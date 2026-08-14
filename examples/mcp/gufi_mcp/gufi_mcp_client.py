@@ -61,102 +61,70 @@
 
 
 
-from fastmcp import FastMCP
 import asyncio
-import sqlite3
+from fastmcp import Client, FastMCP
 import sys
-import subprocess
 
-SCHEMAFILE='./gufi_schemas.txt'
-REMOTEHOST='<remote uri>'
-MCPTRANSPORT='streamable-http'
-MCPSRVHOST='127.0.0.1'
-MCPSRVPORT=8000
-GUFIVTLIB='path/to/gufi_vt'
+MCP_SERVER='http://127.0.0.1:8000/mcp'
+LOCALSELECT='select path,name,size from gufi_vt_pentries'
+LOCALWHERE='where name like \'%\' limit 50'
+LOCALSEARCHPATH='local/index/path'
+REMOTESELECT='select path,name,size from gufi_vt_pentries'
+REMOTEWHERE='where name like \'%\' order by size desc limit 50'
+REMOTESEARCHPATH='remote/index/path'
 
-mcp = FastMCP(
-    name="server"
-)
+async def main():
+   # Connect to FastMCP server
+   client = Client(MCP_SERVER)
+   #print(f"Connected to Server: {client.initialize_result.serverInfo.name}")
+   print(f"Connected to Server")
+   print("-" * 20)
 
-@mcp.tool
-def local_file_index_schema(schema: str) -> str:
-    """
-       sql query on local file information index
-    """
-    schemafile=SCHEMAFILE
-    try:
-        with open(schemafile, mode="r") as f:
-            content = f.read()
-        return content
-    except FileNotFoundError:
-        return "Schema file not found."
+   async with client:
 
-@mcp.tool
-def gufi_version(a: str) -> str:
-    """gufi_query -- version"""
-    result = subprocess.run(["gufi_query", "--version"], capture_output=True, text=True)
-    return str(result)
+     # List available resources
+     resources = await client.list_tools()
+     print("Tools Available}")
+     for tool in resources:
+       print("-" * 20)
+       print(f"Tool Name: {tool.name}")
+       print(f"Description: {tool.description}")
 
-@mcp.tool
-def local_file_index(sqlin: str, wherein: str, searchpath: str) -> list[str]:
-  """
-       sql query on local file information index
-  """
-  conn=sqlite3.connect(':memory:')
-  try:
-    conn.enable_load_extension(True)
-    cursor = conn.cursor()
-    conn.load_extension(GUFIVTLIB)
-    conn.enable_load_extension(False)
-    sqlline='%s(\'%s\',1,1,99,NULL,1) %s' % (sqlin,searchpath,wherein)
-    print(sqlline, file=sys.stderr)
-    cursor.execute(sqlline)
-    rows = cursor.fetchall()
-    for row in rows:
-      yield row
-    conn.close()
-  except sqlite3.Error as e:
-    print(f"An SQLite error occurred: {e}",file=sys.stderr)
-    conn.close()
-    return f"Error executing query: {str(e)}"
-  finally:
-    conn.close()
-    x=1
-  return ''
+     # locate gufi_query
+     print("run locate gufi_query")
+     result = await client.call_tool("gufi_location", {"a": "gufi_query location please"})
+     print(f"Result: {result.content[0].text}")
+     print("-" * 20)
 
-@mcp.tool
-def remote_file_index(sqlin: str, wherein: str, searchpath: str) -> list[str]:
-  """
-       sql query on remote file information index
-  """
-  conn=sqlite3.connect(':memory:')
-  try:
-    conn.enable_load_extension(True)
-    cursor = conn.cursor()
-    conn.load_extension(GUFIVTLIB)
-    conn.enable_load_extension(False)
-    sqlline='%s(\'%s\',1,0,99,NULL,0,\'ssh\',\'%s\') %s' % (sqlin,searchpath,REMOTEHOST,wherein)
-    print(sqlline, file=sys.stderr)
-    cursor.execute(sqlline)
-    rows = cursor.fetchall()
-    for row in rows:
-      yield row
-    conn.close()
-  except sqlite3.Error as e:
-    print(f"An SQLite error occurred: {e}",file=sys.stderr)
-    conn.close()
-    return f"Error executing query: {str(e)}"
-  finally:
-    conn.close()
-    x=1
-  return ''
+     # locate gufi_query
+     print("run gufi_query version")
+     result = await client.call_tool("gufi_version", {"a": "gufi_query version please"})
+     print(f"Result: {result.content[0].text}")
+     print("-" * 20)
 
-@mcp.tool
-def gufi_location(a: str) -> str:
-    """gufi_query location"""
-    result = subprocess.run(["which", "gufi_query"], capture_output=True, text=True)
-    return str(result)
+     # list vt_pentries schema
+     print("run vt_pentries list schema")
+     result = await client.call_tool("local_file_index_schema", {"schema": "gufi_query schema please"})
+     print(f"Result: {result.content[0].text}")
+     print("-" * 20)
+
+     # gufi local query
+     print(f"query local gufi  index")
+     result_stream= await client.call_tool("local_file_index", {"sqlin": LOCALSELECT, "wherein": LOCALWHERE,"searchpath": LOCALSEARCHPATH})
+     deliminate=result_stream.content[0].text.replace("],[","|")[2:-2]
+     outlines=deliminate.split("|")
+     outlen=len(outlines)
+     for outi in range(outlen):
+       print (outlines[outi])
+
+     # gufi remote query
+     print(f"query remote gufi  index")
+     result_stream= await client.call_tool("remote_file_index", {"sqlin": REMOTESELECT, "wherein": REMOTEWHERE,"searchpath": REMOTESEARCHPATH})
+     deliminate=result_stream.content[0].text.replace("],[","|")[2:-2]
+     outlines=deliminate.split("|")
+     outlen=len(outlines)
+     for outi in range(outlen):
+       print (outlines[outi])
 
 if __name__ == "__main__":
-    # Run the server with HTTP transport
-    mcp.run(transport=MCPTRANSPORT, host=MCPSRVHOST, port=MCPSRVPORT)
+    asyncio.run(main())

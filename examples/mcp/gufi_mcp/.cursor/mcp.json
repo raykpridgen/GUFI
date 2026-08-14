@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "gufi_mcp_server": {
+      "command": "uv",
+      "args": ["run", "--with", "mcp[cli]", "mcp", "run", "/home/raykprid/omniverse/work/mcp/GUFI/examples/mcp/gufi_mcp/gufi_mcp_server.py"]
+    }
+  }
+}

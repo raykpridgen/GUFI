@@ -6,3 +6,7 @@ db.db
 build
 .DS_Store
 __pycache__/
+*.env
+*.idea
+examples/mcp/gufi_mcp/data/
+*.cursor
