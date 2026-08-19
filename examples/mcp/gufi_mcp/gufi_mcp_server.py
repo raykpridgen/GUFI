@@ -59,56 +59,26 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
-
-
-from mcp.server import MCPServer
-from typing import TypedDict
-import asyncio
-import sqlite3
-import sys
-import subprocess
-import os
-import json
-import re
-from dotenv import load_dotenv
-from pathlib import Path
-
-
-from sqlglot import parse_one, ParseError
-
-
-class FileEntry(TypedDict):
-    name: str
-    size: int
-    uid: str
-
+from gufi_util import *
 
 load_dotenv()
 
-SCHEMAFILE='./schemas.json'
-REMOTEHOST='<remote uri>'
-MCPTRANSPORT='streamable-http'
-MCPSRVHOST='127.0.0.1'
-MCPSRVPORT=8000
-GUFIVTLIB='path/to/gufi_vt'
-GUFI_EXE=os.getenv('GUFI_EXECUTABLE')
-GUFI_INDEXES_ROOT=os.getenv('GUFI_INDEXES_ROOT')
+SCHEMAFILE=os.getenv("SCHEMAFILE")
+REMOTEHOST=os.getenv("REMOTEHOST")
+MCPTRANSPORT=os.getenv("MCPTRANSPORT")
+MCPSRVHOST=os.getenv("MCPTRANSPORT")
+MCPSRVPORT=os.getenv("MCPSRVPORT")
+GUFIVTLIB=os.getenv("GUFIVTLIB")
+GUFI_EXE=os.getenv("GUFI_EXECUTABLE")
+GUFI_INDEXES_ROOT=os.getenv("GUFI_INDEXES_ROOT")
+PLOT_DIR=Path(os.getenv("GUFI_PLOT_DIR", str(Path(__file__).parent / "plots")))
+
+SCHEMA_REGISTRY: SchemaRegistry = resolve_view_types(parse_schema_registry(SCHEMAFILE))
+
 
 mcp = MCPServer(
     name="server"
 )
-
-'''
---------------- HELPER FUNCTIONS ---------------
-'''
-
-def is_valid_sql_query(sql_query: str, dialect: str = "snowflake") -> bool:
-    try:
-        parse_one(sql_query, read=dialect)
-        return True
-    except ParseError as e:
-        print(f"SQL Grammar Error: {str(e)}", file=sys.stderr)
-        return False
 
 '''
 --------------- TOOLS ---------------
@@ -122,6 +92,107 @@ def gufi_version() -> str:
         return result.stdout
     else:
         return result.stderr
+
+'''
+@mcp.tool()
+def gufi_schema_columns(table: str) -> list[ColumnDef]:
+    """Return the column names and types for a GUFI table or view. Call this before writing a query to confirm valid column names."""
+    if table not in SCHEMA_REGISTRY:
+        available = list(SCHEMA_REGISTRY.keys())
+        return [ColumnDef(name="error", type=f"Unknown table '{table}'. Available: {available}")]
+    return SCHEMA_REGISTRY[table]
+
+@mcp.tool()
+def gufi_schema_tables() -> list[str]:
+    """List all queryable GUFI tables and views known to the schema registry."""
+    return list(SCHEMA_REGISTRY.keys())
+'''
+
+@mcp.tool()
+def gufi_plot_analytics(
+    title: str,
+    plot_type: str,
+    labels: list[str],
+    values: list[float],
+    x_label: str = "",
+    y_label: str = "",
+    y_range: list[float] | None = None,
+    filename: str = "",
+) -> PlotResult:
+    """
+    Generate a matplotlib plot from analytics data and return the file path and
+    a base64-encoded PNG.
+
+    plot_type: 'bar' (vertical bars), 'barh' (horizontal bars), 'pie', or 'line'.
+    labels: category names (x-axis ticks, pie slice labels, or barh y-axis labels).
+    values: one numeric value per label.
+    y_range: optional [min, max] to fix the y-axis scale.
+    filename: optional output file stem; auto-generated from title + timestamp if omitted.
+    """
+    valid_types = {"bar", "barh", "pie", "line"}
+    if plot_type not in valid_types:
+        return PlotResult(
+            file_path="", image_b64="",
+            plot_type=plot_type,
+            title=f"Error: unsupported plot_type '{plot_type}'. Use one of {sorted(valid_types)}."
+        )
+
+    if len(labels) != len(values):
+        return PlotResult(
+            file_path="", image_b64="",
+            plot_type=plot_type,
+            title=f"Error: labels ({len(labels)}) and values ({len(values)}) must be the same length."
+        )
+
+    PLOT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Build output path
+    if filename:
+        stem = re.sub(r"[^\w\-]", "_", filename)
+    else:
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        stem = re.sub(r"[^\w\-]", "_", title) + f"_{ts}"
+    out_path = PLOT_DIR / f"{stem}.png"
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    try:
+        if plot_type == "bar":
+            ax.bar(labels, values)
+            if y_range:
+                ax.set_ylim(y_range)
+        elif plot_type == "barh":
+            ax.barh(labels, values)
+            if y_range:
+                ax.set_xlim(y_range)
+        elif plot_type == "pie":
+            ax.pie(values, labels=labels, autopct="%1.1f%%")
+        elif plot_type == "line":
+            ax.plot(labels, values, marker="o")
+            if y_range:
+                ax.set_ylim(y_range)
+
+        ax.set_title(title)
+        if x_label and plot_type != "pie":
+            ax.set_xlabel(x_label)
+        if y_label and plot_type != "pie":
+            ax.set_ylabel(y_label)
+
+        plt.tight_layout()
+        fig.savefig(out_path, dpi=150, bbox_inches="tight")
+    finally:
+        plt.close(fig)
+
+    buf = io.BytesIO()
+    with open(out_path, "rb") as f:
+        buf.write(f.read())
+    image_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+
+    return PlotResult(
+        file_path=str(out_path),
+        image_b64=image_b64,
+        plot_type=plot_type,
+        title=title,
+    )
 
 @mcp.tool()
 def gufi_query_find_largest_files(index: str, return_count: int) -> list[FileEntry]:
@@ -162,11 +233,7 @@ def gufi_query_find_largest_files(index: str, return_count: int) -> list[FileEnt
     return rows[:return_count]
 
 @mcp.tool()
-def gufi_query_local_index(
-        index: str,
-        sql_query: str,
-        return_limit: int = 0
-) -> str:
+def gufi_query_local_index(index: str, sql_query: str,return_limit: int = 0) -> str:
     """Run a SQL query against a local GUFI index. return_limit=0 means no limit."""
 
     index_root = Path(GUFI_INDEXES_ROOT + index)
@@ -177,15 +244,18 @@ def gufi_query_local_index(
     if not is_valid_sql_query(sql_query, dialect="sqlite"):
         return "Error: invalid SQL syntax.\n"
 
-    with open(SCHEMAFILE, "r") as file:
-        data = json.load(file)
-
     match_table = re.search(r"\bFROM\b\s+(\w+)", sql_query, re.IGNORECASE)
     if match_table is None:
         return "Error: could not determine table from query.\n"
     table_found = match_table.group(1)
-    if table_found not in data:
-        return "Error: invalid table submitted. Inspect schemas for tables to query.\n"
+    if table_found not in SCHEMA_REGISTRY:
+        available = list(SCHEMA_REGISTRY.keys())
+        return f"Error: unknown table '{table_found}'. Available tables: {available}\n"
+
+    bad_cols = validate_query_columns(sql_query, table_found, SCHEMA_REGISTRY)
+    if bad_cols:
+        valid_cols = [c["name"] for c in SCHEMA_REGISTRY[table_found]]
+        return f"Error: unknown column(s) {bad_cols}. Columns available in '{table_found}': {valid_cols}\n"
 
     result = subprocess.run(
         [GUFI_EXE, "-d", "\t", "-E", sql_query, f"{GUFI_INDEXES_ROOT}{index_root.name}/"],
@@ -197,6 +267,394 @@ def gufi_query_local_index(
 
     lines = result.stdout.splitlines()
     return "\n".join(lines[:return_limit] if return_limit else lines)
+
+@mcp.tool()
+def gufi_subtree_analytics(
+    idx_path: str,
+    depth: int = 0,
+    target_uid: int = 0
+) -> SubtreeAnalytics:
+    """
+    Compute high-level aggregated metrics for a directory subtree in a GUFI index.
+
+    idx_path: index name (e.g. 'home_index') or 'index_name/sub/idx_path' for a subtree.
+    depth: max depth below the target path; 0 = unlimited.
+    target_uid: if set, filters entry-level metrics to that UID only.
+
+    NOTE: For rolled-up indexes, starting from a subtree path may yield incomplete
+    results since child entries may be consolidated into parent db.db files. Use a
+    full index path or a non-rolled-up index for guaranteed completeness.
+    """
+    warnings: list[str] = []
+    t_start = time.perf_counter()
+
+    _empty = SubtreeAnalytics(
+        query_metadata=QueryMetadata(
+            target_path=idx_path, total_files_in_scope=0,
+            is_fully_rolled_up=False, treesummary_available=False,
+            execution_time_ms=0.0, warnings=[]
+        ),
+        summary_totals=SummaryTotals(
+            total_bytes=0, total_bytes_human="0 B",
+            total_files=0, total_directories=0, total_symlinks=0
+        ),
+        size_distribution_histogram=SizeHistogram(
+            under_1mb    =HistogramBucket(count=0, total_bytes=0),
+            mb_1_to_100mb=HistogramBucket(count=0, total_bytes=0),
+            mb_100_to_1gb=HistogramBucket(count=0, total_bytes=0),
+            gb_1_to_100gb=HistogramBucket(count=0, total_bytes=0),
+            over_100gb   =HistogramBucket(count=0, total_bytes=0),
+        ),
+        age_and_staleness=AgeAndStaleness(
+            active_under_30_days=AgeBand(bytes=0, percentage=0.0),
+            warm_30_to_180_days =AgeBand(bytes=0, percentage=0.0),
+            cold_180_plus_days  =AgeBand(bytes=0, percentage=0.0),
+            oldest_file_mtime="", newest_file_mtime=""
+        ),
+        top_extensions_by_size=[],
+        top_owners=[]
+    )
+
+    # --- Path resolution ---
+    try:
+        _index_name, start_dir = resolve_gufi_path(idx_path)
+    except ValueError as e:
+        _empty["query_metadata"]["warnings"] = [str(e)]
+        return _empty
+
+    start_path = str(start_dir) + "/"
+
+    # --- treesummary detection and optional build ---
+    has_treesummary = check_treesummary(start_dir)
+    if not has_treesummary:
+        if build_treesummary(start_dir):
+            has_treesummary = check_treesummary(start_dir)
+
+    # depth_clause_s: for -S queries against summary (column is 'depth')
+    # depth_clause_e: for -E queries against vrpentries (column is 'ddepth', the d-prefixed alias)
+    depth_clause_s = f" AND depth <= {depth}"  if depth > 0 else ""
+    depth_clause_e = f" AND ddepth <= {depth}" if depth > 0 else ""
+    uid_clause     = f" AND uid = {target_uid}" if target_uid is not None else ""
+
+    # -T SQL prunes entire branches beyond max depth when treesummary is available
+    tree_sql_arg = ["-T", f"SELECT inode FROM treesummary WHERE depth <= {depth}"] \
+        if has_treesummary and depth > 0 else []
+
+    def run_gufi(flag: str, sql: str) -> list[str]:
+        cmd = [GUFI_EXE, "-d", "\t"] + tree_sql_arg + [flag, sql, start_path]
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        if r.returncode != 0:
+            warnings.append(f"gufi_query error ({flag}): {r.stderr.strip()}")
+            return []
+        return r.stdout.splitlines()
+
+    # --- Query 1: summary totals + rollup check via summary (-S) ---
+    summary_sql = (
+        f"SELECT SUM(totfiles), SUM(totlinks), COUNT(*), SUM(totsize), "
+        f"SUM(CASE WHEN isrolledup=0 THEN 1 ELSE 0 END) "
+        f"FROM summary WHERE rectype=0{depth_clause_s}"
+    )
+    totfiles = totlinks = totdirs = totsize = non_rolled = 0
+    for row in run_gufi("-S", summary_sql):
+        parts = row.split("\t")
+        if len(parts) == 5:
+            try:
+                totfiles   += int(parts[0] or 0)
+                totlinks   += int(parts[1] or 0)
+                totdirs    += int(parts[2] or 0)
+                totsize    += int(parts[3] or 0)
+                non_rolled += int(parts[4] or 0)
+            except ValueError:
+                continue
+
+    is_fully_rolled_up = (non_rolled == 0)
+    if not is_fully_rolled_up and len(Path(idx_path).parts) > 1:
+        warnings.append(
+            "Index is not fully rolled up. Querying from a subtree path on a "
+            "partially rolled-up index may produce incomplete results."
+        )
+
+    # --- Query 2: size distribution histogram via vrpentries (-E) ---
+    MB = 1024 * 1024
+    GB = 1024 * MB
+    hist_sql = (
+        f"SELECT "
+        f"SUM(CASE WHEN size < {MB} THEN 1 ELSE 0 END), "
+        f"SUM(CASE WHEN size < {MB} THEN size ELSE 0 END), "
+        f"SUM(CASE WHEN size >= {MB}     AND size < {100*MB} THEN 1 ELSE 0 END), "
+        f"SUM(CASE WHEN size >= {MB}     AND size < {100*MB} THEN size ELSE 0 END), "
+        f"SUM(CASE WHEN size >= {100*MB} AND size < {GB}     THEN 1 ELSE 0 END), "
+        f"SUM(CASE WHEN size >= {100*MB} AND size < {GB}     THEN size ELSE 0 END), "
+        f"SUM(CASE WHEN size >= {GB}     AND size < {100*GB} THEN 1 ELSE 0 END), "
+        f"SUM(CASE WHEN size >= {GB}     AND size < {100*GB} THEN size ELSE 0 END), "
+        f"SUM(CASE WHEN size >= {100*GB} THEN 1 ELSE 0 END), "
+        f"SUM(CASE WHEN size >= {100*GB} THEN size ELSE 0 END) "
+        f"FROM vrpentries WHERE 1=1{depth_clause_e}{uid_clause}"
+    )
+    h = [0] * 10
+    for row in run_gufi("-E", hist_sql):
+        parts = row.split("\t")
+        if len(parts) == 10:
+            try:
+                h = [h[i] + int(parts[i] or 0) for i in range(10)]
+            except ValueError:
+                continue
+
+    size_histogram = SizeHistogram(
+        under_1mb    =HistogramBucket(count=h[0], total_bytes=h[1]),
+        mb_1_to_100mb=HistogramBucket(count=h[2], total_bytes=h[3]),
+        mb_100_to_1gb=HistogramBucket(count=h[4], total_bytes=h[5]),
+        gb_1_to_100gb=HistogramBucket(count=h[6], total_bytes=h[7]),
+        over_100gb   =HistogramBucket(count=h[8], total_bytes=h[9]),
+    )
+
+    # --- Query 3: age and staleness ---
+    now_expr = "CAST(strftime('%s', 'now') AS INTEGER)"
+    day = 86400
+    age_sql = (
+        f"SELECT "
+        f"SUM(CASE WHEN ({now_expr} - mtime) < {30*day}  THEN size ELSE 0 END), "
+        f"SUM(CASE WHEN ({now_expr} - mtime) >= {30*day}  AND ({now_expr} - mtime) < {180*day} THEN size ELSE 0 END), "
+        f"SUM(CASE WHEN ({now_expr} - mtime) >= {180*day} THEN size ELSE 0 END), "
+        f"MIN(mtime), MAX(mtime) "
+        f"FROM vrpentries WHERE size > 0{depth_clause_e}{uid_clause}"
+    )
+    active_bytes = warm_bytes = cold_bytes = 0
+    oldest_epoch = newest_epoch = 0
+    for row in run_gufi("-E", age_sql):
+        parts = row.split("\t")
+        if len(parts) == 5:
+            try:
+                active_bytes += int(parts[0] or 0)
+                warm_bytes   += int(parts[1] or 0)
+                cold_bytes   += int(parts[2] or 0)
+                mn = int(parts[3] or 0)
+                mx = int(parts[4] or 0)
+                if oldest_epoch == 0 or (mn > 0 and mn < oldest_epoch):
+                    oldest_epoch = mn
+                if mx > newest_epoch:
+                    newest_epoch = mx
+            except ValueError:
+                continue
+
+    total_age_bytes = active_bytes + warm_bytes + cold_bytes or 1
+
+    def epoch_to_iso(epoch: int) -> str:
+        if epoch <= 0:
+            return ""
+        return datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat()
+
+    age_staleness = AgeAndStaleness(
+        active_under_30_days=AgeBand(bytes=active_bytes, percentage=round(active_bytes / total_age_bytes * 100, 2)),
+        warm_30_to_180_days =AgeBand(bytes=warm_bytes,   percentage=round(warm_bytes   / total_age_bytes * 100, 2)),
+        cold_180_plus_days  =AgeBand(bytes=cold_bytes,   percentage=round(cold_bytes   / total_age_bytes * 100, 2)),
+        oldest_file_mtime=epoch_to_iso(oldest_epoch),
+        newest_file_mtime=epoch_to_iso(newest_epoch),
+    )
+
+    # --- Query 4: top extensions by size ---
+    # REPLACE trick: find last '.' by reversing the string via REPLACE/INSTR/CHAR(0)
+    ext_sql = (
+        f"SELECT "
+        f"CASE WHEN INSTR(name, '.') > 0 "
+        f"     THEN LOWER(SUBSTR(name, LENGTH(name) - INSTR(REPLACE(name, '.', CHAR(0)), CHAR(0)) + 2)) "
+        f"     ELSE '' END AS ext, "
+        f"COUNT(*), SUM(size) "
+        f"FROM vrpentries "
+        f"WHERE type = 'f'{depth_clause_e}{uid_clause} "
+        f"GROUP BY ext ORDER BY SUM(size) DESC LIMIT 10"
+    )
+    ext_accum: dict[str, list[int]] = {}
+    for row in run_gufi("-E", ext_sql):
+        parts = row.split("\t")
+        if len(parts) == 3:
+            try:
+                ext = parts[0]
+                if ext not in ext_accum:
+                    ext_accum[ext] = [0, 0]
+                ext_accum[ext][0] += int(parts[1] or 0)
+                ext_accum[ext][1] += int(parts[2] or 0)
+            except ValueError:
+                continue
+
+    top_extensions: list[ExtensionEntry] = [
+        ExtensionEntry(extension=ext, count=v[0], total_bytes=v[1])
+        for ext, v in sorted(ext_accum.items(), key=lambda kv: kv[1][1], reverse=True)[:10]
+    ]
+
+    # --- Query 5: top owners ---
+    owner_sql = (
+        f"SELECT uid, gid, COUNT(*), SUM(size) "
+        f"FROM vrpentries "
+        f"WHERE type = 'f'{depth_clause_e}{uid_clause} "
+        f"GROUP BY uid, gid ORDER BY SUM(size) DESC LIMIT 10"
+    )
+    owner_accum: dict[tuple[int, int], list[int]] = {}
+    for row in run_gufi("-E", owner_sql):
+        parts = row.split("\t")
+        if len(parts) == 4:
+            try:
+                key = (int(parts[0] or 0), int(parts[1] or 0))
+                if key not in owner_accum:
+                    owner_accum[key] = [0, 0]
+                owner_accum[key][0] += int(parts[2] or 0)
+                owner_accum[key][1] += int(parts[3] or 0)
+            except ValueError:
+                continue
+
+    top_owners: list[OwnerEntry] = [
+        OwnerEntry(uid=k[0], gid=k[1], file_count=v[0], total_bytes=v[1])
+        for k, v in sorted(owner_accum.items(), key=lambda kv: kv[1][1], reverse=True)[:10]
+    ]
+
+    elapsed_ms = (time.perf_counter() - t_start) * 1000
+
+    return SubtreeAnalytics(
+        query_metadata=QueryMetadata(
+            target_path=str(start_dir),
+            total_files_in_scope=totfiles,
+            is_fully_rolled_up=is_fully_rolled_up,
+            treesummary_available=has_treesummary,
+            execution_time_ms=round(elapsed_ms, 2),
+            warnings=warnings,
+        ),
+        summary_totals=SummaryTotals(
+            total_bytes=totsize,
+            total_bytes_human=format_bytes(totsize),
+            total_files=totfiles,
+            total_directories=totdirs,
+            total_symlinks=totlinks,
+        ),
+        size_distribution_histogram=size_histogram,
+        age_and_staleness=age_staleness,
+        top_extensions_by_size=top_extensions,
+        top_owners=top_owners,
+    )
+
+@mcp.tool()
+def gufi_check_index_health(
+    idx_path: str,
+    source_path: str | None = None,
+    sample_size: int = 500,
+    max_depth: int = 0,
+    check_shards: bool = True,
+    shard_check_depth: int = 3,
+    max_shard_issues: int = DEFAULT_MAX_SHARD_ISSUES,
+) -> IndexHealthResult:
+    """
+    Assess GUFI index health: age, sampled directory drift, and shard integrity.
+
+    idx_path: index name (e.g. 'home_index') or 'index_name/sub/path' for a subtree.
+    source_path: optional override for the live source root (default: info.db src).
+    sample_size: number of directories to sample for POSIX vs GUFI mtime drift (0 to skip).
+    max_depth: max directory depth for drift sampling; 0 = unlimited.
+    check_shards: when True, audit expected vs accessible shards under the target subtree.
+    shard_check_depth: max depth (relative to target) for shard integrity checks.
+    max_shard_issues: cap on returned shard issue entries; full totals are in shard_counts.
+
+    Freshness (FRESH / DRIFTED / STALE) is derived from index age and drift ratio.
+    Shard terms:
+      - metadata_expected: child dirs GUFI says should have db.db shards
+      - accessible: db.db files that open cleanly with required tables
+      - missing_shard: expected shard absent or invalid path in index tree
+      - corrupt_shard: db.db present but fails SQLite validation
+      - unindexed_path: live source directory with no accessible index shard
+    """
+    t_start = time.perf_counter()
+    warnings: list[str] = []
+
+    def _empty_result() -> IndexHealthResult:
+        return IndexHealthResult(
+            target_path=idx_path,
+            source_path=None,
+            freshness="STALE",
+            index_age_hours=0.0,
+            last_indexed="",
+            sampling=empty_sampling_stats(),
+            shard_counts=empty_shard_counts(),
+            shard_issues=[],
+            warnings=warnings,
+            execution_time_ms=round((time.perf_counter() - t_start) * 1000, 2),
+        )
+
+    try:
+        index_name, start_dir = resolve_gufi_path(idx_path)
+    except ValueError as e:
+        warnings.append(str(e))
+        return _empty_result()
+
+    parts = Path(idx_path).parts
+    subpath = Path(*parts[1:]) if len(parts) > 1 else Path()
+
+    if not (start_dir / "db.db").is_file():
+        warnings.append(f"No db.db at target path '{start_dir}'")
+        return _empty_result()
+
+    age_hours, last_indexed, age_warnings = compute_index_age(start_dir, index_name)
+    warnings.extend(age_warnings)
+
+    source_root, src_warnings = resolve_source_path(index_name, subpath, source_path)
+    warnings.extend(src_warnings)
+
+    start_path = str(start_dir) + "/"
+    depth_clause = f" AND depth <= {max_depth}" if max_depth > 0 else ""
+
+    sampling = empty_sampling_stats()
+    if source_root and sample_size > 0:
+        sql = (
+            f"SELECT name, mtime FROM vsummarydir "
+            f"WHERE type = 'd'{depth_clause} "
+            f"ORDER BY RANDOM() LIMIT {sample_size}"
+        )
+        cmd = [GUFI_EXE, "-d", "\t", "-S", sql, start_path]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            warnings.append(f"gufi_query drift sampling failed: {result.stderr.strip()}")
+        else:
+            sampled: list[tuple[str, int]] = []
+            for row in result.stdout.splitlines():
+                parts_row = row.split("\t")
+                if len(parts_row) >= 2:
+                    try:
+                        sampled.append((parts_row[0], int(parts_row[1] or 0)))
+                    except ValueError:
+                        continue
+            sampling = measure_drift(sampled, source_root)
+    elif not source_root:
+        warnings.append("source path unavailable; drift check skipped")
+
+    shard_counts = empty_shard_counts()
+    shard_issues: list[ShardIssue] = []
+    if check_shards:
+        shard_counts, shard_issues, shard_warnings = audit_shard_integrity(
+            start_dir, source_root, shard_check_depth, max_shard_issues
+        )
+        warnings.extend(shard_warnings)
+
+        total_expected = shard_counts["metadata_expected"] or 1
+        bad_shards = (
+            shard_counts["missing"]
+            + shard_counts["corrupt"]
+            + shard_counts["unindexed"]
+        )
+        if bad_shards > 0 and bad_shards / total_expected > 0.05:
+            warnings.append("shard integrity issues detected (>5% of expected shards affected)")
+
+    drift_ratio = sampling["drift_ratio"] if source_root and sample_size > 0 else 0.0
+    freshness = classify_freshness(age_hours, drift_ratio)
+
+    return IndexHealthResult(
+        target_path=idx_path,
+        source_path=str(source_root) if source_root else None,
+        freshness=freshness,
+        index_age_hours=round(age_hours, 2),
+        last_indexed=last_indexed,
+        sampling=sampling,
+        shard_counts=shard_counts,
+        shard_issues=shard_issues,
+        warnings=warnings,
+        execution_time_ms=round((time.perf_counter() - t_start) * 1000, 2),
+    )
 
 '''
 --------------- PROMPTS ---------------
@@ -228,19 +686,23 @@ def gufi_indexes() -> dict[str, str]:
     return indexes
 
 @mcp.resource("gufi://schemas/{schema}")
-def gufi_schemas_search(schema: str = "query_surfaces") -> dict[str, str]:
-    ''' Discover common tables and their schemas '''
+def gufi_schemas_search(schema: str = "query_surfaces") -> dict:
+    """
+    Discover GUFI table/view schemas.
 
+    - schema='query_surfaces': returns a description dict of all available query surfaces.
+    - schema=<table_name>: returns a structured list of ColumnDef for that table or view.
+    """
     with open(SCHEMAFILE, "r") as file:
         data = json.load(file)
 
-    if (schema in data):
-        if schema == "query_surfaces":
-            return data[schema]
-        else:
-            return {schema: data[schema]}
-    else:
-        return {"error": "Schema not found, input query_surfaces for available schemas."}
+    if schema == "query_surfaces":
+        return data.get("query_surfaces", {})
+
+    if schema in SCHEMA_REGISTRY:
+        return {schema: SCHEMA_REGISTRY[schema]}
+
+    return {"error": f"Schema '{schema}' not found. Use 'query_surfaces' to list available tables."}
 
 '''
 @mcp.tool()
