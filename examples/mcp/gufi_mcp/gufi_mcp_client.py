@@ -60,71 +60,103 @@
 # OF SUCH DAMAGE.
 
 
-
 import asyncio
-from fastmcp import Client, FastMCP
-import sys
+from pathlib import Path
 
-MCP_SERVER='http://127.0.0.1:8000/mcp'
-LOCALSELECT='select path,name,size from gufi_vt_pentries'
-LOCALWHERE='where name like \'%\' limit 50'
-LOCALSEARCHPATH='local/index/path'
-REMOTESELECT='select path,name,size from gufi_vt_pentries'
-REMOTEWHERE='where name like \'%\' order by size desc limit 50'
-REMOTESEARCHPATH='remote/index/path'
+from mcp import Client
 
-async def main():
-   # Connect to FastMCP server
-   client = Client(MCP_SERVER)
-   #print(f"Connected to Server: {client.initialize_result.serverInfo.name}")
-   print(f"Connected to Server")
-   print("-" * 20)
+from gufi_util import format_tool_result_text, get_settings
 
-   async with client:
 
-     # List available resources
-     resources = await client.list_tools()
-     print("Tools Available}")
-     for tool in resources:
-       print("-" * 20)
-       print(f"Tool Name: {tool.name}")
-       print(f"Description: {tool.description}")
+async def call_and_print(client: Client, tool: str, arguments: dict | None = None) -> None:
+    print(f"\n==> {tool}")
+    if arguments:
+        print(f"    args: {arguments}")
+    result = await client.call_tool(tool, arguments or {})
+    print(format_tool_result_text(result))
 
-     # locate gufi_query
-     print("run locate gufi_query")
-     result = await client.call_tool("gufi_location", {"a": "gufi_query location please"})
-     print(f"Result: {result.content[0].text}")
-     print("-" * 20)
 
-     # locate gufi_query
-     print("run gufi_query version")
-     result = await client.call_tool("gufi_version", {"a": "gufi_query version please"})
-     print(f"Result: {result.content[0].text}")
-     print("-" * 20)
+async def main() -> None:
+    settings = get_settings()
+    index = settings.default_index
+    output_path = Path(__file__).resolve().parent / "mcp.out"
 
-     # list vt_pentries schema
-     print("run vt_pentries list schema")
-     result = await client.call_tool("local_file_index_schema", {"schema": "gufi_query schema please"})
-     print(f"Result: {result.content[0].text}")
-     print("-" * 20)
+    print(f"Connecting to MCP server at {settings.mcp_server_url}")
 
-     # gufi local query
-     print(f"query local gufi  index")
-     result_stream= await client.call_tool("local_file_index", {"sqlin": LOCALSELECT, "wherein": LOCALWHERE,"searchpath": LOCALSEARCHPATH})
-     deliminate=result_stream.content[0].text.replace("],[","|")[2:-2]
-     outlines=deliminate.split("|")
-     outlen=len(outlines)
-     for outi in range(outlen):
-       print (outlines[outi])
+    sections: list[str] = []
 
-     # gufi remote query
-     print(f"query remote gufi  index")
-     result_stream= await client.call_tool("remote_file_index", {"sqlin": REMOTESELECT, "wherein": REMOTEWHERE,"searchpath": REMOTESEARCHPATH})
-     deliminate=result_stream.content[0].text.replace("],[","|")[2:-2]
-     outlines=deliminate.split("|")
-     outlen=len(outlines)
-     for outi in range(outlen):
-       print (outlines[outi])
+    async with Client(settings.mcp_server_url) as client:
+        tools = await client.list_tools()
+        tool_names = sorted(tool.name for tool in tools.tools)
+        header = "Available tools:\n  " + "\n  ".join(tool_names)
+        print(header)
+        sections.append(header)
+
+        await call_and_print(client, "gufi_location")
+        sections.append("gufi_location")
+
+        await call_and_print(client, "gufi_version")
+        sections.append("gufi_version")
+
+        await call_and_print(
+            client,
+            "gufi_query_local_index",
+            {
+                "index": index,
+                "sql_query": "SELECT name, size FROM vrpentries ORDER BY size DESC LIMIT 5",
+                "return_limit": 10,
+            },
+        )
+        sections.append("gufi_query_local_index")
+
+        await call_and_print(client, "gufi_client_ls", {"index": index})
+        sections.append("gufi_client_ls")
+
+        await call_and_print(client, "gufi_client_du", {"index": index})
+        sections.append("gufi_client_du")
+
+        await call_and_print(
+            client,
+            "gufi_client_find",
+            {"index": index, "arguments": "-type f"},
+        )
+        sections.append("gufi_client_find")
+
+        await call_and_print(
+            client,
+            "gufi_client_stat",
+            {"index": f"{index}/doc_min.txt"},
+        )
+        sections.append("gufi_client_stat")
+
+        await call_and_print(
+            client,
+            "gufi_client_stats",
+            {"index": index, "arguments": "-c total-filecount"},
+        )
+        sections.append("gufi_client_stats")
+
+        await call_and_print(
+            client,
+            "gufi_client_query",
+            {
+                "index": index,
+                "arguments": (
+                    '-E "SELECT name, size FROM vrpentries '
+                    "WHERE type = 'f' ORDER BY size DESC LIMIT 3;\""
+                ),
+            },
+        )
+        sections.append("gufi_client_query")
+
+    note = (
+        "\nDemo complete. Tools exercised: "
+        + ", ".join(sections[1:])
+    )
+    print(note)
+    output_path.write_text(note + "\n", encoding="utf-8")
+    print(f"\nWrote summary to {output_path}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

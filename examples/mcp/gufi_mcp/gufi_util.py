@@ -1,4 +1,5 @@
 from mcp.server import MCPServer
+from dataclasses import dataclass
 from typing import TypedDict
 from datetime import datetime, timezone
 import asyncio
@@ -10,6 +11,7 @@ import subprocess
 import os
 import json
 import re
+import shlex
 import time
 from dotenv import load_dotenv
 from pathlib import Path
@@ -22,17 +24,121 @@ import sqlglot
 import sqlglot.expressions as exp
 from sqlglot import parse_one, ParseError
 
-load_dotenv()
+_PACKAGE_DIR = Path(__file__).resolve().parent
+_SETTINGS: "GufiMcpSettings | None" = None
 
-SCHEMAFILE=os.getenv("SCHEMAFILE")
-REMOTEHOST=os.getenv("REMOTEHOST")
-MCPTRANSPORT=os.getenv("MCPTRANSPORT")
-MCPSRVHOST=os.getenv("MCPTRANSPORT")
-MCPSRVPORT=os.getenv("MCPSRVPORT")
-GUFIVTLIB=os.getenv("GUFIVTLIB")
-GUFI_EXE=os.getenv("GUFI_EXECUTABLE")
-GUFI_INDEXES_ROOT=os.getenv("GUFI_INDEXES_ROOT")
-PLOT_DIR=Path(os.getenv("GUFI_PLOT_DIR", str(Path(__file__).parent / "plots")))
+
+@dataclass(frozen=True)
+class GufiMcpSettings:
+    """Runtime configuration loaded from .env in the gufi_mcp package directory."""
+
+    schema_file: Path
+    indexes_root: Path
+    gufi_executable: Path
+    server_prefix: Path
+    client_config: Path
+    client_bin: Path
+    ssh_identity: Path
+    default_index: str
+    remote_host: str
+    gufi_vt_lib: Path | None
+    mcp_transport: str
+    mcp_server_host: str
+    mcp_server_port: int
+    mcp_server_url: str
+    plot_dir: Path
+
+    @classmethod
+    def load(cls, env_file: Path | None = None) -> "GufiMcpSettings":
+        env_path = env_file or (_PACKAGE_DIR / ".env")
+        load_dotenv(env_path, override=False)
+
+        def path_from_env(key: str, default: str | None = None, required: bool = True) -> Path:
+            raw = os.getenv(key, default)
+            if raw is None or raw.strip() == "":
+                if required:
+                    raise ValueError(f"Missing required environment variable: {key}")
+                raise ValueError(f"Missing environment variable: {key}")
+            value = Path(raw.strip().strip("'\""))
+            if not value.is_absolute():
+                value = (_PACKAGE_DIR / value).resolve()
+            return value
+
+        schema_file = path_from_env("SCHEMAFILE", "./schemas.json")
+        indexes_root = path_from_env("GUFI_INDEXES_ROOT")
+        gufi_executable = path_from_env("GUFI_EXECUTABLE")
+        server_prefix = path_from_env(
+            "GUFI_SERVER_PREFIX",
+            str(gufi_executable.parent),
+            required=False,
+        )
+        client_config = path_from_env("GUFI_CLIENT_CONFIG")
+        client_bin = path_from_env("GUFI_CLIENT_BIN")
+        ssh_identity = Path(os.path.expanduser(os.getenv("GUFI_SSH_IDENTITY", "~/.ssh/gufi_local")))
+
+        host = os.getenv("MCPSRVHOST", "127.0.0.1").strip().strip("'\"")
+        port = int(os.getenv("MCPSRVPORT", "8000"))
+        transport = os.getenv("MCPTRANSPORT", "streamable-http").strip().strip("'\"")
+        mcp_server_url = os.getenv("MCP_SERVER_URL", f"http://{host}:{port}/mcp").strip().strip("'\"")
+
+        vt_raw = os.getenv("GUFIVTLIB", "").strip().strip("'\"")
+        gufi_vt_lib = None
+        if vt_raw and vt_raw != "path/to/gufi_vt":
+            gufi_vt_lib = Path(vt_raw)
+            if not gufi_vt_lib.is_absolute():
+                gufi_vt_lib = (_PACKAGE_DIR / gufi_vt_lib).resolve()
+
+        plot_default = str(_PACKAGE_DIR / "plots")
+        plot_raw = os.getenv("GUFI_PLOT_DIR", plot_default).strip().strip("'\"")
+        plot_dir = Path(plot_raw)
+        if not plot_dir.is_absolute():
+            plot_dir = (_PACKAGE_DIR / plot_dir).resolve()
+
+        return cls(
+            schema_file=schema_file,
+            indexes_root=indexes_root,
+            gufi_executable=gufi_executable,
+            server_prefix=server_prefix,
+            client_config=client_config,
+            client_bin=client_bin,
+            ssh_identity=ssh_identity,
+            default_index=os.getenv("DEFAULT_INDEX", "notes").strip().strip("'\""),
+            remote_host=os.getenv("REMOTEHOST", "127.0.0.1").strip().strip("'\""),
+            gufi_vt_lib=gufi_vt_lib,
+            mcp_transport=transport,
+            mcp_server_host=host,
+            mcp_server_port=port,
+            mcp_server_url=mcp_server_url,
+            plot_dir=plot_dir,
+        )
+
+
+def get_settings() -> GufiMcpSettings:
+    global _SETTINGS
+    if _SETTINGS is None:
+        _SETTINGS = GufiMcpSettings.load()
+    return _SETTINGS
+
+
+def _sync_module_settings(settings: GufiMcpSettings) -> None:
+    global SCHEMAFILE, REMOTEHOST, MCPTRANSPORT, MCPSRVHOST, MCPSRVPORT
+    global GUFIVTLIB, GUFI_EXE, GUFI_INDEXES_ROOT, PLOT_DIR
+
+    SCHEMAFILE = str(settings.schema_file)
+    REMOTEHOST = settings.remote_host
+    MCPTRANSPORT = settings.mcp_transport
+    MCPSRVHOST = settings.mcp_server_host
+    MCPSRVPORT = str(settings.mcp_server_port)
+    GUFIVTLIB = str(settings.gufi_vt_lib) if settings.gufi_vt_lib else ""
+    GUFI_EXE = str(settings.gufi_executable)
+    GUFI_INDEXES_ROOT = str(settings.indexes_root)
+    if not GUFI_INDEXES_ROOT.endswith(os.sep):
+        GUFI_INDEXES_ROOT += os.sep
+    PLOT_DIR = settings.plot_dir
+
+
+_settings = get_settings()
+_sync_module_settings(_settings)
 
 class FileEntry(TypedDict):
     name: str
@@ -667,3 +773,119 @@ def audit_shard_integrity(
             )
 
     return counts, issues, warnings
+
+
+def parse_client_config(config_path: Path) -> tuple[str, int]:
+    """Read Server and Port from a GUFI client config file."""
+    server: str | None = None
+    port = 22
+    for line in config_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if key == "Server":
+            server = value
+        elif key == "Port":
+            port = int(value)
+    if not server:
+        raise ValueError(f"Missing Server setting in client config: {config_path}")
+    return server, port
+
+
+def resolve_index_path(index: str, indexes_root: Path | None = None) -> Path:
+    """Resolve an index name (relative to IndexRoot) to an on-disk directory."""
+    root = indexes_root or get_settings().indexes_root
+    index_path = (root / index).resolve()
+    if not index_path.is_dir():
+        raise FileNotFoundError(f"GUFI index '{index}' not found at {index_path}")
+    return index_path
+
+
+def _build_client_args(tool: str, index: str, arguments: str, indexes_root: Path | None = None) -> list[str]:
+    extra = shlex.split(arguments) if arguments.strip() else []
+    if tool == "query":
+        index_path = resolve_index_path(index, indexes_root)
+        return extra + [str(index_path) + os.sep]
+    if tool == "stats":
+        return extra + [index]
+    return [index] + extra
+
+
+def run_gufi_client_tool(
+    tool: str,
+    index: str,
+    arguments: str = "",
+    client_config: str | None = None,
+) -> str:
+    """
+    Run a GUFI client wrapper command over SSH.
+
+    The remote server executes the real GUFI tool (gufi_ls, gufi_du, etc.) against
+    paths relative to IndexRoot. `index` is passed as the first positional argument
+    for most tools; for gufi_query and gufi_stats it is appended last.
+    `arguments` holds any additional flags (for example "-a" or "-type f").
+    """
+    settings = get_settings()
+    config_path = Path(client_config).expanduser() if client_config else settings.client_config
+    if not config_path.is_file():
+        return f"Error: client config not found: {config_path}\n"
+
+    try:
+        server, port = parse_client_config(config_path)
+    except ValueError as exc:
+        return f"Error: {exc}\n"
+
+    client_args = _build_client_args(tool, index, arguments, settings.indexes_root)
+    client_script = settings.client_bin / f"gufi_{tool}"
+    use_client_script = client_script.is_file() and tool not in ("query", "stats")
+
+    if use_client_script:
+        cmd = [sys.executable, str(client_script), *client_args]
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(settings.client_bin) + os.pathsep + env.get("PYTHONPATH", "")
+        result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    else:
+        prefix = settings.server_prefix
+        ssh_key = str(settings.ssh_identity.expanduser())
+        remote_tool = "gufi_query" if tool == "query" else f"gufi_{tool}"
+        remote_cmd = "PYTHONPATH={}/lib {}/bin/{} {}".format(
+            prefix,
+            prefix,
+            remote_tool,
+            " ".join(shlex.quote(part) for part in client_args),
+        )
+        cmd = [
+            "ssh",
+            "-i", ssh_key,
+            "-o", "IdentitiesOnly=yes",
+            "-o", "BatchMode=yes",
+            server,
+            "-p", str(port),
+            "--",
+            remote_cmd,
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+    output = result.stdout
+    if result.stderr:
+        output += ("\n" if output else "") + result.stderr
+    if result.returncode != 0 and not output.strip():
+        return f"Error: gufi_{tool} exited with code {result.returncode}\n"
+    return output
+
+
+def format_tool_result_text(result) -> str:
+    """Extract plain text from an MCP CallToolResult."""
+    chunks: list[str] = []
+    for item in result.content:
+        text = getattr(item, "text", None)
+        if text:
+            chunks.append(text)
+    if chunks:
+        return "\n".join(chunks)
+    if result.structured_content is not None:
+        return json.dumps(result.structured_content, indent=2)
+    return ""
