@@ -1,0 +1,33 @@
+#!/bin/sh
+# Adopted from answer by Celada
+# https://security.stackexchange.com/a/118694
+#
+
+# Add a section like this to /etc/ssh/sshd_config:
+#
+# Match Group gufi
+#       ForceCommand /path/to/gufi_jail
+#
+
+set -f
+
+set -- ${SSH_ORIGINAL_COMMAND}
+
+# remove surrounding quotes required to pass command
+# to ssh from client without breaking the command
+# shellcheck disable=SC2124
+cmd="$@"
+cmd="${cmd#\'}"
+cmd="${cmd%\'}"
+
+set -- ${cmd}
+case "$1" in
+    gufi_find|gufi_ls|gufi_query.py|gufi_stat|gufi_stats)
+        ;;
+    *)
+        echo "Error: Command \"$1\" is not allowed" >&2
+        exit 1
+esac
+
+# shellcheck disable=SC2294
+eval "$@"

@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+import subprocess, sys
+from shlex import quote as sanitize
+import gufi_config
+
+PREFIX = "/home/raykp/research/mcp/gufi/local"
+SSH_KEY = "/home/raykp/.ssh/gufi_local"
+
+def run(args):
+    config = gufi_config.Client(gufi_config.PATH)
+    remote = "PYTHONPATH={}/lib {}/bin/gufi_{} {}".format(
+        PREFIX, PREFIX, "find",
+        " ".join(sanitize(a) for a in args),
+    )
+    cmd = [
+        "ssh", "-i", SSH_KEY, "-o", "IdentitiesOnly=yes",
+        config.server, "-p", str(config.port), "--", remote,
+    ]
+    proc = subprocess.Popen(cmd)
+    proc.communicate()
+    return proc.returncode
+
+if __name__ == "__main__":
+    sys.exit(run(sys.argv[1:]))
