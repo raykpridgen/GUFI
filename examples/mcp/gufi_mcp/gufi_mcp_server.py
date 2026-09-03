@@ -78,6 +78,12 @@ from gufi_util import (
     validate_query_columns,
 )
 
+from gufi_mcp.query_plan import (
+    QueryPlanPipeline,
+    explain_report_to_dict,
+    validation_report_to_dict,
+)
+
 SETTINGS: GufiMcpSettings = get_settings()
 SCHEMA_REGISTRY: SchemaRegistry = resolve_view_types(
     parse_schema_registry(str(SETTINGS.schema_file))
@@ -257,6 +263,101 @@ def gufi_schemas_search(schema: str = "query_surfaces") -> dict:
             "Use 'query_surfaces' to list available tables."
         )
     }
+
+
+@mcp.tool()
+def new_query_plan(index: str, intent: str = "", template: str = "") -> dict:
+    """
+    Create a skeleton QueryPlan IR for the agent to fill in stage by stage.
+
+    template='total_file_size' returns a known-good aggregation example.
+    Otherwise returns an empty plan with pipeline stages set to null.
+    """
+    if not index.strip():
+        index = SETTINGS.default_index
+
+    if template == "total_file_size":
+        pipeline = QueryPlanPipeline.total_file_size(index)
+    else:
+        pipeline = QueryPlanPipeline.skeleton(index, intent)
+
+    stages = [
+        ("init", "-I"),
+        ("tree_sql", "-T"),
+        ("summary_sql", "-S"),
+        ("entries_sql", "-E"),
+        ("aggregate_create", "-K"),
+        ("aggregate_insert", "-J"),
+        ("final_select", "-G"),
+    ]
+    return {
+        "plan": pipeline.to_dict(),
+        "pipeline_stages": [
+            {
+                "stage": stage,
+                "flag": flag,
+                "current_sql": getattr(pipeline.plan.pipeline, stage),
+            }
+            for stage, flag in stages
+        ],
+        "next_steps": [
+            "Edit pipeline stage SQL fields in the plan object.",
+            "Call validate_query_plan before explain or execute.",
+            "Call explain_query_plan to show compiled gufi_query argv.",
+        ],
+    }
+
+
+@mcp.tool()
+def validate_query_plan(plan: dict) -> dict:
+    """
+    Validate a QueryPlan IR without executing against an index.
+
+    Returns errors, warnings, and a normalized plan dict.
+    """
+    pipeline = QueryPlanPipeline(plan, schema_registry=SCHEMA_REGISTRY)
+    report = pipeline.validate(SCHEMA_REGISTRY)
+    return validation_report_to_dict(report)
+
+
+@mcp.tool()
+def explain_query_plan(plan: dict) -> dict:
+    """
+    Explain a QueryPlan IR in plain language and show compiled gufi_query argv.
+
+    Resolves the index path from GUFI_INDEXES_ROOT; does not execute the query.
+    """
+    pipeline = QueryPlanPipeline(plan, schema_registry=SCHEMA_REGISTRY)
+    index_name = pipeline.plan.index.strip() or SETTINGS.default_index
+    try:
+        index_path = str(resolve_index_path(index_name, SETTINGS.indexes_root)) + os.sep
+    except FileNotFoundError as exc:
+        return {
+            "error": str(exc),
+            "summary": pipeline.explain(schema_registry=SCHEMA_REGISTRY).summary,
+            "stages": pipeline.explain(schema_registry=SCHEMA_REGISTRY).stages,
+            "compiled_argv": [],
+        }
+
+    report = pipeline.explain(index_path=index_path, schema_registry=SCHEMA_REGISTRY)
+    return explain_report_to_dict(report)
+
+
+@mcp.prompt()
+def plan_gufi_query(index: str, question: str) -> str:
+    """Guide an agent through the structured QueryPlan workflow."""
+    target = index.strip() or SETTINGS.default_index
+    return (
+        f"Answer this GUFI question using the structured query pipeline for index '{target}': "
+        f"{question}\n\n"
+        "Workflow:\n"
+        "1. Read gufi://schemas/query_surfaces and relevant gufi://schemas/{table} resources.\n"
+        "2. Call new_query_plan to get a QueryPlan skeleton (or template='total_file_size').\n"
+        "3. Fill pipeline stages (-I/-T/-S/-E/-K/-J/-G) preferring vrpentries and vrsummary.\n"
+        "4. Call validate_query_plan; fix errors and review warnings.\n"
+        "5. Call explain_query_plan and show the user the explanation before executing.\n"
+        "6. Do not execute until validation passes and the user confirms."
+    )
 
 
 if __name__ == "__main__":
