@@ -1,0 +1,88 @@
+{
+  "index": "notes",
+  "cases": [
+    {
+      "case_id": "notes_total_file_bytes",
+      "question": "What is the total size of regular files in the notes index?",
+      "expected_route": "pipeline",
+      "raw": {
+        "success": true,
+        "elapsed_ms": 10.544076998485252,
+        "answer": "27395",
+        "error": null,
+        "step_count": 1
+      },
+      "structured": {
+        "success": true,
+        "elapsed_ms": 12.10986800288083,
+        "answer": "27395",
+        "error": null,
+        "step_count": 5
+      },
+      "structured_tool_steps": 5,
+      "structured_gap_ms_total": 15.59,
+      "correctness_raw": true,
+      "correctness_structured": true,
+      "raw_faster": true
+    },
+    {
+      "case_id": "notes_top3_files",
+      "question": "Show the top 3 largest regular files in notes",
+      "expected_route": "pipeline",
+      "raw": {
+        "success": true,
+        "elapsed_ms": 8.612600999185815,
+        "answer": [
+          [
+            "mcp_structured_design.md",
+            21744
+          ],
+          [
+            "GUFInotes.md",
+            3099
+          ],
+          [
+            "personalNotes.md",
+            1742
+          ]
+        ],
+        "error": null,
+        "step_count": 1
+      },
+      "structured": {
+        "success": true,
+        "elapsed_ms": 10.222363998764195,
+        "answer": [
+          [
+            "mcp_structured_design.md",
+            21744
+          ],
+          [
+            "GUFInotes.md",
+            3099
+          ],
+          [
+            "personalNotes.md",
+            1742
+          ]
+        ],
+        "error": null,
+        "step_count": 5
+      },
+      "structured_tool_steps": 5,
+      "structured_gap_ms_total": 12.0,
+      "correctness_raw": true,
+      "correctness_structured": true,
+      "raw_faster": true
+    }
+  ],
+  "summary": {
+    "case_count": 2,
+    "raw_avg_ms": 9.58,
+    "structured_execute_avg_ms": 11.17,
+    "structured_correct": 2,
+    "raw_correct": 2,
+    "raw_faster_count": 2,
+    "note": "Structured arm includes validate/cost/explain/dry-run/execute steps; raw arm is single gufi_vt SQL. Expect raw faster on tiny indexes; structured adds guardrails and audit trail via JSONL."
+  }
+}

@@ -1,8 +1,15 @@
 {
   "mcpServers": {
-    "gufi_mcp_server": {
-      "command": "uv",
-      "args": ["run", "--with", "mcp[cli]", "mcp", "run", "/home/raykprid/omniverse/work/mcp/GUFI/examples/mcp/gufi_mcp/gufi_mcp_server.py"]
+    "gufi_mcp": {
+      "command": "/home/raykprid/omniverse/work/mcp/gufi/examples/mcp/gufi_mcp/.venv/bin/mcp",
+      "args": [
+        "run",
+        "/home/raykprid/omniverse/work/mcp/gufi/examples/mcp/gufi_mcp/gufi_mcp_server.py"
+      ],
+      "cwd": "/home/raykprid/omniverse/work/mcp/gufi/examples/mcp/gufi_mcp",
+      "env": {
+        "PYTHONPATH": "/home/raykprid/omniverse/work/mcp/gufi/examples/mcp/gufi_mcp/src"
+      }
     }
   }
 }

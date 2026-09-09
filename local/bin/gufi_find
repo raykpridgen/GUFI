@@ -1,0 +1,972 @@
+#!/usr/bin/env python3
+# This file is part of GUFI, which is part of MarFS, which is released
+# under the BSD license.
+#
+#
+# Copyright (c) 2017, Los Alamos National Security (LANS), LLC
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation and/or
+# other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software without
+# specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+# From Los Alamos National Security, LLC:
+# LA-CC-15-039
+#
+# Copyright (c) 2017, Los Alamos National Security, LLC All rights reserved.
+# Copyright 2017. Los Alamos National Security, LLC. This software was produced
+# under U.S. Government contract DE-AC52-06NA25396 for Los Alamos National
+# Laboratory (LANL), which is operated by Los Alamos National Security, LLC for
+# the U.S. Department of Energy. The U.S. Government has rights to use,
+# reproduce, and distribute this software.  NEITHER THE GOVERNMENT NOR LOS
+# ALAMOS NATIONAL SECURITY, LLC MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR
+# ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  If software is
+# modified to produce derivative works, such modified software should be
+# clearly marked, so as not to confuse it with the version available from
+# LANL.
+#
+# THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL LOS ALAMOS NATIONAL SECURITY, LLC OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+# OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+
+
+
+import argparse
+import math
+import os
+import re
+import subprocess
+import sys
+import time
+
+from gufi_common import SQLITE3_INT64, SQLITE3_TEXT, SQLITE3_ASC, SQLITE3_DESC
+import gufi_common
+import gufi_config
+
+# location of this file
+PATH = os.path.realpath(__file__)
+
+SECONDS_PER_DAY = str(24 * 60 * 60) # do string conversion once
+
+'''file size units specified in GNU find.'''
+FILESIZE = {
+    'b' : 512,
+    'c' : 1,
+    'w' : 2,
+    'k' : 1024,
+    'M' : 1048576,
+    'G' : 1073741824
+}
+
+# Used to parse all numeric arguments
+# From man 1 find:
+#
+# Numeric arguments can be specified as
+#
+# +n     for greater than n,
+#
+# -n     for less than n,
+#
+# n      for exactly n.
+#
+def numeric_arg(n):
+    # pylint: disable=invalid-name
+    try:
+        float(n)
+    except:
+        # pylint: disable=raise-missing-from
+        raise argparse.ArgumentTypeError('{0} is not valid'.format(n))
+
+    op = None
+    if n[0] == '+':
+        op = '>'
+        n = n[1:]
+    elif n[0] == '-':
+        op = '<'
+        n = n[1:]
+    else:
+        op = '=='
+
+    return op, n
+
+# -size
+# requires '=' if passing in negative values:
+# i.e. -size=-2k
+def parse_size(size):
+    unit = 'b'
+    if size[-1] in FILESIZE:
+        unit = size[-1]
+        size = size[:-1]
+
+    comp, actual_size = numeric_arg(size)
+    return comp, int(math.ceil(float(actual_size))) * FILESIZE[unit]
+
+def need_aggregation(args):
+    return bool(args.num_results or args.smallest or args.largest or args.ls)
+
+LS_COL_NAMES = [
+    'inode',
+    'blocks',
+    'mode',
+    'nlink',
+    'uid',
+    'gid',
+    'size',
+    'mtime',
+    'name'
+]
+
+# not using fixed size padding like find(1)
+def pad_ls_output(G):
+    # columns before padding
+    RESULTS = 'results'
+    RESULTS_SCHEMA = ', '.join(LS_COL_NAMES) # not adding types
+
+    # max width of each column
+    # mode width is constant, but is computed because it is in the middle of the list
+    # name width doesn't matter and is not computed
+    MAX_WIDTHS = 'max_widths'
+    MAX_WIDTHS_SCHEMA = ', '.join(['{0}_len'.format(col) for col in LS_COL_NAMES[:-1]])
+    MAX_WIDTHS_INSERT = ', '.join(['max(length({0}))'.format(col) for col in LS_COL_NAMES[:-1]])
+
+    # right pad each column except name
+    # mode also doesn't need padding, but it is in the middle of the list
+    PADDED = ', '.join(['rpad({0}, (SELECT {0}_len FROM {1}))'.format(col, MAX_WIDTHS)
+                        for col in LS_COL_NAMES[:-1]] + [LS_COL_NAMES[-1]])
+
+    return '''
+    CREATE TABLE {0} ({1});
+    INSERT INTO  {0} {2};
+    CREATE TABLE {3} ({4});
+    INSERT INTO  {3} SELECT {5} FROM {0};
+    SELECT {6} FROM {0};
+    '''.format(RESULTS, RESULTS_SCHEMA, G,
+               MAX_WIDTHS, MAX_WIDTHS_SCHEMA, MAX_WIDTHS_INSERT,
+               PADDED)
+
+def build_aggregation_columns(args, path):
+    cols = []
+
+    # (select, col name, col type)
+
+    if args.smallest or args.largest:
+        sort_cols = [(None, 'type', SQLITE3_TEXT)]
+        if not args.ls:
+            sort_cols += [(None, 'size', SQLITE3_INT64)]
+        cols += sort_cols
+
+    if args.ls:
+        cols += [
+            (None, 'inode', SQLITE3_TEXT),
+            ('(size / 1024) + (not not (size % 1024))', 'blocks', SQLITE3_INT64),
+            ('modetotxt(mode)', 'mode', SQLITE3_TEXT),
+            (None, 'nlink', SQLITE3_INT64),
+            ('uidtouser(uid)', 'uid', SQLITE3_TEXT),
+            ('gidtogroup(gid)', 'gid', SQLITE3_TEXT),
+            (None, 'size', SQLITE3_INT64),
+            (gufi_common.timestyle_col('mtime'), 'mtime', SQLITE3_TEXT),
+            ('{0} || CASE type WHEN \'l\' THEN \' -> \' || linkname ELSE \'\' END'.format(path), 'name', SQLITE3_TEXT)
+        ]
+    else:
+        cols += [(path, 'name', SQLITE3_TEXT)]
+
+    return cols
+
+def build_where(args, table, root_uid=0, root_gid=0):
+    '''Build the WHERE clause'''
+
+    # pylint: disable=too-many-branches,unused-argument,too-many-locals,too-many-statements
+
+    where = []
+
+    now = time.time()
+
+    # if not ((os.geteuid() == root_uid) or (os.getegid() == root_gid)):
+    #     where += ['(uid == {0})'.format(os.getuid())]
+
+    if args.amin is not None:
+        where += ['({0} - atime) / 60 {1} {2}'.format(now, amin[0], amin[1])
+                  for amin in args.amin]
+
+    if args.anewer is not None:
+        where += ['atime > {0}'.format(args.anewer.st_atime)]
+
+    if args.atime is not None:
+        where += ['({0} - atime) / {1} {2} {3}'.format(now, SECONDS_PER_DAY, atime[0], atime[1])
+                  for atime in args.atime]
+
+    if args.cmin is not None:
+        where += ['({0} - ctime) / 60 {1} {2}'.format(now, cmin[0], cmin[1])
+                  for cmin in args.cmin]
+
+    if args.cnewer is not None:
+        where += ['ctime > {0}'.format(args.cnewer.st_ctime)]
+
+    if args.ctime is not None:
+        where += ['({0} - ctime) / {1} {2} {3}'.format(now, SECONDS_PER_DAY, ctime[0], ctime[1])
+                  for ctime in args.ctime]
+
+    if args.empty is True:
+        if table in gufi_common.SUMMARY_NAMES:
+            # this is slightly wrong: the number of subdirs should be
+            # counted, but that value is not immediately available
+            where += ['(type == \'d\') AND ((totfiles + totlinks) == 0)']
+        elif table in gufi_common.ENTRIES_NAMES:
+            where += ['(type == \'f\') AND (size == 0)']
+
+    if args.executable is True:
+        where += ['(mode & 64) == 64'] # 0100 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+
+    if args.false is True:
+        where += ['0']
+
+    if args.gid is not None:
+        where += ['gid {0} {1}'.format(gid[0], gid[1])
+                  for gid in args.gid]
+
+    if args.group is not None:
+        where += ['gid == {0}'.format(args.group)]
+
+    # if args.ilname is not None:
+
+    # matches on basename
+    # GLOB is case sensitive, so using REGEX
+    if args.iname is not None:
+        where += [' OR '.join(['name REGEXP \'(?i){0}\''.format(iname)
+                               for iname in args.iname])]
+
+    if args.inum is not None:
+        where += ['inode {0} {1}'.format(inum[0], inum[1])
+                  for inum in args.inum]
+
+    # Behaves in the same way as -iwholename. This option is deprecated, so please do not use it.
+    # if args.ipath is not None:
+
+    # matches on whole path
+    if args.iregex is not None:
+        if table in gufi_common.SUMMARY_NAMES:
+            where += [' OR '.join(['(rpath(sname, sroll) REGEXP \'(?i){0}\')'.format(iregex)
+                                   for iregex in args.iregex])]
+        elif table in gufi_common.ENTRIES_NAMES:
+            where += [' OR '.join(['(rpath(sname, sroll, name) REGEXP \'(?i){0}\')'.format(iregex)
+                                   for iregex in args.iregex])]
+
+    # if args.iwholename is not None:
+
+    if args.links is not None:
+        where += ['nlink {0} {1}'.format(links[0], links[1])
+                  for links in args.links]
+
+    if args.lname is not None:
+        where += ['type == \'l\'',
+                  'name GLOB \'{0}\''.format(args.lname)]
+
+    if args.mmin is not None:
+        where += ['({0} - mtime) / 60 {1} {2}'.format(now, mmin[0], mmin[1])
+                  for mmin in args.mmin]
+
+    if args.mtime is not None:
+        where += ['({0} - mtime) / {1} {2} {3}'.format(now, SECONDS_PER_DAY, mtime[0], mtime[1])
+                  for mtime in args.mtime]
+
+    # matches on basename
+    if args.name is not None:
+        where += [' OR '.join(['(name GLOB \'{0}\')'.format(name)
+                               for name in args.name])]
+
+    if args.newer is not None:
+        where += ['mtime > {0}'.format(args.newer.st_mtime)]
+
+    # if args.newerXY is not None:
+
+    # if args.nogroup is True:
+
+    # if args.nouser is True:
+
+    if args.path is not None:
+        where += [' OR '.join(['(rpath(sname, sroll) GLOB \'{0}\')'.format(path)
+                               for path in args.path])]
+
+    if args.perm is not None:
+        if args.perm[0] is None:   # exact match
+            where += ['((mode & 4095) == {0})'.format(args.perm[1])]
+        elif args.perm[0] == '-':  # all provided bits are set
+            where += ['((mode & 4095) & {0}) == {0}'.format(args.perm[1])]
+        elif args.perm[0] == '/':  # any provided bits are set
+            where += ['((mode & 4095) & {0}) != 0'.format(args.perm[1])]
+        # elif args.perm[0] == '+': # deprecated
+
+    if args.readable is True:
+        where += ['(mode & 256) == 256'] # 0400 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+
+    # matches on whole path
+    if args.regex is not None:
+        if table in gufi_common.SUMMARY_NAMES:
+            where += [' OR '.join(['(rpath(sname, sroll) REGEXP \'{0}\')'.format(regex)
+                                   for regex in args.regex])]
+        elif table in gufi_common.ENTRIES_NAMES:
+            where += [' OR '.join(['(rpath(sname, sroll, name) REGEXP \'{0}\')'.format(regex)
+                                   for regex in args.regex])]
+
+    if args.samefile is not None:
+        where += ['inode == {0}'.format(args.samefile.st_ino)]
+
+    if args.size is not None:
+        where += ['size {0} {1}'.format(size[0], size[1])
+                  for size in args.size]
+
+    if args.true is True:
+        where += ['1']
+
+    if args.type is not None:
+        # multiple types uses OR instead of AND
+        where += [' OR '.join(['(type == \'{0}\')'.format(t)
+                               for t in args.type])]
+
+    if args.uid is not None:
+        where += ['uid {0} {1}'.format(uid[0], uid[1]) for
+                  uid in args.uid]
+
+    # if args.used is not None:
+
+    if args.user is not None:
+        where += ['uid == {0}'.format(args.user)]
+
+    # if args.wholename is not None:
+
+    if args.writable is True:
+        where += ['(mode & 128) == 128'] # 0200 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+
+    # if args.xtype is not None:
+
+    # if args.context is not None:
+
+    return where
+
+def build_group_by(_args):
+    '''Build the GROUP BY clause'''
+    group_by = []
+
+    return group_by
+
+def build_order_by(args):
+    '''Build the ORDER BY clause'''
+    order_by = []
+
+    if args.smallest:
+        order_by += ['size {0}'.format(SQLITE3_ASC)]
+
+    if args.largest:
+        order_by += ['size {0}'.format(SQLITE3_DESC)]
+
+    # order by name last so it doesnt break user requested ordering
+    order_by += ['name {0}'.format(SQLITE3_ASC)]
+
+    return order_by
+
+def parse_escape(fmt, i):
+    ret = fmt[i]
+
+    if ret == 'a':
+        ret = '\a'
+    elif ret == 'b':
+        ret = '\b'
+    elif ret == 'c':
+        ret = ''
+        i = len(fmt)
+    elif ret == 'f':
+        ret = '\f'
+    elif ret == 'n':
+        ret = '\n'
+    elif ret == 'r':
+        ret = '\r'
+    elif ret == 't':
+        ret = '\t'
+    elif ret == 'v':
+        ret = '\v'
+    elif ret == '0':
+        ret = '\0'
+    elif ret == '\\':
+        ret = '\\'
+    elif ret.isdigit():
+        ret = chr(int(fmt[i:i + 3], 8))
+        i += 2 # + 1 when returning
+    else:
+        ret = '\\{0}'.format(ret)
+
+    return '\'{0}\''.format(ret), i + 1
+
+def parse_directives(fmt, fmt_len, i, path):
+    # pylint: disable=too-many-branches,too-many-statements
+    # unterminated directive prints ''; behavior is undefined in GNU find
+    if i >= fmt_len:
+        return '\'\'', i
+
+    # check for width formatting
+    width = re.match('[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)', fmt[i:])
+    if width is not None:
+        width = width.group(0)
+        i += len(width)
+    else:
+        width = ''
+
+    ret = fmt[i]
+
+    if ret == '%':
+        ret = '\'%\''
+    elif ret == 'a':
+        ret = 'printf(\'%{0}d\', atime)'
+    # elif ret == 'A':
+    elif ret == 'b':
+        ret = 'printf(\'%{0}d\', (blocks * blksize) / 512)'
+    elif ret == 'c':
+        ret = 'printf(\'%{0}d\', ctime)'
+    # elif ret == 'C':
+    elif ret == 'd':
+        ret = 'printf(\'%{0}u\', level() + (CASE type WHEN \'d\' THEN 0 ELSE 1 END))'
+    elif ret == 'D':
+        ret = 'printf(\'%{0}s\', \'-\')'
+    elif ret == 'f':
+        ret = 'printf(\'%{0}s\', name)'
+    # elif ret == 'F':
+    elif ret == 'g':
+        ret = 'gidtogroup(gid)'
+    elif ret == 'G':
+        ret = 'printf(\'%{0}d\', gid)'
+    elif ret == 'h':
+        ret = 'printf(\'%{{0}}s\', {0})'.format(path)
+    elif ret == 'H':
+        ret = 'printf(\'%{0}s\', starting_point())'
+    elif ret == 'i':
+        ret = 'printf(\'%{0}d\', inode)'
+    elif ret == 'k':
+        ret = 'printf(\'%{0}d\', (blocks * blksize) / 1024)'
+    elif ret == 'l':
+        ret = 'printf(\'%{0}s\', linkname)'
+    elif ret == 'm':
+        ret = 'printf(\'%{0}o\', mode & 511)' # 0777 have to use decimal or hexadecimal value because sqlite3 doesn't support octal
+    elif ret == 'M':
+        ret = 'printf(\'%{0}s\', modetotxt(mode))'
+    elif ret == 'n':
+        ret = 'printf(\'%{0}d\', nlink)'
+    elif ret == 'p':
+        ret = path
+    elif ret == 'P':
+        ret = 'printf(\'%{{0}}s\', substr({0}, length(starting_point()) + 2))'.format(path) # 2 because indexes start at 1
+    elif ret == 's':
+        ret = 'printf(\'%{0}u\', size)'
+    elif ret == 'S':
+        ret = 'printf(\'%{0}d\', (blksize * blocks) / size)'
+    elif ret == 't':
+        ret = 'printf(\'%{0}d\', mtime)'
+    # elif ret == 'T':
+    elif ret == 'u':
+        ret = 'uidtouser(uid)'
+    elif ret == 'U':
+        ret = 'printf(\'%{0}d\', uid)'
+    elif ret == 'y':
+        ret = 'printf(\'%{0}s\', type)'
+    # elif ret == 'Y':
+    # elif ret == 'Z':
+    else:
+        start = i # first character of bad directive
+
+        # find next escape or directive
+        ret = ''
+        while (i < fmt_len) and (fmt[i] != '%') and (fmt[i] != '\\'):
+            ret += fmt[i]
+            i += 1
+        ret = '\'{0}\''.format(fmt[start - len(width) - 1:i])
+        i -= 1
+
+    return ret.format(width), i + 1
+
+def build_output(args, name):
+    '''Build the output columns SELECT clause'''
+    output = [name]
+
+    if args.ls:
+        output = LS_COL_NAMES
+    elif args.printf is not None:
+        fmt = args.printf
+        fmt_len = len(fmt)
+        if fmt_len == 0:
+            return []
+
+        cols = []
+        i = 0
+        while i < fmt_len:
+            if fmt[i] == '\\':
+                column, i = parse_escape(fmt, i + 1)
+                cols += [column]
+            elif fmt[i] == '%':
+                column, i = parse_directives(fmt, fmt_len, i + 1, name)
+                cols += [column]
+            else:
+                cols += ['\'{0}\''.format(fmt[i])]
+                i += 1
+        output = [' || '.join(cols)]
+
+    return output
+
+def build_expression_parser():
+    EPILOG='''Report bugs to the GitHub Issues page at https://github.com/mar-file-system/GUFI/issues
+or by sending an email to <gufi-lanl@lanl.gov>'''
+
+    # parse the arguments
+    parser = argparse.ArgumentParser('gufi_find', description='GUFI version of find',
+                                     epilog=EPILOG, formatter_class=argparse.RawTextHelpFormatter,
+                                     add_help=False,
+                                     exit_on_error=False) # new in Python 3.9
+
+    gufi_common.add_help_version(parser)
+
+    # GNU find global options
+    parser.add_argument('-maxdepth',
+                        metavar='levels',
+                        type=gufi_common.get_non_negative,
+                        help='Descend at most levels (a non-negative integer) levels of directories below the command line arguments. -maxdepth 0 means only apply the tests and actions to the command line arguments.')
+    parser.add_argument('-mindepth',
+                        metavar='levels',
+                        type=gufi_common.get_non_negative,
+                        help='Do not apply any tests or actions at levels less than levels (a non-negative integer). -mindepth 1 means process all files except the command line arguments.')
+
+    # GNU find test expressions
+    parser.add_argument('-amin',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File was last accessed n minutes ago.')
+    parser.add_argument('-anewer',
+                        metavar='file',
+                        type=os.lstat,
+                        help='File was last accessed more recently than file was modified.')
+    parser.add_argument('-atime',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File was last accessed n*24 hours ago.')
+    parser.add_argument('-cmin',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File\'s status was last changed n minutes ago.')
+    parser.add_argument('-cnewer',
+                        metavar='file',
+                        type=os.lstat,
+                        help='File\'s status was last changed more recently than file was modified.')
+    parser.add_argument('-ctime',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File\'s status was last changed n*24 hours ago.')
+    parser.add_argument('-empty',
+                        action='store_true',
+                        help='File is empty and is either a regular file or a directory.')
+    parser.add_argument('-executable',
+                        action='store_true',
+                        help='Matches files which are executable and directories which are searchable (in a file name resolution sense).')
+    parser.add_argument('-false',
+                        action='store_true',
+                        help='File is false and is either a regular file or a directory.')
+    # parser.add_argument('-fstype',
+    #                     metavar='n',
+    #                     type=str,
+    #                     help='File is on a filesystem of type type.')
+    parser.add_argument('-gid',
+                        metavar='n',
+                        type=lambda gid : numeric_arg(str(gufi_common.get_gid(gid))),
+                        action='append',
+                        help='File\'s numeric group ID is n.')
+    parser.add_argument('-group',
+                        metavar='gname',
+                        type=gufi_common.get_group,
+                        help='File belongs to group gname (numeric group ID allowed).')
+    # parser.add_argument('-ilname',
+    #                     metavar='pattern',
+    #                     type=str,
+    #                     help='Like -lname, but the match is case insensitive.')
+    parser.add_argument('-iname',
+                        metavar='pattern',
+                        type=str,
+                        action='append',
+                        help='Like -name, but the match is case insensitive (uses regex, not glob).')
+    parser.add_argument('-inum',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File has inode number n. It is normally easier to use the -samefile test instead.')
+    # parser.add_argument('-ipath',
+    #                     metavar='pattern',
+    #                     type=str,
+    #                     help='Behaves in the same way as -iwholename. This option is deprecated, so please do not use it.')
+    parser.add_argument('-iregex',
+                        metavar='pattern',
+                        type=str,
+                        action='append',
+                        help='Like -regex, but the match is case insensitive.')
+    # parser.add_argument('-iwholename',
+    #                     metavar='pattern',
+    #                     type=str,
+    #                     help='Like -wholename, but the match is case insensitive.')
+    parser.add_argument('-links',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File has n links.')
+    parser.add_argument('-lname',
+                        metavar='pattern',
+                        type=str,
+                        help='File is a symbolic link whose contents match shell pattern.')
+    parser.add_argument('-mmin',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File\'s data was last modified n minutes ago.')
+    parser.add_argument('-mtime',
+                        metavar='n',
+                        type=numeric_arg,
+                        action='append',
+                        help='File\'s data was last modified n*24 hours ago.')
+    parser.add_argument('-name',
+                        metavar='pattern',
+                        type=str,
+                        action='append',
+                        help='Base of file name (the path with the leading directories removed) matches shell pattern.')
+    parser.add_argument('-newer',
+                        metavar='file',
+                        type=os.lstat,
+                        help='File was modified more recently than file.')
+    # parser.add_argument('-newerXY',
+    #                     metavar='reference',
+    #                     type=str,
+    #                     help='Compares the timestamp of the current file with reference.')
+    # parser.add_argument('-nouser',
+    #                     type='store_true',
+    #                     help='No user corresponds to file\'s numeric user ID.')
+    parser.add_argument('-path',
+                        metavar='pattern',
+                        type=str,
+                        action='append',
+                        help='File name matches shell pattern.')
+    parser.add_argument('-perm',
+                        metavar='mode',
+                        type=gufi_common.get_mode,
+                        help='File\'s permission bits (no prefix, -, or /) (octal mode)')
+    parser.add_argument('-readable',
+                        action='store_true',
+                        help='Matches files which are readable.')
+    parser.add_argument('-regex',
+                        metavar='pattern',
+                        type=str,
+                        action='append',
+                        help='File name matches regular expression pattern.')
+    parser.add_argument('-samefile',
+                        metavar='name',
+                        type=os.lstat,
+                        help='File refers to the same inode as name.')
+    parser.add_argument('-size',
+                        metavar='n',
+                        type=parse_size,
+                        action='append',
+                        help='Note that if searching for files of size less than some value (e.g. -2k), must use equal sign (e.g. -size=-2k) so that the value is not interpreted incorrectly by argparse.')
+    parser.add_argument('-true',
+                        action='store_true',
+                        help='Always true.')
+    parser.add_argument('-type',
+                        metavar='c',
+                        action='append',
+                        type=gufi_common.get_char,
+                        help='File is of type c.')
+    parser.add_argument('-uid',
+                        metavar='n',
+                        type=lambda uid : numeric_arg(str(gufi_common.get_uid(uid))),
+                        action='append',
+                        help='File\'s numeric user ID is n.')
+    # parser.add_argument('-used',
+    #                     metavar='n',
+    #                     type=numeric_arg,
+    #                     action='append',
+    #                     help='File was last accessed n days after its status was last changed.')
+    parser.add_argument('-user',
+                        metavar='uname',
+                        type=gufi_common.get_user,
+                        help='File is owned by user uname (numeric user ID allowed).')
+    # parser.add_argument('-wholename',
+    #                     metavar='pattern',
+    #                     type=str,
+    #                     action='append'
+    #                     help='See -path. This alternative is less portable than -path.')
+    parser.add_argument('-writable',
+                        action='store_true',
+                        help='Matches files which are writable.')
+    # parser.add_argument('-xtype',
+    #                     metavar='c',
+    #                     type=gufi_common.get_char,
+    #                     help='The same as -type unless the file is a symbolic link.')
+    # parser.add_argument('-context',
+    #                     metavar='pattern',
+    #                     type=str,
+    #                     help='(SELinux only) Security context of the file matches glob pattern.')
+
+    # GNU find actions
+    query = parser.add_mutually_exclusive_group()
+    query.add_argument('-fprint',
+                       metavar='file',
+                       type=str,
+                       help='Output result to file.')
+
+    query.add_argument('-ls',
+                       action='store_true',
+                       help='List current file ls -dils format.')
+    query.add_argument('-print',
+                       action='store_true',
+                       help='Print the full name on the standard output, followed by a newline, similar to GNU find.')
+    query.add_argument('-print0',
+                       action='store_true',
+                       help='Print the full name on the standard output, followed by a null character, similar to GNU find.')
+    query.add_argument('-printf',
+                       metavar='format',
+                       type=str,
+                       help='Print format on the standard output, similar to GNU find.')
+
+    # GUFI specific arguments
+    parser.add_argument('--num-results',
+                        metavar='n',
+                        type=gufi_common.get_non_negative,
+                        help='First n results.')
+
+    order = parser.add_mutually_exclusive_group()
+    order.add_argument('--smallest',
+                       action='store_true',
+                       help='Sort output by size, ascending.')
+    order.add_argument('--largest',
+                       action='store_true',
+                       help='Sort output by size, descending.')
+
+    parser.add_argument('--compress',
+                        action='store_true',
+                        help='Try to reduce memory usage by compressing with zlib (if available).')
+
+    gufi_common.add_common_flags(parser)
+
+    return parser
+
+# argv[0] should be the command name
+def run(argv, config_path, stdout=None, stderr=None):
+    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+    # find and parse the configuration file first
+    config = gufi_config.Server(config_path)
+
+    # parse 'real' options
+    # must be separate arguments
+    #
+    # results are ignored
+    real_handled = ['P']
+    real_not_handled = ['H', 'L', 'D', 'O']
+    arg_offset = 1 # offset this many arguments before passing into parser
+    while (arg_offset < len(argv)) and (argv[arg_offset][0] == '-'):
+        if argv[arg_offset][1:] not in (real_handled + real_not_handled):
+            break
+
+        if argv[arg_offset][1:] in real_not_handled:
+            sys.stderr.write('Found flag {0}. Ignoring.\n'.format(argv[arg_offset][1:]))
+
+        arg_offset += 1
+
+    # assume following arguments are paths until '-' is found
+
+    # parse paths
+    paths = []
+    while (arg_offset < len(argv)) and (argv[arg_offset][0] != '-'):
+        paths += [argv[arg_offset]]
+        arg_offset += 1
+    if len(paths) == 0:
+        paths = ['']
+
+    # all arguments afterwards are parsed as expressions
+
+    paths = gufi_common.clean_paths(config, paths)
+
+    try:
+        # parse expressions without the 'real' and path arguments
+        expression_parser = build_expression_parser()
+        args, unknown = expression_parser.parse_known_args(argv[arg_offset:])
+    except Exception as e: # pylint: disable=broad-exception-caught
+        print(e, file=sys.stderr)
+        sys.exit(1)
+
+    if len(paths) == 0:
+        return 1, '', ''
+
+    if len(unknown) > 0:
+        raise RuntimeError('gufi_find: unknown predicate `{0}\''.format(unknown[0]))
+
+    # create the query command
+    query_cmd = [
+        config.query,
+        '--no-print-sql-on-err',
+        '--threads', str(config.threads),
+        '--output-buffer-size', str(config.outputbuffer),
+        '-a', '1',
+        '--delim', ' ',
+    ]
+
+    if args.print is True:
+        query_cmd += ['--newline', '\n']
+    elif args.print0 is True:
+        query_cmd += ['--newline', '0']
+    elif args.printf is not None:
+        query_cmd += ['--suppress-newline']
+    elif args.fprint is not None:
+        pass
+
+    if args.compress is True:
+        query_cmd += ['--compress']
+
+    # constants only used here
+    INDEXROOT_LEN   = len(config.indexroot) + 2                                      # pylint: disable=invalid-name
+    VRSUMMARY_NAME  = 'substr(rpath(sname, sroll), {0})'.format(INDEXROOT_LEN)       # pylint: disable=invalid-name
+    VRPENTRIES_NAME = 'substr(rpath(sname, sroll, name), {0})'.format(INDEXROOT_LEN) # pylint: disable=invalid-name
+
+    # pylint: disable=invalid-name
+    if need_aggregation(args):
+        s_cols = build_aggregation_columns(args, VRSUMMARY_NAME)
+        e_cols = build_aggregation_columns(args, VRPENTRIES_NAME)
+
+        # -ls adds name column in build_aggregation_columns
+        # no -ls adds name column here because the name column depends on where it is used
+        col_decl = ['{0} {1}'.format(col_name, col_type)
+                    for _, col_name, col_type in s_cols] # both have the same columns
+
+        I = 'CREATE TABLE {0} ({1})'.format(
+            gufi_common.INTERMEDIATE_NAME,
+            ', '.join(col_decl))
+
+        S = 'INSERT INTO {0} {1}'.format(
+            gufi_common.INTERMEDIATE_NAME,
+            gufi_common.build_query([col_select if col_select else col_name
+                                     for col_select, col_name, _ in s_cols],
+                                    [gufi_common.VRSUMMARY],
+                                    build_where(args, gufi_common.VRSUMMARY),
+                                    build_group_by(args),
+                                    build_order_by(args),
+                                    args.num_results))
+
+        E = 'INSERT INTO {0} {1}'.format(
+            gufi_common.INTERMEDIATE_NAME,
+            gufi_common.build_query([col_select if col_select else col_name
+                                     for col_select, col_name, _ in e_cols],
+                                    [gufi_common.VRPENTRIES],
+                                    build_where(args, gufi_common.VRPENTRIES),
+                                    build_group_by(args),
+                                    build_order_by(args),
+                                    args.num_results))
+
+        K = 'CREATE TABLE {0} ({1})'.format(
+            gufi_common.AGGREGATE_NAME,
+            ', '.join(col_decl))
+
+        J = 'INSERT INTO {0} {1}'.format(
+            gufi_common.AGGREGATE_NAME,
+            gufi_common.build_query([col_name
+                                     for _, col_name, _ in s_cols],
+                                    [gufi_common.INTERMEDIATE_NAME],
+                                    None,
+                                    build_group_by(args),
+                                    build_order_by(args),
+                                    args.num_results))
+
+        G = gufi_common.build_query(build_output(args, 'name'),
+                                    [gufi_common.AGGREGATE_NAME],
+                                    None,
+                                    build_group_by(args),
+                                    build_order_by(args),
+                                    args.num_results)
+
+        if args.ls:
+            G = pad_ls_output(G)
+
+        query_cmd += [
+            '-I', I,
+            '-S', S,
+            '-E', E,
+            '-J', J,
+            '-K', K,
+            '-G', G
+        ]
+    else:
+        S = gufi_common.build_query(build_output(args, VRSUMMARY_NAME),
+                                    [gufi_common.VRSUMMARY],
+                                    build_where(args, gufi_common.VRSUMMARY),
+                                    build_group_by(args),
+                                    build_order_by(args),
+                                    args.num_results)
+
+        E = gufi_common.build_query(build_output(args, VRPENTRIES_NAME),
+                                    [gufi_common.VRPENTRIES],
+                                    build_where(args, gufi_common.VRPENTRIES),
+                                    build_group_by(args),
+                                    build_order_by(args),
+                                    args.num_results)
+        query_cmd += [
+            '-S', S,
+            '-E', E
+        ]
+
+    if args.maxdepth is not None:
+        query_cmd += ['--max-level', str(args.maxdepth)]
+
+    if args.mindepth is not None:
+        query_cmd += ['--min-level', str(args.mindepth)]
+
+    if args.skip:
+        query_cmd += ['--skip-file', args.skip]
+
+    if args.verbose:
+        gufi_common.print_query(query_cmd + paths)
+
+    if args.fprint:
+        with open(args.fprint, 'wb') as out:
+            query = subprocess.Popen(query_cmd + paths, stdout=out)
+    else:
+        query = subprocess.Popen(query_cmd + paths, # pylint: disable=consider-using-with
+                                 stdout=stdout,
+                                 stderr=stderr,
+                                 text=True)
+    out, err = query.communicate()                  # block until query finishes
+
+    return query.returncode, out, err
+
+if __name__ == '__main__':
+    sys.exit(run(sys.argv, gufi_config.PATH)[0])

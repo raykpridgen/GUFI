@@ -60,103 +60,33 @@
 # OF SUCH DAMAGE.
 
 
-import asyncio
-from pathlib import Path
 
-from mcp import Client
+# This file should generally not be called directly. This script is
+# meant for advanced users running on clients to call gufi_query
+# without knowing the indexroot.
+import subprocess
+import sys
 
-from gufi_util import format_tool_result_text, get_settings
+import gufi_config # pylint: disable=wrong-import-position
 
+def run(args, config_path, stdout=None, stderr=None):
+    '''
+    Send all arguments to gufi_query
+    '''
 
-async def call_and_print(client: Client, tool: str, arguments: dict | None = None) -> None:
-    print(f"\n==> {tool}")
-    if arguments:
-        print(f"    args: {arguments}")
-    result = await client.call_tool(tool, arguments or {})
-    print(format_tool_result_text(result))
+    config = gufi_config.Server(config_path)
 
+    # not automatically adding config.indexroot
+    cmd = [config.query] + args[1:]
 
-async def main() -> None:
-    settings = get_settings()
-    index = settings.default_index
-    output_path = Path(__file__).resolve().parent / "mcp.out"
+    # run the command
+    query = subprocess.Popen(cmd,       # pylint: disable=consider-using-with
+                             stdout=stdout,
+                             stderr=stderr,
+                             text=True)
+    out, err = query.communicate()      # block until query finishes
 
-    print(f"Connecting to MCP server at {settings.mcp_server_url}")
+    return query.returncode, out, err
 
-    sections: list[str] = []
-
-    async with Client(settings.mcp_server_url) as client:
-        tools = await client.list_tools()
-        tool_names = sorted(tool.name for tool in tools.tools)
-        header = "Available tools:\n  " + "\n  ".join(tool_names)
-        print(header)
-        sections.append(header)
-
-        await call_and_print(client, "gufi_location")
-        sections.append("gufi_location")
-
-        await call_and_print(client, "gufi_version")
-        sections.append("gufi_version")
-
-        await call_and_print(
-            client,
-            "gufi_query_local_index",
-            {
-                "index": index,
-                "sql_query": "SELECT name, size FROM vrpentries ORDER BY size DESC LIMIT 5",
-                "return_limit": 10,
-            },
-        )
-        sections.append("gufi_query_local_index")
-
-        await call_and_print(client, "gufi_client_ls", {"index": index})
-        sections.append("gufi_client_ls")
-
-        await call_and_print(client, "gufi_client_du", {"index": index})
-        sections.append("gufi_client_du")
-
-        await call_and_print(
-            client,
-            "gufi_client_find",
-            {"index": index, "arguments": "-type f"},
-        )
-        sections.append("gufi_client_find")
-
-        await call_and_print(
-            client,
-            "gufi_client_stat",
-            {"index": f"{index}/doc_min.txt"},
-        )
-        sections.append("gufi_client_stat")
-
-        await call_and_print(
-            client,
-            "gufi_client_stats",
-            {"index": index, "arguments": "-c total-filecount"},
-        )
-        sections.append("gufi_client_stats")
-
-        await call_and_print(
-            client,
-            "gufi_client_query",
-            {
-                "index": index,
-                "arguments": (
-                    '-E "SELECT name, size FROM vrpentries '
-                    "WHERE type = 'f' ORDER BY size DESC LIMIT 3;\""
-                ),
-            },
-        )
-        sections.append("gufi_client_query")
-
-    note = (
-        "\nDemo complete. Tools exercised: "
-        + ", ".join(sections[1:])
-    )
-    print(note)
-    output_path.write_text(note + "\n", encoding="utf-8")
-    print(f"\nWrote summary to {output_path}")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+if __name__  == '__main__':
+    sys.exit(run(sys.argv, gufi_config.PATH)[0])

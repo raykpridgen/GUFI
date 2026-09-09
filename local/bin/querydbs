@@ -46,7 +46,7 @@
 # modified to produce derivative works, such modified software should be
 # clearly marked, so as not to confuse it with the version available from
 # LANL.
-#
+
 # THIS SOFTWARE IS PROVIDED BY LOS ALAMOS NATIONAL SECURITY, LLC AND CONTRIBUTORS
 # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
 # THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -60,103 +60,75 @@
 # OF SUCH DAMAGE.
 
 
-import asyncio
-from pathlib import Path
 
-from mcp import Client
+import argparse
+import sys
+import subprocess
 
-from gufi_util import format_tool_result_text, get_settings
+import gufi_common
+import gufi_config
 
+def parse_args(argv):
+    parser = argparse.ArgumentParser('querydbs', description='Query GUFI result dbs')
 
-async def call_and_print(client: Client, tool: str, arguments: dict | None = None) -> None:
-    print(f"\n==> {tool}")
-    if arguments:
-        print(f"    args: {arguments}")
-    result = await client.call_tool(tool, arguments or {})
-    print(format_tool_result_text(result))
+    parser.add_argument('table_name',
+                        help='name of table in database file to attach; also used for view name: \'v<table_name>\'')
+    parser.add_argument('SQL',
+                        help='arbitrary SQL executed on view')
 
+    parser.add_argument('db',
+                        nargs='+',
+                        help='path of source database file(s) to add to view')
 
-async def main() -> None:
-    settings = get_settings()
-    index = settings.default_index
-    output_path = Path(__file__).resolve().parent / "mcp.out"
+    parser.add_argument('-d',
+                        type=gufi_common.get_char,
+                        dest='delim',
+                        default='|',
+                        help='delimiter')
 
-    print(f"Connecting to MCP server at {settings.mcp_server_url}")
+    parser.add_argument('--attach-prefix',
+                        metavar='name',
+                        default='querydbs_prefix',
+                        help='name when attaching dbs')
 
-    sections: list[str] = []
+    parser.add_argument('--verbose', '-V',
+                        action='store_true',
+                        help='Show the equivalent shell command passing raw SQL into gufi_sqlite3')
 
-    async with Client(settings.mcp_server_url) as client:
-        tools = await client.list_tools()
-        tool_names = sorted(tool.name for tool in tools.tools)
-        header = "Available tools:\n  " + "\n  ".join(tool_names)
-        print(header)
-        sections.append(header)
+    return parser.parse_args(argv[1:])
 
-        await call_and_print(client, "gufi_location")
-        sections.append("gufi_location")
+def run(argv, config_path):
+    # find and parse the configuration file first
+    config = gufi_config.Server(config_path)
 
-        await call_and_print(client, "gufi_version")
-        sections.append("gufi_version")
+    args = parse_args(argv)
 
-        await call_and_print(
-            client,
-            "gufi_query_local_index",
-            {
-                "index": index,
-                "sql_query": "SELECT name, size FROM vrpentries ORDER BY size DESC LIMIT 5",
-                "return_limit": 10,
-            },
-        )
-        sections.append("gufi_query_local_index")
+    attach = [] # ATTACH '<db>' AS <attach_prefix><index>;
+    select = [] # SELECT * FROM <attach_prefix><index>.<table_name>
 
-        await call_and_print(client, "gufi_client_ls", {"index": index})
-        sections.append("gufi_client_ls")
+    for i, db in enumerate(args.db):
+        attach_name = '{}{}'.format(args.attach_prefix, i)
+        attach += ['ATTACH \'{}\' AS {};'.format(db, attach_name)]
+        select += ['SELECT * FROM {}.{}'.format(attach_name, args.table_name)]
 
-        await call_and_print(client, "gufi_client_du", {"index": index})
-        sections.append("gufi_client_du")
+    # CREATE TEMP VIEW v<table_name> AS SELECT * FROM <attach_prefix><index>.<table_name> ... ;
+    union_all = 'CREATE TEMP VIEW v{} AS '.format(args.table_name) + ' UNION ALL '.join(select) + ';'
 
-        await call_and_print(
-            client,
-            "gufi_client_find",
-            {"index": index, "arguments": "-type f"},
-        )
-        sections.append("gufi_client_find")
+    cmd = [config.sqlite3,'-d', args.delim]
+    sql = attach + [union_all, args.SQL]
+    stdin = '\n'.join(sql)
 
-        await call_and_print(
-            client,
-            "gufi_client_stat",
-            {"index": f"{index}/doc_min.txt"},
-        )
-        sections.append("gufi_client_stat")
+    if args.verbose:
+        print('(')
+        for line in sql:
+            print('    echo "{}"'.format(line))
+        print(') {} -d "{}"'.format(cmd[0], cmd[2]))
+        sys.stdout.flush()
 
-        await call_and_print(
-            client,
-            "gufi_client_stats",
-            {"index": index, "arguments": "-c total-filecount"},
-        )
-        sections.append("gufi_client_stats")
+    query = subprocess.Popen(cmd, stdin=subprocess.PIPE)    # pylint: disable=consider-using-with
+    query.communicate(stdin.encode())                       # block until query finishes
 
-        await call_and_print(
-            client,
-            "gufi_client_query",
-            {
-                "index": index,
-                "arguments": (
-                    '-E "SELECT name, size FROM vrpentries '
-                    "WHERE type = 'f' ORDER BY size DESC LIMIT 3;\""
-                ),
-            },
-        )
-        sections.append("gufi_client_query")
+    return query.returncode
 
-    note = (
-        "\nDemo complete. Tools exercised: "
-        + ", ".join(sections[1:])
-    )
-    print(note)
-    output_path.write_text(note + "\n", encoding="utf-8")
-    print(f"\nWrote summary to {output_path}")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+if __name__ == '__main__':
+    sys.exit(run(sys.argv, gufi_config.PATH))

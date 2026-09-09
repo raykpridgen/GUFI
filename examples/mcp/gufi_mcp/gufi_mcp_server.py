@@ -59,39 +59,480 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
-from gufi_util import *
 
-load_dotenv()
-
-SCHEMAFILE=os.getenv("SCHEMAFILE")
-REMOTEHOST=os.getenv("REMOTEHOST")
-MCPTRANSPORT=os.getenv("MCPTRANSPORT")
-MCPSRVHOST=os.getenv("MCPTRANSPORT")
-MCPSRVPORT=os.getenv("MCPSRVPORT")
-GUFIVTLIB=os.getenv("GUFIVTLIB")
-GUFI_EXE=os.getenv("GUFI_EXECUTABLE")
-GUFI_INDEXES_ROOT=os.getenv("GUFI_INDEXES_ROOT")
-PLOT_DIR=Path(os.getenv("GUFI_PLOT_DIR", str(Path(__file__).parent / "plots")))
-
-SCHEMA_REGISTRY: SchemaRegistry = resolve_view_types(parse_schema_registry(SCHEMAFILE))
-
-
-mcp = MCPServer(
-    name="server"
+from gufi_util import (
+    GufiMcpSettings,
+    MCPServer,
+    Path,
+    SchemaRegistry,
+    TreesummaryStatus,
+    get_settings,
+    inspect_treesummary_status,
+    is_valid_sql_query,
+    json,
+    os,
+    parse_schema_registry,
+    re,
+    resolve_index_path,
+    resolve_view_types,
+    run_gufi_client_tool,
+    subprocess,
+    validate_query_columns,
 )
 
-'''
---------------- TOOLS ---------------
-'''
+from gufi_mcp.agent_routing import (
+    build_find_biggest_files_prompt,
+    build_plan_gufi_query_prompt,
+    build_routing_payload,
+    build_session_briefing_prompt,
+    build_simple_query_prompt,
+    route_query,
+)
+from gufi_mcp.event_logger import EventLogger, attach_event_logging
+from gufi_mcp.gufi_vt_executor import get_executor
+from gufi_mcp.pipeline_service import (
+    estimate_query_cost as estimate_plan_cost,
+    execute_query_plan as run_query_plan,
+    explain_plan,
+    validate_plan,
+)
+from gufi_mcp.query_plan import QueryPlanPipeline
+from gufi_mcp.schema_resources import (
+    ROLLUP_SEMANTICS_RESOURCE,
+    QUERY_FLAGS_RESOURCE,
+    UDFS_RESOURCE,
+    enrich_table_schema,
+    get_static_resource,
+)
+
+SETTINGS: GufiMcpSettings = get_settings()
+SCHEMA_REGISTRY: SchemaRegistry = resolve_view_types(
+    parse_schema_registry(str(SETTINGS.schema_file))
+)
+
+mcp = MCPServer("gufi-mcp")
+
+EVENT_LOGGER = EventLogger.from_path(SETTINGS.event_log_path)
+attach_event_logging(mcp, EVENT_LOGGER)
+
+try:
+    get_executor()
+except FileNotFoundError:
+    pass
+
+
+def _run_gufi_client(
+    tool: str,
+    index: str,
+    arguments: str = "",
+    client_config: str = "",
+) -> str:
+    """Shared helper for all gufi_client_* MCP tools."""
+    if not index.strip():
+        index = SETTINGS.default_index
+    config_override = client_config.strip() or None
+    return run_gufi_client_tool(tool, index, arguments, config_override)
+
 
 @mcp.tool()
 def gufi_version() -> str:
     """Return the version string of the configured gufi_query executable."""
-    result = subprocess.run([GUFI_EXE, "--version"], capture_output=True, text=True)
-    if result.returncode == 0:
-        return result.stdout
+    result = subprocess.run(
+        [str(SETTINGS.gufi_executable), "--version"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.stdout if result.returncode == 0 else result.stderr
+
+
+@mcp.tool()
+def gufi_location() -> str:
+    """Return the absolute path to the configured gufi_query executable."""
+    return str(SETTINGS.gufi_executable.resolve())
+
+
+@mcp.tool()
+def gufi_query_local_index(index: str, sql_query: str, return_limit: int = 0) -> str:
+    """
+    Run a SQL query against a local GUFI index. return_limit=0 means no limit.
+
+    Deprecated for agents: prefer the structured pipeline (validate → execute_query_plan).
+    """
+    try:
+        index_path = resolve_index_path(index, SETTINGS.indexes_root)
+    except FileNotFoundError as exc:
+        return f"Error: {exc}\n"
+
+    if not is_valid_sql_query(sql_query, dialect="sqlite"):
+        return "Error: invalid SQL syntax.\n"
+
+    match_table = re.search(r"\bFROM\b\s+(\w+)", sql_query, re.IGNORECASE)
+    if match_table is None:
+        return "Error: could not determine table from query.\n"
+
+    table_found = match_table.group(1)
+    if table_found not in SCHEMA_REGISTRY:
+        available = list(SCHEMA_REGISTRY.keys())
+        return f"Error: unknown table '{table_found}'. Available tables: {available}\n"
+
+    bad_cols = validate_query_columns(sql_query, table_found, SCHEMA_REGISTRY)
+    if bad_cols:
+        valid_cols = [c["name"] for c in SCHEMA_REGISTRY[table_found]]
+        return (
+            f"Error: unknown column(s) {bad_cols}. "
+            f"Columns available in '{table_found}': {valid_cols}\n"
+        )
+
+    result = subprocess.run(
+        [
+            str(SETTINGS.gufi_executable),
+            "-d", "\t",
+            "-E", sql_query,
+            str(index_path) + os.sep,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return f"Error: gufi_query failed: {result.stderr}\n"
+
+    lines = result.stdout.splitlines()
+    if return_limit > 0:
+        lines = lines[:return_limit]
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def gufi_client_ls(index: str, arguments: str = "", client_config: str = "") -> str:
+    """List entries in a GUFI index via the remote gufi_ls client wrapper.
+
+    Prefer this over the QueryPlan pipeline for simple directory listings.
+    If output satisfies the user, stop — do not draft a plan.
+    """
+    return _run_gufi_client("ls", index, arguments, client_config)
+
+
+@mcp.tool()
+def gufi_client_du(index: str, arguments: str = "", client_config: str = "") -> str:
+    """Summarize disk usage for a GUFI index via the remote gufi_du client wrapper.
+
+    Prefer this over the QueryPlan pipeline for directory disk-usage totals.
+    If output satisfies the user, stop — do not draft a plan.
+    """
+    return _run_gufi_client("du", index, arguments, client_config)
+
+
+@mcp.tool()
+def gufi_client_find(index: str, arguments: str = "", client_config: str = "") -> str:
+    """Find paths in a GUFI index via the remote gufi_find client wrapper.
+
+    Prefer this over the QueryPlan pipeline for find/largest-files asks.
+    If output satisfies the user, stop — do not draft a plan.
+    """
+    return _run_gufi_client("find", index, arguments, client_config)
+
+
+@mcp.tool()
+def gufi_client_stat(index: str, arguments: str = "", client_config: str = "") -> str:
+    """Stat entries in a GUFI index via the remote gufi_stat client wrapper.
+
+    Prefer this over the QueryPlan pipeline for path metadata lookups.
+    If output satisfies the user, stop — do not draft a plan.
+    """
+    return _run_gufi_client("stat", index, arguments, client_config)
+
+
+@mcp.tool()
+def gufi_client_stats(index: str, arguments: str = "", client_config: str = "") -> str:
+    """Run canned gufi_stats queries via the remote client wrapper.
+
+    Prefer this over the QueryPlan pipeline for canned index statistics.
+    If output satisfies the user, stop — do not draft a plan.
+    """
+    return _run_gufi_client("stats", index, arguments, client_config)
+
+
+@mcp.tool()
+def gufi_client_getfattr(index: str, arguments: str = "", client_config: str = "") -> str:
+    """Read extended attributes via the remote gufi_getfattr client wrapper.
+
+    Prefer this over the QueryPlan pipeline for xattr lookups.
+    If output satisfies the user, stop — do not draft a plan.
+    """
+    return _run_gufi_client("getfattr", index, arguments, client_config)
+
+
+@mcp.tool()
+def gufi_client_query(index: str, arguments: str = "", client_config: str = "") -> str:
+    """Run gufi_query on the server via SSH. Pass gufi_query flags in arguments."""
+    return _run_gufi_client("query", index, arguments, client_config)
+
+
+@mcp.prompt()
+def gufi_session_briefing() -> str:
+    """
+    Session-start briefing: project context, MCP resources, routing gate, and tools.
+
+    Fetch this at the beginning of a GUFI session (or when unsure how to proceed).
+    For a specific user question, also call plan_gufi_query(index, question).
+    """
+    return build_session_briefing_prompt(default_index=SETTINGS.default_index)
+
+
+@mcp.prompt()
+def find_biggest_files(index: str) -> str:
+    """Prompt an agent to find the largest files in a GUFI index."""
+    return build_find_biggest_files_prompt(index, default_index=SETTINGS.default_index)
+
+
+@mcp.prompt()
+def gufi_simple_query(index: str, question: str) -> str:
+    """Wrapper-only briefing for simple du/ls/find/stat asks on an index."""
+    return build_simple_query_prompt(
+        index, question, default_index=SETTINGS.default_index
+    )
+
+
+@mcp.resource("gufi://indexes")
+def gufi_indexes() -> dict[str, str]:
+    """List GUFI indexes discovered under GUFI_INDEXES_ROOT."""
+    indexes: dict[str, str] = {}
+    index_root = SETTINGS.indexes_root
+
+    if index_root.is_dir():
+        for entry in index_root.iterdir():
+            if not entry.is_dir():
+                continue
+            db_path = entry / "db.db"
+            if db_path.is_file():
+                indexes[entry.name] = str(entry) + os.sep
+
+    return indexes
+
+
+@mcp.resource("gufi://schemas/{schema}")
+def gufi_schemas_search(schema: str = "query_surfaces") -> dict:
+    """
+    Discover GUFI table/view schemas.
+
+    schema='query_surfaces' returns descriptions of all query surfaces.
+    schema=<table_name> returns column definitions for that table or view.
+    """
+    with open(SETTINGS.schema_file, "r", encoding="utf-8") as file:
+        data = json.load(file)
+
+    if schema == "query_surfaces":
+        return data.get("query_surfaces", {})
+
+    static = get_static_resource(schema)
+    if static is not None:
+        return static
+
+    if schema in SCHEMA_REGISTRY:
+        return {
+            schema: enrich_table_schema(schema, SCHEMA_REGISTRY[schema]),
+        }
+
+    return {
+        "error": (
+            f"Schema '{schema}' not found. "
+            "Use 'query_surfaces' to list available tables, or "
+            "udfs / query-flags / rollup-semantics for static references."
+        )
+    }
+
+
+@mcp.resource("gufi://udfs")
+def gufi_udfs() -> dict:
+    """Path-aware and utility SQL functions available in gufi_query."""
+    return UDFS_RESOURCE
+
+
+@mcp.resource("gufi://query-flags")
+def gufi_query_flags() -> dict:
+    """GUFI query pipeline flags (-I/-T/-S/-E/-K/-J/-G) and scope flags."""
+    return QUERY_FLAGS_RESOURCE
+
+
+@mcp.resource("gufi://rollup-semantics")
+def gufi_rollup_semantics() -> dict:
+    """How index rollup affects tables, paths, and query surfaces."""
+    return ROLLUP_SEMANTICS_RESOURCE
+
+
+@mcp.tool()
+def gufi_route_query(question: str) -> dict:
+    """
+    Classify a user question as wrapper vs QueryPlan pipeline before calling tools.
+
+    Returns route, recommended_tools, avoid_tools, resources_needed, and stop_if_satisfied.
+    Call this once per ask; prefer wrapper when route is 'wrapper'.
+    """
+    return build_routing_payload(question)
+
+
+@mcp.tool()
+def new_query_plan(index: str, intent: str = "", template: str = "") -> dict:
+    """
+    Create a skeleton QueryPlan IR for the agent to fill in stage by stage.
+
+    For simple list/du/find/stat asks, use gufi_client_* instead. Do not start a
+    QueryPlan if a wrapper tool already answered the question.
+
+    template='total_file_size' returns a known-good aggregation example.
+    Otherwise returns an empty plan with pipeline stages set to null.
+    """
+    if not index.strip():
+        index = SETTINGS.default_index
+
+    if template == "total_file_size":
+        pipeline = QueryPlanPipeline.total_file_size(index)
     else:
-        return result.stderr
+        pipeline = QueryPlanPipeline.skeleton(index, intent)
+
+    stages = [
+        ("init", "-I"),
+        ("tree_sql", "-T"),
+        ("summary_sql", "-S"),
+        ("entries_sql", "-E"),
+        ("aggregate_create", "-K"),
+        ("aggregate_insert", "-J"),
+        ("final_select", "-G"),
+    ]
+    result: dict = {
+        "plan": pipeline.to_dict(),
+        "pipeline_stages": [
+            {
+                "stage": stage,
+                "flag": flag,
+                "current_sql": getattr(pipeline.plan.pipeline, stage),
+            }
+            for stage, flag in stages
+        ],
+        "next_steps": [
+            "Edit pipeline stage SQL fields in the plan object.",
+            "Call validate_query_plan; save the returned plan_hash.",
+            "Call estimate_query_cost and explain_query_plan before execute.",
+            "Call execute_query_plan with the same plan and plan_hash.",
+        ],
+    }
+    check_text = intent.strip() or template.strip()
+    if check_text:
+        routing = route_query(check_text)
+        if routing.route == "wrapper":
+            result["routing_warning"] = (
+                "This intent matches the wrapper path; prefer gufi_client_* "
+                "unless you need custom SQL or validated execution."
+            )
+    return result
+
+
+@mcp.tool()
+def validate_query_plan(plan: dict) -> dict:
+    """
+    Validate a QueryPlan IR without executing against an index.
+
+    For simple list/du/find/stat asks, use gufi_client_* instead. Do not validate
+    a plan if a wrapper tool already answered the question.
+
+    Returns errors, warnings, a normalized plan dict, and plan_hash when valid.
+    """
+    return validate_plan(plan, schema_registry=SCHEMA_REGISTRY)
+
+
+@mcp.tool()
+def estimate_query_cost(plan: dict) -> dict:
+    """
+    Static cost estimate for a QueryPlan (no index I/O).
+
+    For simple list/du/find/stat asks, use gufi_client_* instead.
+
+    Returns cost_level (LOW/MEDIUM/HIGH), signals, and tables_touched.
+    """
+    return estimate_plan_cost(plan, schema_registry=SCHEMA_REGISTRY)
+
+
+@mcp.tool()
+def explain_query_plan(plan: dict) -> dict:
+    """
+    Explain a QueryPlan IR in plain language and show compiled gufi_vt SQL.
+
+    For simple list/du/find/stat asks, use gufi_client_* instead.
+
+    Resolves the index path from GUFI_INDEXES_ROOT; does not execute the query.
+    """
+    return explain_plan(
+        plan,
+        schema_registry=SCHEMA_REGISTRY,
+        indexes_root=SETTINGS.indexes_root,
+    )
+
+
+@mcp.tool()
+def execute_query_plan(
+    plan: dict,
+    plan_hash: str,
+    dry_run: bool = False,
+    approved: bool = False,
+) -> dict:
+    """
+    Execute a validated QueryPlan via gufi_vt after plan_hash verification.
+
+    For simple list/du/find/stat asks, use gufi_client_* instead. Do not execute
+    a plan if a wrapper tool already answered the question.
+
+    Re-validates server-side. HIGH cost plans require approved=True or dry_run=True.
+    """
+    return run_query_plan(
+        plan,
+        plan_hash,
+        dry_run=dry_run,
+        approved=approved,
+        schema_registry=SCHEMA_REGISTRY,
+        indexes_root=SETTINGS.indexes_root,
+    )
+
+
+@mcp.prompt()
+def plan_gufi_query(index: str, question: str) -> str:
+    """Guide an agent through routing; wrapper path or QueryPlan workflow by ask type."""
+    return build_plan_gufi_query_prompt(
+        index,
+        question,
+        default_index=SETTINGS.default_index,
+    )
+
+
+@mcp.tool()
+def gufi_check_treesummary(index: str) -> TreesummaryStatus:
+    """
+    Check whether the optional treesummary table exists for a GUFI index.
+
+    Call this before using pipeline tree_sql (-T) or scope.use_treesummary.
+    index: index name (e.g. 'notes', 'vault') or 'index_name/sub/path' for a subtree.
+
+    Returns treesummary_available (bool) after a fast sqlite_master probe on db.db.
+    Does not execute gufi_query or build treesummary.
+    """
+    if not index.strip():
+        index = SETTINGS.default_index
+    return inspect_treesummary_status(index)
+
+
+if __name__ == "__main__":
+    mcp.run(
+        transport=SETTINGS.mcp_transport,
+        host=SETTINGS.mcp_server_host,
+        port=SETTINGS.mcp_server_port,
+    )
+
+
+
+# OLD STUFF - MOSTLY EXTRACIRRICULAR
+
+
 
 '''
 @mcp.tool()
@@ -106,7 +547,6 @@ def gufi_schema_columns(table: str) -> list[ColumnDef]:
 def gufi_schema_tables() -> list[str]:
     """List all queryable GUFI tables and views known to the schema registry."""
     return list(SCHEMA_REGISTRY.keys())
-'''
 
 @mcp.tool()
 def gufi_plot_analytics(
@@ -232,41 +672,7 @@ def gufi_query_find_largest_files(index: str, return_count: int) -> list[FileEnt
     rows.sort(key=lambda r: r["size"], reverse=True)
     return rows[:return_count]
 
-@mcp.tool()
-def gufi_query_local_index(index: str, sql_query: str,return_limit: int = 0) -> str:
-    """Run a SQL query against a local GUFI index. return_limit=0 means no limit."""
 
-    index_root = Path(GUFI_INDEXES_ROOT + index)
-
-    if not index_root.is_dir():
-        return f"Error: index '{index}' not found.\n"
-
-    if not is_valid_sql_query(sql_query, dialect="sqlite"):
-        return "Error: invalid SQL syntax.\n"
-
-    match_table = re.search(r"\bFROM\b\s+(\w+)", sql_query, re.IGNORECASE)
-    if match_table is None:
-        return "Error: could not determine table from query.\n"
-    table_found = match_table.group(1)
-    if table_found not in SCHEMA_REGISTRY:
-        available = list(SCHEMA_REGISTRY.keys())
-        return f"Error: unknown table '{table_found}'. Available tables: {available}\n"
-
-    bad_cols = validate_query_columns(sql_query, table_found, SCHEMA_REGISTRY)
-    if bad_cols:
-        valid_cols = [c["name"] for c in SCHEMA_REGISTRY[table_found]]
-        return f"Error: unknown column(s) {bad_cols}. Columns available in '{table_found}': {valid_cols}\n"
-
-    result = subprocess.run(
-        [GUFI_EXE, "-d", "\t", "-E", sql_query, f"{GUFI_INDEXES_ROOT}{index_root.name}/"],
-        capture_output=True, text=True
-    )
-
-    if result.returncode != 0:
-        return f"Error: gufi_query failed: {result.stderr}\n"
-
-    lines = result.stdout.splitlines()
-    return "\n".join(lines[:return_limit] if return_limit else lines)
 
 @mcp.tool()
 def gufi_subtree_analytics(
@@ -656,119 +1062,5 @@ def gufi_check_index_health(
         execution_time_ms=round((time.perf_counter() - t_start) * 1000, 2),
     )
 
-'''
---------------- PROMPTS ---------------
-'''
-
-@mcp.prompt()
-def find_biggest_files(index: str):
-    ''' Prompt agent to find biggest files in an index '''
-    return f"Please go find the largest files within the {index} index. Thank you."
 
 '''
---------------- RESOURCES ---------------
-'''
-
-@mcp.resource("gufi://indexes")
-def gufi_indexes() -> dict[str, str]:
-    index_root = Path(GUFI_INDEXES_ROOT)
-    indexes = {}
-
-    if index_root.exists() and index_root.is_dir():
-        # Check for any GUFI indexes
-        for entry in index_root.iterdir():
-            # Keep path of index for return
-            index_path = GUFI_INDEXES_ROOT + entry.name + "/"
-            # For an entry, check for db next layer down
-            if entry.is_dir() and Path(index_path + "db.db").is_file():
-                indexes[entry.name] = index_path
-
-    return indexes
-
-@mcp.resource("gufi://schemas/{schema}")
-def gufi_schemas_search(schema: str = "query_surfaces") -> dict:
-    """
-    Discover GUFI table/view schemas.
-
-    - schema='query_surfaces': returns a description dict of all available query surfaces.
-    - schema=<table_name>: returns a structured list of ColumnDef for that table or view.
-    """
-    with open(SCHEMAFILE, "r") as file:
-        data = json.load(file)
-
-    if schema == "query_surfaces":
-        return data.get("query_surfaces", {})
-
-    if schema in SCHEMA_REGISTRY:
-        return {schema: SCHEMA_REGISTRY[schema]}
-
-    return {"error": f"Schema '{schema}' not found. Use 'query_surfaces' to list available tables."}
-
-'''
-@mcp.tool()
-def local_file_index(sqlin: str, wherein: str, searchpath: str) -> list[str]:
-  """
-       sql query on local file information index
-  """
-  conn=sqlite3.connect(':memory:')
-  try:
-    conn.enable_load_extension(True)
-    cursor = conn.cursor()
-    conn.load_extension(GUFIVTLIB)
-    conn.enable_load_extension(False)
-    sqlline='%s(\'%s\',1,1,99,NULL,1) %s' % (sqlin,searchpath,wherein)
-    print(sqlline, file=sys.stderr)
-    cursor.execute(sqlline)
-    rows = cursor.fetchall()
-    for row in rows:
-      yield row
-    conn.close()
-  except sqlite3.Error as e:
-    print(f"An SQLite error occurred: {e}",file=sys.stderr)
-    conn.close()
-    return f"Error executing query: {str(e)}"
-  finally:
-    conn.close()
-    x=1
-  return ''
-
-@mcp.tool()
-def remote_file_index(sqlin: str, wherein: str, searchpath: str) -> list[str]:
-  """
-       sql query on remote file information index
-  """
-  conn=sqlite3.connect(':memory:')
-  try:
-    conn.enable_load_extension(True)
-    cursor = conn.cursor()
-    conn.load_extension(GUFIVTLIB)
-    conn.enable_load_extension(False)
-    sqlline='%s(\'%s\',1,0,99,NULL,0,\'ssh\',\'%s\') %s' % (sqlin,searchpath,REMOTEHOST,wherein)
-    print(sqlline, file=sys.stderr)
-    cursor.execute(sqlline)
-    rows = cursor.fetchall()
-    for row in rows:
-      yield row
-    conn.close()
-  except sqlite3.Error as e:
-    print(f"An SQLite error occurred: {e}",file=sys.stderr)
-    conn.close()
-    return f"Error executing query: {str(e)}"
-  finally:
-    conn.close()
-    x=1
-  return ''
-
-
-@mcp.tool()
-def gufi_location(a: str) -> str:
-    """gufi_query location"""
-    result = subprocess.run(["which", GUFI_EXE], capture_output=True, text=True)
-    return str(result)
-'''
-
-
-
-if __name__ == "__main__":
-    # Run the server with HTTP transport
-    mcp.run(transport=MCPTRANSPORT, host=MCPSRVHOST, port=MCPSRVPORT)

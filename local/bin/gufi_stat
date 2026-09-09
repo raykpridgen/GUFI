@@ -60,103 +60,101 @@
 # OF SUCH DAMAGE.
 
 
-import asyncio
-from pathlib import Path
 
-from mcp import Client
+import argparse
+import os
+import subprocess
+import sys
 
-from gufi_util import format_tool_result_text, get_settings
+import gufi_common
+import gufi_config
 
+# location of this file
+PATH = os.path.realpath(__file__)
 
-async def call_and_print(client: Client, tool: str, arguments: dict | None = None) -> None:
-    print(f"\n==> {tool}")
-    if arguments:
-        print(f"    args: {arguments}")
-    result = await client.call_tool(tool, arguments or {})
-    print(format_tool_result_text(result))
+def parse_args():
+    # parse the arguments
+    parser = argparse.ArgumentParser('gufi_stat', description='GUFI version of stat', add_help=False)
 
+    gufi_common.add_help_version(parser)
 
-async def main() -> None:
-    settings = get_settings()
-    index = settings.default_index
-    output_path = Path(__file__).resolve().parent / "mcp.out"
+    # parser.add_argument('-L', '--dereference'
+    #                     action='set_true',
+    #                     help='follow links')
 
-    print(f"Connecting to MCP server at {settings.mcp_server_url}")
+    # parser.add_argument('-f', '--file-system'
+    #                     action='set_true',
+    #                     help='display file system status instead of file status')
 
-    sections: list[str] = []
+    parser.add_argument('-c', '--format',
+                        metavar='FORMAT',
+                        type=str,
+                        help='use the specified FORMAT instead of the default; output a newline after each use of FORMAT')
 
-    async with Client(settings.mcp_server_url) as client:
-        tools = await client.list_tools()
-        tool_names = sorted(tool.name for tool in tools.tools)
-        header = "Available tools:\n  " + "\n  ".join(tool_names)
-        print(header)
-        sections.append(header)
+    # parser.add_argument('--printf',
+    #                     metavar='FORMAT',
+    #                     type=str,
+    #                     help='like --format but interpret backslash escapes, and do not output a mandatory trailing newline; if you want a newline, include \n in FORMAT')
 
-        await call_and_print(client, "gufi_location")
-        sections.append("gufi_location")
+    parser.add_argument('-t', '--terse',
+                        action='store_true',
+                        help='print the information in terse form')
 
-        await call_and_print(client, "gufi_version")
-        sections.append("gufi_version")
+    parser.add_argument('paths',
+                        metavar='FILE',
+                        nargs='+')
 
-        await call_and_print(
-            client,
-            "gufi_query_local_index",
-            {
-                "index": index,
-                "sql_query": "SELECT name, size FROM vrpentries ORDER BY size DESC LIMIT 5",
-                "return_limit": 10,
-            },
-        )
-        sections.append("gufi_query_local_index")
+    # does not call gufi_query, so need custom verbose flag
+    parser.add_argument('-V', '--verbose',
+                        action='store_true',
+                        help='Show the actual command being run')
 
-        await call_and_print(client, "gufi_client_ls", {"index": index})
-        sections.append("gufi_client_ls")
+    return parser
 
-        await call_and_print(client, "gufi_client_du", {"index": index})
-        sections.append("gufi_client_du")
+# argv[0] should be the command name
+def run(argv, config_path, stdout=None, stderr=None):
+    # find and parse the configuration file first
+    config = gufi_config.Server(config_path)
 
-        await call_and_print(
-            client,
-            "gufi_client_find",
-            {"index": index, "arguments": "-type f"},
-        )
-        sections.append("gufi_client_find")
+    parser = parse_args()
+    args = parser.parse_args(argv[1:])
 
-        await call_and_print(
-            client,
-            "gufi_client_stat",
-            {"index": f"{index}/doc_min.txt"},
-        )
-        sections.append("gufi_client_stat")
+    # create the stat command
+    stat_cmd = [config.stat]
 
-        await call_and_print(
-            client,
-            "gufi_client_stats",
-            {"index": index, "arguments": "-c total-filecount"},
-        )
-        sections.append("gufi_client_stats")
+    if args.format is not None:
+        stat_cmd += ['--format', args.format]
 
-        await call_and_print(
-            client,
-            "gufi_client_query",
-            {
-                "index": index,
-                "arguments": (
-                    '-E "SELECT name, size FROM vrpentries '
-                    "WHERE type = 'f' ORDER BY size DESC LIMIT 3;\""
-                ),
-            },
-        )
-        sections.append("gufi_client_query")
+    if args.terse is True:
+        stat_cmd += ['--terse']
 
-    note = (
-        "\nDemo complete. Tools exercised: "
-        + ", ".join(sections[1:])
-    )
-    print(note)
-    output_path.write_text(note + "\n", encoding="utf-8")
-    print(f"\nWrote summary to {output_path}")
+    paths = gufi_common.clean_paths(config, args.paths)
 
+    if len(paths) == 0:
+        return 1, '', ''
 
-if __name__ == "__main__":
-    asyncio.run(main())
+    if args.verbose:
+        gufi_common.print_query(stat_cmd + paths)
+
+    stat = subprocess.Popen(stat_cmd + paths,          # pylint: disable=consider-using-with
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            text=True)
+    out, err = stat.communicate()                      # block until stat finishes
+
+    if err:
+        err = err.replace(os.path.join(config.indexroot, ''), '')
+        if stderr is None:
+            sys.stderr.write(err)
+            err = None
+
+    if len(out):
+        out = out.replace(os.path.join(config.indexroot, ''), '')
+        if stdout is None:
+            sys.stdout.write(out)
+            out = None
+
+    return stat.returncode, out, err
+
+if __name__ == '__main__':
+    sys.exit(run(sys.argv, gufi_config.PATH)[0])
