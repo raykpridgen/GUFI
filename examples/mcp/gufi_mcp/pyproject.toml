@@ -1,0 +1,21 @@
+[project]
+name = "gufi-mcp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "raykpridgen", email = "rkpridgen@coastal.edu" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "ipykernel>=7.3.0",
+    "mcp[cli]>=2.2.0",
+    "sqlglot>=30.18.0",
+]
+
+[project.scripts]
+gufi-mcp = "gufi_mcp:main"
+
+[build-system]
+requires = ["uv_build>=0.12.6,<0.13.0"]
+build-backend = "uv_build"
