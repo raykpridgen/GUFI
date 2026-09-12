@@ -71,53 +71,113 @@ from typing import Any, TypedDict
 from dataclasses import dataclass, field
 from sqlglot import parse_one, ParseError
 import sqlglot.expressions as exp
+import os
+from dotenv import load_dotenv
 
-SCHEMAFILE='./gufi_schemas.txt'
-REMOTEHOST='<remote uri>'
-MCPTRANSPORT='streamable-http'
-MCPSRVHOST='127.0.0.1'
-MCPSRVPORT=8000
-GUFIVTLIB='/home/raykprid/gufi/lib/gufi_vt.so'
-GUFI_INDEX_ROOT='/home/raykprid/search/'
-GUFI_QUERY='/home/raykprid/gufi/bin/gufi_query'
+load_dotenv()
+
+SCHEMAFILE = os.getenv('SCHEMAFILE')
+REMOTEHOST = os.getenv('REMOTEHOST')
+MCPTRANSPORT = os.getenv('MCPTRANSPORT')
+MCPSRVHOST = os.getenv('MCPSRVHOST')
+MCPSRVPORT = os.getenv('MCPSRVPORT')
+GUFIVTLIB = os.getenv('GUVIVTLIB')
+GUFI_INDEX_ROOT = os.getenv('GUFI_INDEX_ROOT')
+GUFI_QUERY = os.getenv('GUFI_QUERY')
 
 mcp = MCPServer(name="gufi_mcp_server")
+
+# Object to handle query returns
+@dataclass
+class GufiQueryResult:
+    columns: list[str] = field(default_factory=list)
+    rows: list[list[Any]] = field(default_factory=list)
+    row_count: int = 0
+
+    def parse_result(self, stdout: str, delimiter: str) -> None:
+        lines = stdout.strip().splitlines()
+
+        if not lines:
+            return
+
+        self.columns = lines[0].split(delimiter)
+        self.rows = [line.split(delimiter) for line in lines[1:]]
+        self.row_count = len(self.rows)
+
+    def get_columns(self) -> list[str]:
+        return self.columns
+
+    def get_row_count(self) -> int:
+        return self.row_count
+
+    def get_rows(self, start, stop) -> list[list[Any]]:
+        if stop > self.row_count or start < 0:
+            return None
+
+        return self.rows[start:stop]
+        
 
 # Object to handle query construction
 @dataclass
 class GufiQuery():
     index: str
     options: list[tuple[str, str]] = field(default_factory=list)
-    specifiers = set
+    delimiter: str = "\t"
 
-    def __init__(self, index):
+    sql_specifiers: set[str] = field(
+        default_factory=lambda: {"-I", "-T", "-S", "-E", "-J", "-K", "-G", "-F"}
+    )
+
+    config: set[str] = field(
+        default_factory=lambda: {"-a"}
+    )
+
+    result: GufiQueryResult = field(default_factory=GufiQueryResult)
+
+
+    def __init_validate__(self):
         # Check that index exists
+        if self.index not in get_gufi_indexes():
+            raise RuntimeError("Failed to create query, index does not exist.")
 
-        self.index = index
-        self.options = []
-        self.specifiers = ("-I", "-T", "-S", "-E", "-J", "-K", "-G", "-F", "-a")
-
-    def add_option(self, specifier: str, option: str):
+    def add_option(self, tag: str, option: str):
         ''' Add an option to a query '''
 
         # Check for valid specifier
-        if specifier not in self.specifiers:
-            raise RuntimeError(f'Specifier: {specifier} is not a valid option')
+        if tag in self.sql_specifiers:
+            # Check that SQL supplied is valid
+            if not is_valid_sql_query(option, dialect="sqlite"):
+                raise RuntimeError(f'Query: {option} is not a valid SQL query')
 
-        # Check that SQL supplied is valid
-        if not is_valid_sql_query(option, dialect="sqlite"):
-            raise RuntimeError(f'Query: {option} is not a valid SQL query')
+        # Check for config
+        elif tag in self.config:
+            # Invalid short circuit specifier
+            if tag == "-a" and option not in ("0", "1", "2"):
+                raise RuntimeError(f"Config for -a must be 0, 1, or 2")
 
-        self.options.append((specifier,option))
+        else:
+            raise RuntimeError(f'Specifier: {tag} is not a valid option')
+
+        self.options.append((tag,option))
+        
 
     def validate_query(self) -> bool:
         return True
 
-# Object to handle query returns
-class GufiQueryResult(TypedDict):
-    columns: list[str]
-    rows: list[list[Any]]
-    row_count: int
+    def build_query_command(self) -> list[str]:
+
+        # Add delimiter at the end to parse correctly
+        self.options.append(("-d",self.delimiter))
+
+        cmd = []
+        cmd.append(GUFI_QUERY)
+        for option in self.options:
+            cmd.append(option[0])
+            cmd.append(option[1])
+        cmd.append(f"{GUFI_INDEX_ROOT}{self.index}")
+
+        return cmd
+
 
 '''   NEW   '''
 
@@ -149,6 +209,8 @@ def table_exists(index: str, table_name: str) -> bool:
 
 def get_gufi_indexes() -> list[str]:
     index_root = Path(GUFI_INDEX_ROOT).resolve()
+    if not index_root.exists():
+        raise RuntimeError("Error: GUFI index root does not exist")
     indexes = []
 
     # Confirm path is a directory with other dirs inside
@@ -160,7 +222,7 @@ def get_gufi_indexes() -> list[str]:
 
     return indexes
 
-def execute_gufi_query(query: GufiQuery) -> GufiQueryResult:
+def execute_gufi_query(query: GufiQuery) -> GufiQuery:
     ''' Helper function to execute gufi queries '''
 
     allowed_prefixes = ('SELECT', 'SHOW', 'DESC', 'DESCRIBE', 'USE')
@@ -238,22 +300,21 @@ def execute_gufi_query(query: GufiQuery) -> GufiQueryResult:
 
 
     # Execution
-    cmd = []
-    cmd.append(GUFI_QUERY)
-    for option in query.options:
-        cmd.append(option[0])
-        cmd.append(option[1])
-    cmd.append(f"{GUFI_INDEX_ROOT}{query.index}")
+    execution_result = subprocess.run(query.build_query_command(), capture_output=True, text=True)
+    if execution_result.stderr:
+        print(execution_result.stderr)
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.stderr:
-        print(result.stderr)
-    plain = result.stdout
-    plain.strip("/")
+    query.result.parse_result(execution_result.stdout, query.delimiter)
 
-query = GufiQuery("downloads")
+    tmp = 1 + 2
+
+idx = get_gufi_indexes()
+query = GufiQuery('pictures')
 query.add_option("-E", "SELECT name, size FROM entries WHERE size > 1048576;")
 execute_gufi_query(query)
+print(query.result.get_columns())
+print(query.result.get_row_count())
+print(query.result.get_rows(0, 5))
 
 # manage path for isolation
 
