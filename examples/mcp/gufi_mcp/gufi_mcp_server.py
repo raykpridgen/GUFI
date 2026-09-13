@@ -94,89 +94,18 @@ class GufiQueryResult:
     rows: list[list[Any]] = field(default_factory=list)
     row_count: int = 0
 
-    def parse_result(self, stdout: str, delimiter: str) -> None:
-        lines = stdout.strip().splitlines()
-
-        if not lines:
-            return
-
-        self.columns = lines[0].split(delimiter)
-        self.rows = [line.split(delimiter) for line in lines[1:]]
-        self.row_count = len(self.rows)
-
-    def get_columns(self) -> list[str]:
-        return self.columns
-
-    def get_row_count(self) -> int:
-        return self.row_count
-
-    def get_rows(self, start, stop) -> list[list[Any]]:
-        if stop > self.row_count or start < 0:
-            return None
-
-        return self.rows[start:stop]
-        
+# Object for GUFI options
+@dataclass
+class GufiOption:
+    option: str
+    sql: str
 
 # Object to handle query construction
 @dataclass
-class GufiQuery():
+class GufiQuery:
     index: str
-    options: list[tuple[str, str]] = field(default_factory=list)
+    options: list[GufiOption] = field(default_factory=list)
     delimiter: str = "\t"
-
-    sql_specifiers: set[str] = field(
-        default_factory=lambda: {"-I", "-T", "-S", "-E", "-J", "-K", "-G", "-F"}
-    )
-
-    config: set[str] = field(
-        default_factory=lambda: {"-a"}
-    )
-
-    result: GufiQueryResult = field(default_factory=GufiQueryResult)
-
-
-    def __init_validate__(self):
-        # Check that index exists
-        if self.index not in get_gufi_indexes():
-            raise RuntimeError("Failed to create query, index does not exist.")
-
-    def add_option(self, tag: str, option: str):
-        ''' Add an option to a query '''
-
-        # Check for valid specifier
-        if tag in self.sql_specifiers:
-            # Check that SQL supplied is valid
-            if not is_valid_sql_query(option, dialect="sqlite"):
-                raise RuntimeError(f'Query: {option} is not a valid SQL query')
-
-        # Check for config
-        elif tag in self.config:
-            # Invalid short circuit specifier
-            if tag == "-a" and option not in ("0", "1", "2"):
-                raise RuntimeError(f"Config for -a must be 0, 1, or 2")
-
-        else:
-            raise RuntimeError(f'Specifier: {tag} is not a valid option')
-
-        self.options.append((tag,option))
-        
-
-    def validate_query(self) -> bool:
-        return True
-
-    def build_query_command(self) -> list[str]:
-
-        # Add delimiter at the end to parse correctly
-        self.options.append(("-d",self.delimiter))
-
-        cmd = []
-        cmd.append(GUFI_QUERY)
-        for option in self.options:
-            cmd.append(option[0])
-            cmd.append(option[1])
-        cmd.append(f"{GUFI_INDEX_ROOT}{self.index}")
-
-        return cmd
 
 
 '''   NEW   '''
@@ -222,7 +151,7 @@ def get_gufi_indexes() -> list[str]:
 
     return indexes
 
-def execute_gufi_query(query: GufiQuery) -> GufiQuery:
+def execute_gufi_query(query: GufiQuery) -> GufiQueryResult:
     ''' Helper function to execute gufi queries '''
 
     allowed_prefixes = ('SELECT', 'SHOW', 'DESC', 'DESCRIBE', 'USE')
@@ -300,21 +229,7 @@ def execute_gufi_query(query: GufiQuery) -> GufiQuery:
 
 
     # Execution
-    execution_result = subprocess.run(query.build_query_command(), capture_output=True, text=True)
-    if execution_result.stderr:
-        print(execution_result.stderr)
-
-    query.result.parse_result(execution_result.stdout, query.delimiter)
-
-    tmp = 1 + 2
-
-idx = get_gufi_indexes()
-query = GufiQuery('pictures')
-query.add_option("-E", "SELECT name, size FROM entries WHERE size > 1048576;")
-execute_gufi_query(query)
-print(query.result.get_columns())
-print(query.result.get_row_count())
-print(query.result.get_rows(0, 5))
+    
 
 # manage path for isolation
 
@@ -326,22 +241,33 @@ def gufi_indexes() -> list[str]:
     ''' Access list of available gufi indexes '''
     return get_gufi_indexes()
 
-
-# tool that accesses treesummary of an index
 @mcp.tool()
-def gufi_treesummary(index: str, query: str) -> GufiQueryResult:
-    ''' Query the treesummary table of an index - if present '''
+def build_gufi_query() -> int:
+    ''' Construct a GUFI Query from plaintext '''
 
-    # Check that index requested exists
-    if index not in get_gufi_indexes():
-        raise RuntimeError(f"Index {index} not found.")
+    # Returns an integer ID of the GUFI query that can be referenced to execute later
 
-    # confirm existence of treesummary in the index
-    if not table_exists(index, "treesummary"):
-        raise RuntimeError(f"Index {index} does not have treesummary indexed.")
+@mcp.tool()
+def gufi_query(new_query: GufiQuery) -> GufiQueryResult:
+    ''' Submit a query to GUFI '''
+
+    if new_query.index not in get_gufi_indexes():
+        raise RuntimeError(f"Error: Index {new_query.index} not found")
+
+    for option in new_query.options:
+        new_query.add_option(option[0], option[1])
+
+    execution_result = subprocess.run(new_query.build_query_command(), capture_output=True, text=True)
+    if execution_result.stderr:
+        print(execution_result.stderr)
+        return False
+
+    result = GufiQueryResult()
+    result.parse_result(execution_result.stdout, new_query.delimiter)
+    return result
 
 
-
+    
 
 # tool that exposes path discovery
 
