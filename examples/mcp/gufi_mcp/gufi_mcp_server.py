@@ -59,15 +59,22 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
-
-
 from mcp.server import MCPServer
 import asyncio
 import sqlite3
 import sys
 import subprocess
+import shutil
+from pathlib import Path
+from typing import Any, TypedDict
+from dataclasses import dataclass, field
+from sqlglot import parse_one, ParseError
+import sqlglot.expressions as exp
 import os
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
+from gufi_mcp_util import GufiQueryResult, GufiQuery, GufiOption
+import gufi_mcp_util as util
 
 load_dotenv()
 
@@ -160,6 +167,31 @@ def sql_remote_file_index(sqlin: str, wherein: str, searchpath: str) -> list[str
     conn.close()
     x=1
   return ''
+
+@mcp.tool()
+def gufi_query(new_query: GufiQuery) -> GufiQueryResult:
+    ''' Submit a query to GUFI '''
+
+    if new_query.index not in util.get_gufi_indexes():
+        raise RuntimeError(f"Error: Index {new_query.index} not found")
+
+    for option in new_query.options:
+        new_query.add_option(option[0], option[1])
+
+    execution_result = subprocess.run(new_query.build_query_command(), capture_output=True, text=True)
+    if execution_result.stderr:
+        print(execution_result.stderr)
+        return False
+
+    result = GufiQueryResult()
+    result.parse_result(execution_result.stdout, new_query.delimiter)
+    return result
+
+# resource that returns indexes available
+@mcp.resource("gufi://indexes")
+def gufi_indexes() -> list[str]:
+    ''' Access list of available gufi indexes '''
+    return util.get_gufi_indexes()
 
 if __name__ == "__main__":
     # Run the server with HTTP transport
