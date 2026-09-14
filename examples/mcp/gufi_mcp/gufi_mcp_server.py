@@ -72,6 +72,7 @@ from dataclasses import dataclass, field
 from sqlglot import parse_one, ParseError
 import sqlglot.expressions as exp
 import os
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -88,23 +89,20 @@ GUFI_QUERY = os.getenv('GUFI_QUERY')
 mcp = MCPServer(name="gufi_mcp_server")
 
 # Object to handle query returns
-@dataclass
-class GufiQueryResult:
-    columns: list[str] = field(default_factory=list)
-    rows: list[list[Any]] = field(default_factory=list)
+class GufiQueryResult(BaseModel):
+    columns: list[str] = Field(default_factory=list)
+    rows: list[list[str]] = Field(default_factory=list)
     row_count: int = 0
 
 # Object for GUFI options
-@dataclass
-class GufiOption:
+class GufiOption(BaseModel):
     option: str
     sql: str
 
 # Object to handle query construction
-@dataclass
-class GufiQuery:
+class GufiQuery(BaseModel):
     index: str
-    options: list[GufiOption] = field(default_factory=list)
+    options: list[GufiOption] = Field(default_factory=list)
     delimiter: str = "\t"
 
 
@@ -300,7 +298,6 @@ def local_file_index_schema() -> str:
     except FileNotFoundError:
         return "Schema file not found."
 
-
 @mcp.tool()
 def local_file_index(sqlin: str, searchpath: str, wherein: str = '') -> list[str]:
   """
@@ -360,6 +357,18 @@ def gufi_location() -> str:
     """gufi_query location"""
     result = subprocess.run(["which", "gufi_query"], capture_output=True, text=True)
     return str(result.stdout)
+
+inp = {
+  "index": "pictures",
+  "options": [
+    {
+      "option": "-E",
+      "sql": "SELECT name, size FROM vrpentries LIMIT 10;"
+    }
+  ]
+}
+
+gufi_query(inp)
 
 if __name__ == "__main__":
     # Run the server with HTTP transport

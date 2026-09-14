@@ -62,7 +62,7 @@
 
 
 import asyncio
-from fastmcp import Client, FastMCP
+from mcp.server import MCPServer, Client
 import sys
 
 MCP_SERVER='http://127.0.0.1:8000/mcp'
