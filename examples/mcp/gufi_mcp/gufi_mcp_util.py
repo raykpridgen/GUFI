@@ -12,6 +12,7 @@ import sqlglot.expressions as exp
 import os
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
+import re
 
 load_dotenv()
 
@@ -27,7 +28,7 @@ GUFI_QUERY = os.getenv('GUFI_QUERY')
 # Object to handle query returns
 class GufiQueryResult(BaseModel):
     columns: list[str] = Field(default_factory=list)
-    rows: list[list[str]] = Field(default_factory=list)
+    rows: list[list[Any]] = Field(default_factory=list)
     row_count: int = 0
 
 # Object for GUFI options
@@ -67,6 +68,19 @@ def table_exists(index: str, table_name: str) -> bool:
 
     finally:
         conn.close()
+
+def get_columns_from_sqlin(sqlin) -> list[str]:
+    ''' Separate out column names into a list '''
+    col_string = re.match(r'(?i)SELECT\s+(.+?)\s+FROM', sqlin, flags=re.IGNORECASE | re.DOTALL).group(1)
+    return [col.strip() for col in col_string.split(',')]
+
+def resolve_index(index: str) -> str:
+    ''' resolve name of an index to the full path '''
+
+    if index not in get_gufi_indexes():
+        raise RuntimeError("Error: Index provided not found at index root.")
+
+    return f'{GUFI_INDEX_ROOT}{index}'
 
 def get_gufi_indexes() -> list[str]:
     index_root = Path(GUFI_INDEX_ROOT).resolve()

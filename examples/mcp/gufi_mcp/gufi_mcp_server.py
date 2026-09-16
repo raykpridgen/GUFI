@@ -75,6 +75,7 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from gufi_mcp_util import GufiQueryResult, GufiQuery, GufiOption
 import gufi_mcp_util as util
+import re
 
 load_dotenv()
 
@@ -93,13 +94,13 @@ mcp = MCPServer(name="gufi-mcp")
 def gufi_version() -> str:
     """gufi_query -- version"""
     result = subprocess.run(["gufi_query", "--version"], capture_output=True, text=True)
-    return str(result)
+    return str(result.stdout)
 
 @mcp.tool()
 def gufi_location() -> str:
     """gufi_query location"""
     result = subprocess.run(["which", "gufi_query"], capture_output=True, text=True)
-    return str(result)
+    return str(result.stdout)
 
 @mcp.tool()
 def local_file_index_schema() -> str:
@@ -115,83 +116,98 @@ def local_file_index_schema() -> str:
         return "Schema file not found."
 
 @mcp.tool()
-def sql_local_file_index(sqlin: str, wherein: str, searchpath: str) -> list[str]:
-  """
-       sql query on local file information index
-  """
-  conn=sqlite3.connect(':memory:')
-  try:
-    conn.enable_load_extension(True)
-    cursor = conn.cursor()
-    conn.load_extension(GUFIVTLIB)
-    conn.enable_load_extension(False)
-    sqlline='%s(\'%s\',1,1,99,NULL,1) %s' % (sqlin,searchpath,wherein)
-    print(sqlline, file=sys.stderr)
-    cursor.execute(sqlline)
-    rows = cursor.fetchall()
-    for row in rows:
-      yield row
-    conn.close()
-  except sqlite3.Error as e:
-    print(f"An SQLite error occurred: {e}",file=sys.stderr)
-    conn.close()
-    return f"Error executing query: {str(e)}"
-  finally:
-    conn.close()
-    x=1
-  return ''
+def sql_local_file_index(sqlin: str, wherein: str, index: str, remote: bool = False) -> GufiQueryResult:
+    """
+        sql query on local file information index
+    """
 
-@mcp.tool()
-def sql_remote_file_index(sqlin: str, wherein: str, searchpath: str) -> list[str]:
-  """
-       sql query on remote file information index
-  """
-  conn=sqlite3.connect(':memory:')
-  try:
-    conn.enable_load_extension(True)
-    cursor = conn.cursor()
-    conn.load_extension(GUFIVTLIB)
-    conn.enable_load_extension(False)
-    sqlline='%s(\'%s\',1,0,99,NULL,0,\'ssh\',\'%s\') %s' % (sqlin,searchpath,REMOTEHOST,wherein)
-    print(sqlline, file=sys.stderr)
-    cursor.execute(sqlline)
-    rows = cursor.fetchall()
-    for row in rows:
-      yield row
-    conn.close()
-  except sqlite3.Error as e:
-    print(f"An SQLite error occurred: {e}",file=sys.stderr)
-    conn.close()
-    return f"Error executing query: {str(e)}"
-  finally:
-    conn.close()
-    x=1
-  return ''
+    query_result = GufiQueryResult()
 
-@mcp.tool()
-def gufi_query(new_query: GufiQuery) -> GufiQueryResult:
-    ''' Submit a query to GUFI '''
+    # Verify index existence on local queries
+    if not remote:
+        searchpath = util.resolve_index(index)
+        if not searchpath:
+            raise RuntimeError(f"Error: Index {index} not found")
 
-    if new_query.index not in util.get_gufi_indexes():
-        raise RuntimeError(f"Error: Index {new_query.index} not found")
+    conn=sqlite3.connect(':memory:')
+    try:
+        # Load GUFI_VT extension and connect
+        conn.enable_load_extension(True)
+        cursor = conn.cursor()
+        conn.load_extension(GUFIVTLIB)
+        conn.enable_load_extension(False)
 
-    for option in new_query.options:
-        new_query.add_option(option[0], option[1])
+        # Build SQL line
+        if remote:
+            sqlline = '%s(\'%s\',1,0,99,NULL,0,\'ssh\',\'%s\') %s' % (sqlin, searchpath, REMOTEHOST, wherein)
+        else:
+            sqlline = '%s(\'%s\',1,1,99,NULL,1) %s' % (sqlin, searchpath, wherein)
 
-    execution_result = subprocess.run(new_query.build_query_command(), capture_output=True, text=True)
-    if execution_result.stderr:
-        print(execution_result.stderr)
-        return False
+        print(sqlline, file=sys.stderr)
 
-    result = GufiQueryResult()
-    result.parse_result(execution_result.stdout, new_query.delimiter)
-    return result
+        # Call GUFI_VT
+        cursor.execute(sqlline)
+
+        # Format result into serialized object
+        query_result.columns = util.get_columns_from_sqlin(sqlin)
+        query_result.rows = [list(res_row) for res_row in cursor.fetchall()]
+        query_result.row_count = len(query_result.rows)
+        return query_result
+        conn.close()
+
+    except sqlite3.Error as e:
+        print(f"An SQLite error occurred: {e}",file=sys.stderr)
+        conn.close()
+        return f"Error executing query: {str(e)}"
+
+    finally:
+        conn.close()
 
 # resource that returns indexes available
 @mcp.resource("gufi://indexes")
 def gufi_indexes() -> list[str]:
     ''' Access list of available gufi indexes '''
     return util.get_gufi_indexes()
+
+@mcp.resource("gufi://schemas/{schema}")
+def gufi_schemas(schema: str = "all") -> list[str]:
+    """
+        Return schemas of each gufi index table
+    """
+
+    # Pick first index to get schemas from
+    index = f"{util.resolve_index(util.get_gufi_indexes()[0])}" + "/db.db"
+
+    conn=sqlite3.connect(index)
+
+    try:
+        conn.enable_load_extension(True)
+        cursor = conn.cursor()
+        conn.load_extension(GUFIVTLIB)
+        conn.enable_load_extension(False)
+        # select path,name,size from gufi_vt_pentries(\'%s\',1,0,99,NULL,0,\'ssh\',\'%s\') where name like \'%\' limit 50
+        # LOCALWHERE='where name like \'%\' limit 50'
+        # LOCALSEARCHPATH='documents'
+        sqlline=f'SELECT name, type, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY type, name'
+        print(sqlline, file=sys.stderr)
+        cursor.execute(sqlline)
+        rows = cursor.fetchall()
+        for row in rows:
+            yield row
+        conn.close()
+    except sqlite3.Error as e:
+        print(f"An SQLite error occurred: {e}",file=sys.stderr)
+        conn.close()
+        return f"Error executing query: {str(e)}"
+    finally:
+        conn.close()
+        x=1
+        return ''
+
+
+
+for row in gufi_schemas("asd"):
+    print(row)
 
 if __name__ == "__main__":
     # Run the server with HTTP transport

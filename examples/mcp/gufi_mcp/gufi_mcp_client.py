@@ -67,6 +67,7 @@ from mcp.server import MCPServer
 import sys
 import os
 from dotenv import load_dotenv
+import json
 
 load_dotenv()
 
@@ -75,63 +76,99 @@ MCPSRVPORT = os.getenv('MCPSRVPORT')
 MCP_SERVER=f'http://{MCPSRVHOST}:{MCPSRVPORT}/mcp'
 LOCALSELECT='select path,name,size from gufi_vt_pentries'
 LOCALWHERE='where name like \'%\' limit 50'
-LOCALSEARCHPATH='/home/raykprid/search/documents/'
+LOCALSEARCHPATH='documents'
 REMOTESELECT='select path,name,size from gufi_vt_pentries'
 REMOTEWHERE='where name like \'%\' order by size desc limit 50'
 REMOTESEARCHPATH='/home/raykprid/search/documents/'
 
 async def main():
-   # Connect to FastMCP server
-   client = Client(MCP_SERVER)
-   print(f"Connected to Server: {client.initialize_result.serverInfo.name}")
-   print(f"Connected to Server")
-   print("-" * 20)
+    # Connect to FastMCP server
+    client = Client(MCP_SERVER)
 
-   async with client:
+    async with client:
 
-     # List available resources
-     resources = await client.list_tools()
-     print("Tools Available")
-     for tool in resources.tools:
-       print("-" * 20)
-       print(f"Tool Name: {tool.name}")
-       print(f"Description: {tool.description}")
+        print(f"Connected to Server: {client.server_info.name}")
+        print(f"Connected to Server")
+        print("-" * 20)
 
-     # locate gufi_query
-     print("run locate gufi_query")
-     result = await client.call_tool("gufi_location", {"a": "gufi_query location please"})
-     print(f"Result: {result.content[0].text}")
-     print("-" * 20)
+        ''' List available resources '''
 
-     # locate gufi_query
-     print("run gufi_query version")
-     result = await client.call_tool("gufi_version", {"a": "gufi_query version please"})
-     print(f"Result: {result.content[0].text}")
-     print("-" * 20)
+        avail_resources = await client.list_resources()
+        print("Resources Available")
+        for resource in avail_resources.resources:
+            print("-" * 20)
+            print(f"Resource Name: {resource.name}")
+            print(f"Description: {resource.description}")
 
-     # list vt_pentries schema
-     print("run vt_pentries list schema")
-     result = await client.call_tool("local_file_index_schema", {"schema": "gufi_query schema please"})
-     print(f"Result: {result.content[0].text}")
-     print("-" * 20)
+        # get available indexes
+        print("read gufi_indexes")
+        result = await client.read_resource("gufi://indexes")
+        print(f"Result: {result.contents[0].text}")
+        print("-" * 20)
 
-     # gufi local query
-     print(f"query local gufi  index")
-     result_stream= await client.call_tool("local_file_index", {"sqlin": LOCALSELECT, "wherein": LOCALWHERE,"searchpath": LOCALSEARCHPATH})
-     deliminate=result_stream.content[0].text.replace("],[","|")[2:-2]
-     outlines=deliminate.split("|")
-     outlen=len(outlines)
-     for outi in range(outlen):
-       print (outlines[outi])
+        # get schema
+        print("read gufi_schemas")
+        result = await client.read_resource("gufi://schemas/{balls}")
+        deliminate = result.contents[0].text.replace("],[", "|")[2:-2]
+        outlines = deliminate.split("|")
+        outlen = len(outlines)
+        for outi in range(outlen):
+            print(outlines[outi])
 
-     # gufi remote query
-     print(f"query remote gufi  index")
-     result_stream= await client.call_tool("remote_file_index", {"sqlin": REMOTESELECT, "wherein": REMOTEWHERE,"searchpath": REMOTESEARCHPATH})
-     deliminate=result_stream.content[0].text.replace("],[","|")[2:-2]
-     outlines=deliminate.split("|")
-     outlen=len(outlines)
-     for outi in range(outlen):
-       print (outlines[outi])
+        # gufi local query
+        print(f"query local gufi  index")
+        result_stream= await client.call_tool("sql_local_file_index", {"sqlin": 'select name, type, sql from sqlite_master', "wherein": 'where sql is not null order by name, type',"index": LOCALSEARCHPATH})
+        deliminate=result_stream.content[0].text.replace("],[","|")[2:-2]
+        outlines=deliminate.split("|")
+        outlen=len(outlines)
+        for outi in range(outlen):
+            print (outlines[outi])
+
+
+        ''' List available tools '''
+
+        avail_tools = await client.list_tools()
+        print("Tools Available")
+        for tool in avail_tools.tools:
+            print("-" * 20)
+            print(f"Tool Name: {tool.name}")
+            print(f"Description: {tool.description}")
+
+        # locate gufi_query
+        print("run locate gufi_query")
+        result = await client.call_tool("gufi_location", {"a": "gufi_query location please"})
+        print(f"Result: {result.content[0].text}")
+        print("-" * 20)
+
+        # locate gufi_query
+        print("run gufi_query version")
+        result = await client.call_tool("gufi_version", {"a": "gufi_query version please"})
+        print(f"Result: {result.content[0].text}")
+        print("-" * 20)
+
+        # list vt_pentries schema
+        print("run vt_pentries list schema")
+        result = await client.call_tool("local_file_index_schema", {"schema": "gufi_query schema please"})
+        print(f"Result: {result.content[0].text}")
+        print("-" * 20)
+
+        # gufi local query
+        print(f"query local gufi  index")
+        result_stream= await client.call_tool("sql_local_file_index", {"sqlin": LOCALSELECT, "wherein": LOCALWHERE,"index": LOCALSEARCHPATH})
+        res = json.loads(result_stream.content[0].text)
+        for row in range(res["row_count"]):
+            print (res["rows"][row])
+
+        # gufi remote query
+        print(f"query remote gufi  index")
+        result_stream= await client.call_tool("sql_remote_file_index", {"sqlin": REMOTESELECT, "wherein": REMOTEWHERE,"searchpath": REMOTESEARCHPATH})
+        deliminate=result_stream.content[0].text.replace("],[","|")[2:-2]
+        outlines=deliminate.split("|")
+        outlen=len(outlines)
+        for outi in range(outlen):
+            print (outlines[outi])
+
+
 
 if __name__ == "__main__":
     asyncio.run(main())
