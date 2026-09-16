@@ -170,12 +170,10 @@ def gufi_indexes() -> list[str]:
     return util.get_gufi_indexes()
 
 @mcp.resource("gufi://schemas/{schema}")
-def gufi_schemas(schema: str = "all") -> list[str]:
-    """
-        Return schemas of each gufi index table
-    """
-
-    # Pick first index to get schemas from
+def gufi_schemas(schema: str = "all") -> list[list[str]]:
+    """ Return schemas of each gufi index table """
+    print(schema, file=sys.stderr)
+    # Pick any index to get schemas from, attach db since not using gufi_vt for this
     index = f"{util.resolve_index(util.get_gufi_indexes()[0])}" + "/db.db"
 
     conn=sqlite3.connect(index)
@@ -188,12 +186,18 @@ def gufi_schemas(schema: str = "all") -> list[str]:
         # select path,name,size from gufi_vt_pentries(\'%s\',1,0,99,NULL,0,\'ssh\',\'%s\') where name like \'%\' limit 50
         # LOCALWHERE='where name like \'%\' limit 50'
         # LOCALSEARCHPATH='documents'
-        sqlline=f'SELECT name, type, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY type, name'
-        print(sqlline, file=sys.stderr)
-        cursor.execute(sqlline)
-        rows = cursor.fetchall()
-        for row in rows:
-            yield row
+        if schema == "all":
+            sqlline=f'SELECT name, type FROM sqlite_master WHERE sql IS NOT NULL ORDER BY type DESC'
+            print(sqlline, file=sys.stderr)
+            cursor.execute(sqlline)
+            rows = [list(res_row) for res_row in cursor.fetchall()]
+        else:
+            sqlline=f"PRAGMA table_info(\"{schema}\")"
+            print(sqlline, file=sys.stderr)
+            cursor.execute(sqlline)
+            rows = [[res_row[1], res_row[2]] for res_row in cursor.fetchall()]
+
+        return rows
         conn.close()
     except sqlite3.Error as e:
         print(f"An SQLite error occurred: {e}",file=sys.stderr)
@@ -201,14 +205,9 @@ def gufi_schemas(schema: str = "all") -> list[str]:
         return f"Error executing query: {str(e)}"
     finally:
         conn.close()
-        x=1
-        return ''
 
 
-
-for row in gufi_schemas("asd"):
-    print(row)
-
+ret = gufi_schemas("all")
 if __name__ == "__main__":
     # Run the server with HTTP transport
     mcp.run(transport=MCPTRANSPORT, host=MCPSRVHOST, port=MCPSRVPORT)

@@ -107,13 +107,17 @@ async def main():
         print("-" * 20)
 
         # get schema
-        print("read gufi_schemas")
-        result = await client.read_resource("gufi://schemas/{balls}")
-        deliminate = result.contents[0].text.replace("],[", "|")[2:-2]
-        outlines = deliminate.split("|")
-        outlen = len(outlines)
-        for outi in range(outlen):
-            print(outlines[outi])
+        print("read all schemas")
+        result = await client.read_resource("gufi://schemas/all")
+        schema = result.contents[0].text.replace("],[", "|")[2:-2]
+        print(schema)
+
+
+        # get schema
+        print("read one schema's columns")
+        result = await client.read_resource("gufi://schemas/vrsummary")
+        schema = result.contents[0].text.replace("],[", "|")[2:-2]
+        print(schema)
 
         # gufi local query
         print(f"query local gufi  index")
