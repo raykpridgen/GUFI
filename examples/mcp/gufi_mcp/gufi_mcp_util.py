@@ -85,6 +85,33 @@ def get_columns_from_sqlin(sqlin) -> list[str]:
     col_string = re.match(r'(?i)SELECT\s+(.+?)\s+FROM', sqlin, flags=re.IGNORECASE | re.DOTALL).group(1)
     return [col.strip() for col in col_string.split(',')]
 
+def sqlite_string(value: str, quote: str = "'") -> str:
+    ''' Quote a string literal for SQLite SQL text.
+
+    gufi_vt module arguments are embedded in a CREATE VIRTUAL TABLE statement,
+    so quotes inside each argument need to be escaped before SQLite parses it.
+    '''
+    return f"{quote}{value.replace(quote, quote * 2)}{quote}"
+
+def ensure_sql_statement(sql: str) -> str:
+    ''' Make a gufi_query SQL fragment look like a full SQL statement.
+
+    GUFI examples pass -I/-E/-K/-J/-G fragments with trailing semicolons; this
+    preserves caller-provided semicolons and adds one when the caller omitted it.
+    '''
+    sql = sql.strip()
+    return sql if sql.endswith(";") else f"{sql};"
+
+def resolve_query_index(index: str) -> str:
+    ''' Resolve an MCP index name into the path gufi_vt should receive.
+
+    Absolute paths are passed through for advanced callers. Relative names are
+    resolved under GUFI_INDEX_ROOT, matching the other local MCP query helpers.
+    '''
+    if os.path.isabs(index):
+        return index
+    return os.path.join(GUFI_INDEX_ROOT, index)
+
 def resolve_local_index(index: str) -> str:
     ''' resolve name of a local index to the full path '''
 

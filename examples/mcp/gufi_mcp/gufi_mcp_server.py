@@ -60,6 +60,7 @@
 # OF SUCH DAMAGE.
 
 from mcp.server import MCPServer
+import sqlite3
 import subprocess
 from typing import Any, Annotated, Literal
 from pydantic import Field
@@ -124,7 +125,7 @@ def sql_file_index(
         query_result.rows = [list(res_row) for res_row in result]
         query_result.columns = util.get_columns_from_sqlin(sqlin)
         query_result.row_count = len(query_result.rows)
-        return query_result
+        return query_result.model_dump()
 
     else:
         raise RuntimeError(f"Error executing SQL: {result[1]}")
@@ -143,32 +144,81 @@ def aggregate_sql_query(
 
     query_result = GufiQueryResult()
 
-    # CREATE VIRTUAL TABLE temp.gufi
-    # USING gufi_vt(
-    options = []
+    options = [util.sqlite_string(util.resolve_query_index(query.index))]
+    for config in query.config:
+        options.append(config)
     for item in query.sql_options:
         option = item.option.lstrip("-")
-        sql = item.sql.replace("'", "''")
-        options.append(f"{option}='{sql}'")
-
-    options.append(f"index='{query.index}'")
+        sql = util.ensure_sql_statement(item.sql)
+        options.append(f"{option}={util.sqlite_string(sql, '"')}")
 
     sql_query = f"""
-        CREATE VIRTUAL TABLE temp.gufi.mcp
-        USING gufi_vt({", ".join(options)}
+        CREATE VIRTUAL TABLE temp.gufi
+        USING gufi_vt({", ".join(options)})
     """
 
-    result = util.execute_sql(sql_query, True)
+    conn = sqlite3.connect(":memory:")
+    try:
+        conn.enable_load_extension(True)
+        conn.load_extension(GUFIVTLIB)
+        conn.enable_load_extension(False)
 
-    if result[0] != "sql error:":
+        cursor = conn.cursor()
+        cursor.execute(sql_query)
+        cursor.execute("SELECT * FROM temp.gufi")
+        result = cursor.fetchall()
+
         # Format result into serialized object
         query_result.rows = [list(res_row) for res_row in result]
-        query_result.columns = [""]
+        query_result.columns = [description[0] for description in cursor.description]
         query_result.row_count = len(query_result.rows)
-        return query_result
+        return query_result.model_dump()
 
-    else:
-        raise RuntimeError(f"Error executing SQL: {result[1]}")
+    except sqlite3.Error as e:
+        raise RuntimeError(f"Error executing SQL: {e}") from e
+
+    finally:
+        try:
+            conn.execute("DROP TABLE IF EXISTS temp.gufi")
+        finally:
+            conn.close()
+
+
+'''
+gufi_query \
+-I "CREATE TABLE intermediate(size INT64);" \
+-E "INSERT INTO intermediate SELECT size FROM entries WHERE type = 'f';" \
+-K "CREATE TABLE aggregate(total INT64);" \
+-J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" \
+-G "SELECT SUM(total) FROM aggregate;" \
+-d '|' -n 32 index
+'''
+qobj = {
+            "index": "Downloads",
+            "config": ["threads=32"],
+            "sql_options": [
+                {
+                    "option": "-I",
+                    "sql": "CREATE TABLE intermediate(size INT64)"
+                },
+                {
+                    "option": "-E",
+                    "sql": "INSERT INTO intermediate SELECT size FROM entries WHERE type='f'"
+                },
+                {
+                    "option": "-K",
+                    "sql": "CREATE TABLE aggregate(total INT64)"
+                },
+                {
+                    "option": "-J",
+                    "sql": "INSERT INTO aggregate SELECT SUM(size) FROM intermediate"
+                },
+                {
+                    "option": "-G",
+                    "sql": "SELECT SUM(total) FROM aggregate"
+                }
+            ]
+        }
 
 @mcp.tool()
 def gufi_ls(
@@ -196,7 +246,7 @@ def gufi_ls(
     tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
     tool_result.row_count = len(tool_result.rows)
 
-    return tool_result
+    return tool_result.model_dump()
 
 @mcp.tool()
 def gufi_du(
@@ -226,7 +276,7 @@ def gufi_du(
     # Pack object and return
     tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
     tool_result.row_count = len(tool_result.rows)
-    return tool_result
+    return tool_result.model_dump()
 
 @mcp.tool()
 def gufi_find(
@@ -250,7 +300,7 @@ def gufi_find(
     # Pack object and return
     tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
     tool_result.row_count = len(tool_result.rows)
-    return tool_result
+    return tool_result.model_dump()
 
 @mcp.tool()
 def gufi_stat(
@@ -279,7 +329,7 @@ def gufi_stat(
     # Pack object and return
     tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
     tool_result.row_count = len(tool_result.rows)
-    return tool_result
+    return tool_result.model_dump()
 
 @mcp.tool()
 def gufi_stats(
@@ -322,7 +372,7 @@ def gufi_stats(
     # Pack object and return
     tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
     tool_result.row_count = len(tool_result.rows)
-    return tool_result
+    return tool_result.model_dump()
 
 # resource that returns indexes available
 @mcp.resource("gufi://indexes")

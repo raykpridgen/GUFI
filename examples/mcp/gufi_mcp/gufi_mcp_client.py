@@ -184,9 +184,9 @@ async def main():
 
         # aggregate query
         print(f"Use aggregate query tool")
-        json_data = '''
-        {
+        aggregate_query = {
             "index": "Downloads",
+            "config": ["threads=32"],
             "sql_options": [
                 {
                     "option": "-I",
@@ -194,7 +194,7 @@ async def main():
                 },
                 {
                     "option": "-E",
-                    "sql": "INSERT INTO intermediate SELECT name, size FROM entries WHERE type='f'"
+                    "sql": "INSERT INTO intermediate SELECT size FROM entries WHERE type='f'"
                 },
                 {
                     "option": "-K",
@@ -210,8 +210,11 @@ async def main():
                 }
             ]
         }
-        '''
-        result_stream = await client.call_tool("aggregate_sql_query", {"query": json_data})
+        result_stream = await client.call_tool("aggregate_sql_query", {"query": aggregate_query})
+        res = json.loads(result_stream.content[0].text)
+        print(f"Aggregate Columns: {res['columns']}")
+        for row in range(res["row_count"]):
+            print(res["rows"][row])
 
 if __name__ == "__main__":
     asyncio.run(main())
