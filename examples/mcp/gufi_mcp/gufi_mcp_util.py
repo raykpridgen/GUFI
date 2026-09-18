@@ -7,6 +7,7 @@ import os
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 import re
+import subprocess
 
 load_dotenv()
 
@@ -18,6 +19,29 @@ MCPSRVPORT = os.getenv('MCPSRVPORT')
 GUFIVTLIB = os.getenv('GUFIVTLIB')
 GUFI_INDEX_ROOT = os.getenv('GUFI_INDEX_ROOT')
 GUFI_QUERY = os.getenv('GUFI_QUERY')
+from enum import Enum
+
+class GufiSQLOption(str, Enum):
+    I = "-I"
+    T = "-T"
+    S = "-S"
+    E = "-E"
+    K = "-K"
+    J = "-J"
+    G = "-G"
+    F = "-F"
+
+# Object for GUFI options
+class GufiOption(BaseModel):
+    option: GufiSQLOption
+    sql: str
+
+# Object to handle query construction
+class GufiQuery(BaseModel):
+    index: str
+    sql_options: list[GufiOption] = Field(default_factory=list)
+    config: list[str] = Field(default_factory=list)
+    delimiter: str = "\t"
 
 # Object to handle query returns
 class GufiQueryResult(BaseModel):
@@ -29,18 +53,6 @@ class GufiQueryResult(BaseModel):
 class GufiToolResult(BaseModel):
     rows: list[list[Any]] = Field(default_factory=list)
     row_count: int = 0
-
-# Object for GUFI options
-class GufiOption(BaseModel):
-    option: str
-    sql: str
-
-# Object to handle query construction
-class GufiQuery(BaseModel):
-    index: str
-    options: list[GufiOption] = Field(default_factory=list)
-    delimiter: str = "\t"
-
 
 def is_valid_sql_query(sql_query: str, dialect: str = "sqlite") -> bool:
     try:
@@ -91,7 +103,7 @@ def resolve_remote_index(index: str) -> str:
 def get_gufi_indexes() -> list[str]:
     index_root = Path(GUFI_INDEX_ROOT).resolve()
     if not index_root.exists():
-        raise RuntimeError("Error: GUFI index root does not exist")
+        raise RuntimeError("Error: GUFI index root does not exist.")
     indexes = []
 
     # Confirm path is a directory with other dirs inside
@@ -160,3 +172,16 @@ def has_treesummary(index: str) -> bool:
         return False
     else:
         return True
+
+def subpath_exists(path: str) -> bool:
+    ''' Confirm a subpath exists within gufi index root '''
+    result = subprocess.run(["gufi_ls", f"{path}"], capture_output=True, text=True)
+    if result.stdout:
+        return True
+    else:
+        return False
+
+def validate_aggregate_order(query: GufiQuery) -> bool:
+    ''' Validate the aggregate order of gufi queries '''
+
+    return True

@@ -182,5 +182,36 @@ async def main():
         for row in range(res["row_count"]):
             print(res["rows"][row])
 
+        # aggregate query
+        print(f"Use aggregate query tool")
+        json_data = '''
+        {
+            "index": "Downloads",
+            "sql_options": [
+                {
+                    "option": "-I",
+                    "sql": "CREATE TABLE intermediate(size INT64)"
+                },
+                {
+                    "option": "-E",
+                    "sql": "INSERT INTO intermediate SELECT name, size FROM entries WHERE type='f'"
+                },
+                {
+                    "option": "-K",
+                    "sql": "CREATE TABLE aggregate(total INT64)"
+                },
+                {
+                    "option": "-J",
+                    "sql": "INSERT INTO aggregate SELECT SUM(size) FROM intermediate"
+                },
+                {
+                    "option": "-G",
+                    "sql": "SELECT SUM(total) FROM aggregate"
+                }
+            ]
+        }
+        '''
+        result_stream = await client.call_tool("aggregate_sql_query", {"query": json_data})
+
 if __name__ == "__main__":
     asyncio.run(main())

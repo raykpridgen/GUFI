@@ -61,10 +61,11 @@
 
 from mcp.server import MCPServer
 import subprocess
-from typing import Any
+from typing import Any, Annotated, Literal
+from pydantic import Field
 import os
 from dotenv import load_dotenv
-from gufi_mcp_util import GufiQueryResult, GufiToolResult
+from gufi_mcp_util import GufiQueryResult, GufiToolResult, GufiQuery
 import gufi_mcp_util as util
 
 load_dotenv()
@@ -93,7 +94,12 @@ def gufi_location() -> str:
     return str(result.stdout)
 
 @mcp.tool()
-def sql_file_index(sqlin: str, wherein: str, index: str, remote: bool = False) -> GufiQueryResult:
+def sql_file_index(
+        sqlin: Annotated[str, Field(description="SELECT and FROM portion of the SQL query.")],
+        wherein: Annotated[str, Field(description="WHERE, ORDER, and LIMIT portion of the SQL query.")],
+        index: Annotated[str, Field(description="Index / subpath to query. This will be resolved internally so the name obtained from the gufi_indexes resource should be used.")],
+        remote: Annotated[bool, Field(description="Boolean for if this is a remote connection. Leave untouched unless user specifies otherwise. Config will be handled before invokation if remote is needed.")] = False
+) -> GufiQueryResult:
     """
         sql query on local file information index
     """
@@ -124,7 +130,51 @@ def sql_file_index(sqlin: str, wherein: str, index: str, remote: bool = False) -
         raise RuntimeError(f"Error executing SQL: {result[1]}")
 
 @mcp.tool()
-def gufi_ls(path: str = None, options: list[str] = None) -> GufiToolResult:
+def aggregate_sql_query(
+        query: Annotated[GufiQuery, Field(description="Constructed object for the aggregate SQL query.")],
+) -> GufiQueryResult:
+
+    index = query.index
+    if not util.subpath_exists(index):
+        raise RuntimeError(f"Error: Index or subpath {index} does not exist")
+
+    if not util.validate_aggregate_order(query):
+        raise RuntimeError(f"Error: Aggregate order is not valid")
+
+    query_result = GufiQueryResult()
+
+    # CREATE VIRTUAL TABLE temp.gufi
+    # USING gufi_vt(
+    options = []
+    for item in query.sql_options:
+        option = item.option.lstrip("-")
+        sql = item.sql.replace("'", "''")
+        options.append(f"{option}='{sql}'")
+
+    options.append(f"index='{query.index}'")
+
+    sql_query = f"""
+        CREATE VIRTUAL TABLE temp.gufi.mcp
+        USING gufi_vt({", ".join(options)}
+    """
+
+    result = util.execute_sql(sql_query, True)
+
+    if result[0] != "sql error:":
+        # Format result into serialized object
+        query_result.rows = [list(res_row) for res_row in result]
+        query_result.columns = [""]
+        query_result.row_count = len(query_result.rows)
+        return query_result
+
+    else:
+        raise RuntimeError(f"Error executing SQL: {result[1]}")
+
+@mcp.tool()
+def gufi_ls(
+        path: Annotated[str, Field(description="Optional subpath of gufi_ls. This path should have the desired index as the root, since the underlying tool resolves from a configured root.")] = None,
+        options: Annotated[list[str], Field(description="Options to submit for gufi_ls. submit '--help' to view these options. Do not use --delim, the tool uses its own to give structured output. A value supplied after an option should be a new list entry.")] = None
+) -> GufiToolResult:
     ''' Execute user-facing tool: gufi equivalent of ls '''
 
     tool_result = GufiQueryResult()
@@ -149,7 +199,10 @@ def gufi_ls(path: str = None, options: list[str] = None) -> GufiToolResult:
     return tool_result
 
 @mcp.tool()
-def gufi_du(subpath: str = None, options: list[str] = None) -> GufiToolResult:
+def gufi_du(
+        subpath: Annotated[str, Field(description="Optional subpath to input for du. This directory must have treesummary active to get results.")] = None,
+        options: Annotated[list[str], Field(description="Options to submit for gufi_du. submit '--help' to view these options. A value supplied after an option should be a new list entry.")] = None
+) -> GufiToolResult:
     ''' Execute user-facing tool: gufi equivalent of ls '''
 
     tool_result = GufiQueryResult()
@@ -176,7 +229,9 @@ def gufi_du(subpath: str = None, options: list[str] = None) -> GufiToolResult:
     return tool_result
 
 @mcp.tool()
-def gufi_find(options: list[str] = None) -> GufiToolResult:
+def gufi_find(
+        options: Annotated[list[str], Field(description="Options to submit for gufi_find. submit '--help' to view these options. Do not use --delim, the tool uses its own to give structured output. A value supplied after an option should be a new list entry.")] = None
+) -> GufiToolResult:
     ''' Execute user-facing tool: gufi equivalent of find '''
 
     tool_result = GufiQueryResult()
@@ -198,7 +253,10 @@ def gufi_find(options: list[str] = None) -> GufiToolResult:
     return tool_result
 
 @mcp.tool()
-def gufi_stat(file: str, options: list[str] = None) -> GufiToolResult:
+def gufi_stat(
+        file: Annotated[str, Field(description="File to stat.")],
+        options: Annotated[list[str], Field(description="Options to submit for gufi_stat. submit '--help' to view these options. A value supplied after an option should be a new list entry.")] = None
+) -> GufiToolResult:
     ''' Execute user-facing tool: gufi equivalent of ls '''
 
     tool_result = GufiQueryResult()
@@ -224,21 +282,33 @@ def gufi_stat(file: str, options: list[str] = None) -> GufiToolResult:
     return tool_result
 
 @mcp.tool()
-def gufi_stats(path: str, stat: str, options: list[str] = None) -> GufiToolResult:
+def gufi_stats(
+        path: Annotated[str, Field(description="Path to obtain statistic from. Resolved with tool internally.")],
+        stat: Annotated[str, Field(description="Statistic to use. Use the --help option to view these statistics.")],
+        options: Annotated[list[str], Field(description="Options to submit for gufi_stats. submit '--help' to view these options. Do not use --delim, the tool uses its own to give structured output. A value supplied after an option should be a new list entry.")] = None
+) -> GufiToolResult:
     ''' Execute user-facing tool: gufi equivalent of ls '''
 
     tool_result = GufiQueryResult()
 
     cmd = ["gufi_stats"]
+    help = False
     # Build options string if options passed
     if options:
         for option in options:
+            if option == "--help":
+                help = True
             cmd.append(option)
 
-    cmd.append(stat)
-    cmd.append(path)
-    cmd.append("--delim")
-    cmd.append("\t")
+    # Override previous build for clean help, since required vars are used
+    if help:
+        cmd = ['gufi_stats', '--help']
+        result = subprocess.run(cmd, capture_output=True, text=True)
+    else:
+        cmd.append(stat)
+        cmd.append(path)
+        cmd.append("--delim")
+        cmd.append("\t")
 
     result = subprocess.run(cmd, capture_output=True, text=True)
 
@@ -267,7 +337,9 @@ def gufi_indexes() -> list[list[Any]]:
     return output
 
 @mcp.resource("gufi://schemas/{schema}")
-def gufi_schemas(schema: str = "all") -> list[list[str]]:
+def gufi_schemas(
+        schema: Annotated[str, Field(description="After running this resource with no input, all tables will be available. Inputting a table to this variable will reflect schema information for that table.")] = "all"
+) -> list[list[str]]:
     """ Return schemas of each gufi index table """
 
     # Get all tables for GUFI
@@ -288,6 +360,18 @@ def gufi_schemas(schema: str = "all") -> list[list[str]]:
             raise RuntimeError(f"Error executing SQL: {result[1]}")
 
     return rows
+
+@mcp.prompt()
+def gufi_session_briefing() -> str:
+
+    # What is GUFI
+    # How writing sql to it works
+    # Tools available
+    # How to use tools
+    # When to use a user tool vs sql query tool vs aggregate query tool
+
+
+    return "This is what you should do."
 
 if __name__ == "__main__":
     # Run the server with HTTP transport
