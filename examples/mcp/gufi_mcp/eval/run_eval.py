@@ -433,6 +433,16 @@ def structured_result_error(result_text: str) -> str | None:
     return None
 
 
+def structured_result_warning(result_text: str) -> str | None:
+    try:
+        parsed = json.loads(result_text)
+    except json.JSONDecodeError:
+        return None
+    if isinstance(parsed, dict) and parsed.get("warning"):
+        return str(parsed["warning"])
+    return None
+
+
 async def run_participant(
     *,
     spec: RunSpec,
@@ -663,7 +673,9 @@ def grade_run(
                 "with keys: score, correctness, tool_use, gufi_understanding, "
                 "efficiency, clarity, completed, used_expected_tool, "
                 "major_failure_mode, reasoning. Treat failed, redundant, or timed-out "
-                "tool calls as evidence for tool_use and efficiency scores."
+                "tool calls as evidence for tool_use and efficiency scores. Penalize "
+                "accepting shard-local sql_file_index results when warning is present "
+                "for global top-N, ORDER BY, GROUP BY, or aggregate questions."
             ),
         },
         {"role": "user", "content": json.dumps(grader_prompt, indent=2)},

@@ -102,7 +102,7 @@ def _extract_correlation_fields(name: str | None, output: Any) -> dict[str, Any]
         return {}
 
     fields: dict[str, Any] = {}
-    for key in ("row_count", "error", "sql", "compiled_sql", "plan_hash"):
+    for key in ("row_count", "error", "sql", "compiled_sql", "plan_hash", "warning", "execution_mode", "requested_limit"):
         if key in output and output[key] is not None:
             fields[key] = output[key]
     if name == "execute_query_plan" and "elapsed_ms" in output:

@@ -74,8 +74,7 @@ load_dotenv()
 MCPSRVHOST = os.getenv('MCPSRVHOST')
 MCPSRVPORT = os.getenv('MCPSRVPORT')
 MCP_SERVER=f'http://{MCPSRVHOST}:{MCPSRVPORT}/mcp'
-LOCALSELECT='select path,name,size from pentries'
-LOCALWHERE='where name like \'%\' limit 10'
+LOCALSELECT='select path,name,size from pentries where name like \'%\' limit 10'
 LOCALSEARCHPATH='vault'
 REMOTESELECT='select path,name,size from gufi_vt_pentries'
 REMOTEWHERE='where name like \'%\' order by size desc limit 10'
@@ -141,7 +140,7 @@ async def main():
 
         # gufi local query
         print(f"query local gufi index")
-        result_stream= await client.call_tool("sql_file_index", {"sqlin": LOCALSELECT, "wherein": LOCALWHERE,"index": LOCALSEARCHPATH})
+        result_stream= await client.call_tool("sql_file_index", {"sqlin": LOCALSELECT, "index": LOCALSEARCHPATH})
         res = json.loads(result_stream.content[0].text)
         print(res["columns"])
         for row in range(res["row_count"]):
@@ -189,38 +188,42 @@ async def main():
         for row in range(res["row_count"]):
             print(res["rows"][row])
 
-        # aggregate query
-        print(f"Use aggregate query tool")
-        aggregate_query = {
+        # aggregate query: total size
+        print("Use aggregate query tool for total size")
+        total_size_query = {
             "index": "Downloads",
             "config": ["threads=32"],
             "sql_options": [
-                {
-                    "option": "-I",
-                    "sql": "CREATE TABLE intermediate(size INT64)"
-                },
-                {
-                    "option": "-E",
-                    "sql": "INSERT INTO intermediate SELECT size FROM entries WHERE type='f'"
-                },
-                {
-                    "option": "-K",
-                    "sql": "CREATE TABLE aggregate(total INT64)"
-                },
-                {
-                    "option": "-J",
-                    "sql": "INSERT INTO aggregate SELECT SUM(size) FROM intermediate"
-                },
-                {
-                    "option": "-G",
-                    "sql": "SELECT SUM(total) FROM aggregate"
-                }
-            ]
+                {"option": "-I", "sql": "CREATE TABLE intermediate(size INT64)"},
+                {"option": "-E", "sql": "INSERT INTO intermediate SELECT size FROM entries WHERE type='f'"},
+                {"option": "-K", "sql": "CREATE TABLE aggregate(total INT64)"},
+                {"option": "-J", "sql": "INSERT INTO aggregate SELECT SUM(size) FROM intermediate"},
+                {"option": "-G", "sql": "SELECT SUM(total) FROM aggregate"},
+            ],
         }
-        result_stream = await client.call_tool("aggregate_sql_query", {"query": aggregate_query})
+        result_stream = await client.call_tool("aggregate_sql_query", {"query": total_size_query})
         res = json.loads(result_stream.content[0].text)
-        print(f"Aggregate Columns: {res['columns']}")
+        print(f"Total size columns: {res['columns']}")
         for row in range(res["row_count"]):
+            print(res["rows"][row])
+
+        # grouped aggregate example (uid totals)
+        print("Use aggregate query tool for grouped uid totals")
+        uid_totals_query = {
+            "index": "personal_data",
+            "config": ["threads=12"],
+            "sql_options": [
+                {"option": "-I", "sql": "CREATE TABLE intermediate(uid INT64, total_bytes INT64)"},
+                {"option": "-E", "sql": "INSERT INTO intermediate SELECT uid, size FROM vrpentries WHERE type = 'f'"},
+                {"option": "-K", "sql": "CREATE TABLE aggregate(uid INT64, total_bytes INT64)"},
+                {"option": "-J", "sql": "INSERT INTO aggregate SELECT uid, SUM(total_bytes) FROM intermediate GROUP BY uid"},
+                {"option": "-G", "sql": "SELECT uid, total_bytes FROM aggregate ORDER BY total_bytes DESC LIMIT 10"},
+            ],
+        }
+        result_stream = await client.call_tool("aggregate_sql_query", {"query": uid_totals_query})
+        res = json.loads(result_stream.content[0].text)
+        print(f"UID totals columns: {res['columns']}")
+        for row in range(min(res["row_count"], 5)):
             print(res["rows"][row])
 
 if __name__ == "__main__":
