@@ -110,25 +110,73 @@ def sql_file_index(
     # Build SQL line
     if remote:
         searchpath = util.resolve_remote_index(index)
-        sqlline = '%s(\'%s\',1,0,99,NULL,0,\'ssh\',\'%s\') %s' % (sqlin, searchpath, REMOTEHOST, wherein)
+        threads = os.cpu_count() or 1
+        vt_config = [
+            util.sqlite_string(searchpath),
+            f"threads={threads}",
+            "min_level=0",
+            "max_level=99",
+            "verbose=0",
+            "remote_cmd='ssh'",
+            f"remote_arg={util.sqlite_string(REMOTEHOST)}",
+        ]
     else:
         searchpath = util.resolve_local_index(index)
         if not searchpath:
             raise RuntimeError(f"Error: Index {index} not found")
-        sqlline = '%s(\'%s\',1,1,99,NULL,1) %s' % (sqlin, searchpath, wherein)
+        threads = os.cpu_count() or 1
 
-    # Execute Query using GUFI_VT
-    result = util.execute_sql(sqlline, True)
+        vt_config = [
+            util.sqlite_string(searchpath),
+            f"threads={threads}",
+            "min_level=1",
+            "max_level=99",
+            "verbose=0",
+        ]
 
-    if result[0] != "sql error:":
-        # Format result into serialized object
+    logical_sql = util.normalize_gufi_query_sql(f"{sqlin.strip()} {wherein.strip()}".strip())
+    stage = util.gufi_query_stage_from_sql(logical_sql)
+    if not stage:
+        query_result.error = "Could not find a supported GUFI table in the SQL FROM clause."
+        query_result.sql = logical_sql
+        return query_result.model_dump()
+
+    vt_config.append(f'{stage}={util.sqlite_string(util.ensure_sql_statement(logical_sql), '"')}')
+    create_sql = f"""
+        CREATE VIRTUAL TABLE temp.gufi
+        USING gufi_vt({", ".join(vt_config)})
+    """
+    query_result.sql = create_sql
+
+    try:
+        conn = sqlite3.connect(":memory:")
+        conn.enable_load_extension(True)
+        conn.load_extension(GUFIVTLIB)
+        conn.enable_load_extension(False)
+
+        cursor = conn.cursor()
+        cursor.execute(create_sql)
+        cursor.execute("SELECT * FROM temp.gufi")
+        result = cursor.fetchall()
+
         query_result.rows = [list(res_row) for res_row in result]
-        query_result.columns = util.get_columns_from_sqlin(sqlin)
+        query_result.columns = [description[0] for description in cursor.description]
         query_result.row_count = len(query_result.rows)
         return query_result.model_dump()
 
-    else:
-        raise RuntimeError(f"Error executing SQL: {result[1]}")
+    except sqlite3.Error as e:
+        query_result.error = str(e)
+        return query_result.model_dump()
+
+    finally:
+        try:
+            conn.execute("DROP TABLE IF EXISTS temp.gufi")
+        except (NameError, sqlite3.Error):
+            pass
+        try:
+            conn.close()
+        except (NameError, sqlite3.Error):
+            pass
 
 @mcp.tool()
 def aggregate_sql_query(
@@ -156,6 +204,7 @@ def aggregate_sql_query(
         CREATE VIRTUAL TABLE temp.gufi
         USING gufi_vt({", ".join(options)})
     """
+    query_result.sql = sql_query
 
     conn = sqlite3.connect(":memory:")
     try:
@@ -175,7 +224,8 @@ def aggregate_sql_query(
         return query_result.model_dump()
 
     except sqlite3.Error as e:
-        raise RuntimeError(f"Error executing SQL: {e}") from e
+        query_result.error = str(e)
+        return query_result.model_dump()
 
     finally:
         try:
@@ -374,6 +424,47 @@ def gufi_stats(
     tool_result.row_count = len(tool_result.rows)
     return tool_result.model_dump()
 
+@mcp.tool()
+def gufi_getfattr(
+        path: Annotated[str, Field(description="Path to obtain fattrs from. Resolved with tool internally.")],
+        options: Annotated[list[str], Field(description="Options to submit for gufi_stats. submit '--help' to view these options. Do not use --delim, the tool uses its own to give structured output. A value supplied after an option should be a new list entry.")] = None
+) -> GufiToolResult:
+    ''' Execute user-facing tool: gufi equivalent of get_fattr '''
+
+    tool_result = GufiQueryResult()
+
+    cmd = ["gufi_getfattr"]
+    help = False
+    # Build options string if options passed
+    if options:
+        for option in options:
+            if option == "--help":
+                help = True
+            cmd.append(option)
+
+    # Override previous build for clean help, since required vars are used
+    if help:
+        cmd = ['gufi_fattr', '--help']
+        result = subprocess.run(cmd, capture_output=True, text=True)
+    else:
+        cmd.append(path)
+        cmd.append("--delim")
+        cmd.append("\t")
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.stderr:
+        # treesummary existence error at subpath
+        if "argument stat: invalid choice:" in result.stderr:
+            return [[f"Tool error: gufi_stats does not allow getting statistic {stat}."]]
+        if "No such file or directory" in result.stderr:
+            return [[f"Path error: gufi_stats was not able to find the path {path}."]]
+
+    # Pack object and return
+    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
+    tool_result.row_count = len(tool_result.rows)
+    return tool_result.model_dump()
+
 # resource that returns indexes available
 @mcp.resource("gufi://indexes")
 def gufi_indexes() -> list[list[Any]]:
@@ -410,6 +501,20 @@ def gufi_schemas(
             raise RuntimeError(f"Error executing SQL: {result[1]}")
 
     return rows
+
+#@mcp.resource("gufi://naive_indexes")
+def naive_index_scheme() -> str:
+    """
+       sql query on local file information index
+    """
+    schemafile=SCHEMAFILE
+    try:
+        with open(schemafile, mode="r") as f:
+            content = f.read()
+        return content
+    except FileNotFoundError:
+        return "Schema file not found."
+
 
 @mcp.prompt()
 def gufi_session_briefing() -> str:

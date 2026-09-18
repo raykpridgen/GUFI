@@ -48,6 +48,8 @@ class GufiQueryResult(BaseModel):
     columns: list[str] = Field(default_factory=list)
     rows: list[list[Any]] = Field(default_factory=list)
     row_count: int = 0
+    error: str | None = None
+    sql: str | None = None
 
 # Object for tool results
 class GufiToolResult(BaseModel):
@@ -111,6 +113,52 @@ def resolve_query_index(index: str) -> str:
     if os.path.isabs(index):
         return index
     return os.path.join(GUFI_INDEX_ROOT, index)
+
+def rewrite_gufi_vt_from(sql: str, vt_args: str) -> str:
+    ''' Rewrite logical GUFI table names into executable gufi_vt calls.
+
+    Models see schemas for raw GUFI tables such as pentries and vrpentries, but
+    SQLite execution needs the gufi_vt_* table-valued function with index args.
+    This narrow regex only rewrites whitelisted FROM table tokens.
+    '''
+    tables = "treesummary|summary|entries|pentries|vrsummary|vrpentries"
+    pattern = rf"(?i)\bFROM\s+(?:gufi_vt_)?({tables})\b(?!\s*\()"
+
+    def replace(match: re.Match) -> str:
+        table = match.group(1)
+        return f"FROM gufi_vt_{table}({vt_args})"
+
+    return re.sub(pattern, replace, sql, count=1)
+
+def gufi_query_stage_from_sql(sql: str) -> str | None:
+    ''' Pick the gufi_query SQL phase needed for a logical SELECT.
+
+    The generic gufi_vt table maps SQL text to gufi_query flags. Entry-like
+    tables run through -E, summary-like tables through -S, and treesummary
+    through -T.
+    '''
+    match = re.search(
+        r"(?i)\bFROM\s+(?:gufi_vt_)?(treesummary|summary|entries|pentries|vrsummary|vrpentries)\b",
+        sql,
+    )
+    if not match:
+        return None
+
+    table = match.group(1).lower()
+    if table == "treesummary":
+        return "T"
+    if table in {"summary", "vrsummary"}:
+        return "S"
+    return "E"
+
+def normalize_gufi_query_sql(sql: str) -> str:
+    ''' Normalize logical SQL before passing it into generic gufi_vt.
+
+    The fixed gufi_vt_pentries wrapper exposes a synthetic path column, but raw
+    pentries SQL uses the GUFI path() function. This keeps simple client/model
+    queries like SELECT path,name,size FROM pentries executable through -E.
+    '''
+    return re.sub(r"(?i)\bSELECT\s+path\s*,", "SELECT path() AS path,", sql, count=1)
 
 def resolve_local_index(index: str) -> str:
     ''' resolve name of a local index to the full path '''

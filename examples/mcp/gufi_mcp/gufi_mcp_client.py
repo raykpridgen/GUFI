@@ -74,12 +74,12 @@ load_dotenv()
 MCPSRVHOST = os.getenv('MCPSRVHOST')
 MCPSRVPORT = os.getenv('MCPSRVPORT')
 MCP_SERVER=f'http://{MCPSRVHOST}:{MCPSRVPORT}/mcp'
-LOCALSELECT='select path,name,size from gufi_vt_pentries'
+LOCALSELECT='select path,name,size from pentries'
 LOCALWHERE='where name like \'%\' limit 10'
-LOCALSEARCHPATH='Documents'
+LOCALSEARCHPATH='vault'
 REMOTESELECT='select path,name,size from gufi_vt_pentries'
 REMOTEWHERE='where name like \'%\' order by size desc limit 10'
-REMOTESEARCHPATH='/home/raykprid/search/documents/'
+REMOTESEARCHPATH='/home/raykprid/search/vault/'
 
 async def main():
     # Connect to FastMCP server
@@ -178,6 +178,13 @@ async def main():
         # gufi_stats
         print(f"use gufi_stats tool")
         result_stream = await client.call_tool("gufi_stats", {"path": "personal_data", "stat": "leaf-dirs", "options": ["-r", "--num-results", "10"]})
+        res = json.loads(result_stream.content[0].text)
+        for row in range(res["row_count"]):
+            print(res["rows"][row])
+
+        # gufi_getfattr
+        print(f"use gufi_getfattr tool")
+        result_stream = await client.call_tool("gufi_getfattr", {"path": "personal_data", "options": ["-R"]})
         res = json.loads(result_stream.content[0].text)
         for row in range(res["row_count"]):
             print(res["rows"][row])
