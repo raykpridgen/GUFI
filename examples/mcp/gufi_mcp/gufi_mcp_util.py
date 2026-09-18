@@ -19,7 +19,12 @@ MCPSRVPORT = os.getenv('MCPSRVPORT')
 GUFIVTLIB = os.getenv('GUFIVTLIB')
 GUFI_INDEX_ROOT = os.getenv('GUFI_INDEX_ROOT')
 GUFI_QUERY = os.getenv('GUFI_QUERY')
+GUFI_LIB = os.getenv('GUFI_LIB')
 from enum import Enum
+
+WRAPPER_TOOLS = ("gufi_find", "gufi_ls", "gufi_du", "gufi_stat", "gufi_stats", "gufi_getfattr")
+_WRAPPER_TOOLS = WRAPPER_TOOLS
+_TOOL_HELP_CACHE: dict[str, str] = {}
 
 class GufiSQLOption(str, Enum):
     I = "-I"
@@ -61,6 +66,7 @@ class GufiToolResult(BaseModel):
     row_count: int = 0
     stderr: str | None = None
     returncode: int | None = None
+    error: str | None = None
 
 
 def parse_delimited_stdout(stdout: str, delimiter: str = "\t") -> list[list[str]]:
@@ -71,19 +77,245 @@ def parse_delimited_stdout(stdout: str, delimiter: str = "\t") -> list[list[str]
     return [line.split(delimiter) for line in text.splitlines()]
 
 
+def gufi_lib_path() -> str:
+    ''' Return the directory containing gufi_common for GUFI Python CLI tools. '''
+    if GUFI_LIB:
+        return GUFI_LIB
+    if GUFIVTLIB:
+        return str(Path(GUFIVTLIB).resolve().parent)
+    return ""
+
+
+def run_gufi_cli(argv: list[str]) -> subprocess.CompletedProcess:
+    ''' Run a GUFI Python CLI with PYTHONPATH set so gufi_common imports succeed. '''
+    env = os.environ.copy()
+    gufi_lib = gufi_lib_path()
+    if gufi_lib:
+        prefix = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = gufi_lib + (os.pathsep + prefix if prefix else "")
+    return subprocess.run(argv, capture_output=True, text=True, env=env)
+
+
 def pack_command_result(result: subprocess.CompletedProcess, delimiter: str = "\t") -> dict[str, Any]:
-    ''' Build a tool result from a subprocess, surfacing stderr when stdout is empty. '''
-    rows = parse_delimited_stdout(result.stdout, delimiter)
+    ''' Build a tool result from a subprocess; failed runs surface error, not fake rows. '''
     stderr = result.stderr.strip() if result.stderr and result.stderr.strip() else None
-    if not rows and stderr:
-        rows = [[line] for line in stderr.splitlines()]
+    if result.returncode != 0:
+        error = stderr or f"Command failed with exit code {result.returncode}"
+        tool_result = GufiToolResult(
+            rows=[],
+            row_count=0,
+            stderr=stderr,
+            returncode=result.returncode,
+            error=error,
+        )
+        return tool_result.model_dump()
+
+    rows = parse_delimited_stdout(result.stdout, delimiter)
+    error = None
+    if not rows and stderr and any(
+        phrase in stderr
+        for phrase in (
+            "No such file or directory",
+            "Could not stat",
+            "unknown predicate",
+            "ModuleNotFoundError",
+        )
+    ):
+        error = stderr
     tool_result = GufiToolResult(
         rows=rows,
         row_count=len(rows),
         stderr=stderr,
         returncode=result.returncode,
+        error=error,
     )
     return tool_result.model_dump()
+
+
+def capture_tool_help(tool_name: str) -> str:
+    ''' Run a GUFI CLI --help once and cache the text for tool schemas and resources. '''
+    if tool_name in _TOOL_HELP_CACHE:
+        return _TOOL_HELP_CACHE[tool_name]
+    result = run_gufi_cli([tool_name, "--help"])
+    text = (result.stdout or result.stderr or "").strip()
+    if result.returncode != 0 and not text:
+        text = f"{tool_name} --help failed (exit {result.returncode})"
+    _TOOL_HELP_CACHE[tool_name] = text
+    return text
+
+
+def warm_tool_help_cache() -> None:
+    ''' Pre-load help text for all command wrapper tools at server startup. '''
+    for tool_name in _WRAPPER_TOOLS:
+        capture_tool_help(tool_name)
+
+
+def get_tool_help(tool_name: str) -> str:
+    ''' Return cached or freshly captured help for one wrapper tool. '''
+    return capture_tool_help(tool_name)
+
+
+def format_tool_description(summary: str, tool_name: str, example: str, *, max_help_chars: int = 1800) -> str:
+    ''' Build an MCP tool description with embedded usage and a copy-paste example. '''
+    help_text = get_tool_help(tool_name)
+    if len(help_text) > max_help_chars:
+        help_text = help_text[:max_help_chars] + "\n... [truncated; read gufi://tool-guide/" + tool_name + "]"
+    return (
+        f"{summary}\n\n"
+        f"Example:\n{example}\n\n"
+        f"Usage ({tool_name}):\n{help_text}\n\n"
+        "Do not call this tool solely to fetch help; usage is included above."
+    )
+
+
+def _append_extra_flags(cmd: list[str], extra_flags: list[str] | None) -> None:
+    if extra_flags:
+        cmd.extend(extra_flags)
+
+
+def cli_target_path(index: str, subpath: str | None = None) -> str:
+    ''' Build the path argument GUFI CLI tools expect (index name, not absolute path). '''
+    if os.path.isabs(index):
+        base = index.rstrip("/")
+    else:
+        if index not in get_gufi_indexes():
+            raise RuntimeError(f"Error: Index provided not found at index root: {index}")
+        base = index.strip().rstrip("/")
+    if subpath:
+        return f"{base}/{subpath.lstrip('/')}"
+    return base
+
+
+def resolve_index_path(index: str, subpath: str | None = None) -> str:
+    ''' Resolve an index name and optional subpath to a filesystem path under the index root. '''
+    relative = cli_target_path(index, subpath)
+    if os.path.isabs(relative):
+        return relative
+    return os.path.join(GUFI_INDEX_ROOT, relative)
+
+
+def build_find_argv(
+    index: str,
+    *,
+    subpath: str | None = None,
+    name: str | None = None,
+    type: str | None = "f",
+    mtime: str | None = None,
+    size: str | None = None,
+    limit: int | None = None,
+    largest: bool = False,
+    extra_flags: list[str] | None = None,
+) -> list[str]:
+    ''' Build argv for gufi_find. mtime uses GNU find day semantics (+N = older than N days). '''
+    cmd = ["gufi_find", cli_target_path(index, subpath)]
+    if type:
+        cmd.extend(["-type", type])
+    if name:
+        cmd.extend(["-name", name])
+    if mtime:
+        cmd.extend(["-mtime", mtime])
+    if size:
+        cmd.extend(["-size", size])
+    if largest:
+        cmd.append("--largest")
+    if limit is not None:
+        cmd.extend(["--num-results", str(limit)])
+    _append_extra_flags(cmd, extra_flags)
+    cmd.extend(["--delim", "\t"])
+    return cmd
+
+
+def build_ls_argv(
+    index: str,
+    *,
+    subpath: str | None = None,
+    long_format: bool = False,
+    human_readable: bool = False,
+    recursive: bool = False,
+    extra_flags: list[str] | None = None,
+) -> list[str]:
+    ''' Build argv for gufi_ls. '''
+    cmd = ["gufi_ls"]
+    if long_format:
+        cmd.append("-l")
+    if human_readable:
+        cmd.append("-h")
+    if recursive:
+        cmd.append("-R")
+    _append_extra_flags(cmd, extra_flags)
+    cmd.extend(["--delim", "\t", cli_target_path(index, subpath)])
+    return cmd
+
+
+def build_du_argv(
+    index: str,
+    *,
+    subpath: str | None = None,
+    human_readable: bool = False,
+    summarize: bool = False,
+    extra_flags: list[str] | None = None,
+) -> list[str]:
+    ''' Build argv for gufi_du. Requires treesummary on the target path. '''
+    cmd = ["gufi_du"]
+    if human_readable:
+        cmd.append("-h")
+    if summarize:
+        cmd.append("-s")
+    _append_extra_flags(cmd, extra_flags)
+    cmd.append(cli_target_path(index, subpath))
+    return cmd
+
+
+def build_stat_argv(
+    index: str,
+    file: str,
+    *,
+    extra_flags: list[str] | None = None,
+) -> list[str]:
+    ''' Build argv for gufi_stat. file is relative to the index root unless absolute. '''
+    cmd = ["gufi_stat"]
+    _append_extra_flags(cmd, extra_flags)
+    if os.path.isabs(file):
+        cmd.append(file)
+    else:
+        cmd.append(cli_target_path(index, file))
+    return cmd
+
+
+def build_stats_argv(
+    index: str,
+    stat: str,
+    *,
+    subpath: str | None = None,
+    recursive: bool = False,
+    num_results: int | None = None,
+    extra_flags: list[str] | None = None,
+) -> list[str]:
+    ''' Build argv for gufi_stats. '''
+    cmd = ["gufi_stats"]
+    if recursive:
+        cmd.append("-r")
+    if num_results is not None:
+        cmd.extend(["--num-results", str(num_results)])
+    _append_extra_flags(cmd, extra_flags)
+    cmd.extend([stat, cli_target_path(index, subpath), "--delim", "\t"])
+    return cmd
+
+
+def build_getfattr_argv(
+    index: str,
+    path: str,
+    *,
+    recursive: bool = False,
+    extra_flags: list[str] | None = None,
+) -> list[str]:
+    ''' Build argv for gufi_getfattr. '''
+    cmd = ["gufi_getfattr"]
+    if recursive:
+        cmd.append("-R")
+    _append_extra_flags(cmd, extra_flags)
+    cmd.extend([cli_target_path(index, path), "--delim", "\t"])
+    return cmd
 
 def is_valid_sql_query(sql_query: str, dialect: str = "sqlite") -> bool:
     try:
@@ -320,6 +552,128 @@ def build_top_n_files_query(
             ),
         ],
     )
+
+
+def build_mtime_filter_query(
+    index: str,
+    cutoff_epoch: int,
+    *,
+    limit: int = 100,
+    order: str = "mtime ASC",
+    comparison: str = "<",
+    table: str = "vrpentries",
+    threads: int | None = None,
+) -> GufiQuery:
+    ''' Build an aggregate query for index-wide files filtered by mtime against a Unix epoch cutoff. '''
+    thread_count = threads if threads is not None else (os.cpu_count() or 1)
+    if table == "vrpentries":
+        extract_sql = (
+            f"INSERT INTO intermediate SELECT sname, dname, name, mtime, size "
+            f"FROM vrpentries WHERE type = 'f' AND mtime {comparison} {cutoff_epoch}"
+        )
+        i_sql = "CREATE TABLE intermediate(sname TEXT, dname TEXT, name TEXT, mtime INT64, size INT64)"
+        k_sql = "CREATE TABLE aggregate(sname TEXT, dname TEXT, name TEXT, mtime INT64, size INT64)"
+        j_sql = "INSERT INTO aggregate SELECT sname, dname, name, mtime, size FROM intermediate"
+        g_sql = f"SELECT sname, dname, name, mtime, size FROM aggregate ORDER BY {order} LIMIT {limit}"
+    else:
+        extract_sql = (
+            f"INSERT INTO intermediate SELECT path() AS filepath, name, mtime, size "
+            f"FROM {table} WHERE type = 'f' AND mtime {comparison} {cutoff_epoch}"
+        )
+        i_sql = "CREATE TABLE intermediate(filepath TEXT, name TEXT, mtime INT64, size INT64)"
+        k_sql = "CREATE TABLE aggregate(filepath TEXT, name TEXT, mtime INT64, size INT64)"
+        j_sql = "INSERT INTO aggregate SELECT filepath, name, mtime, size FROM intermediate"
+        g_sql = f"SELECT filepath, name, mtime, size FROM aggregate ORDER BY {order} LIMIT {limit}"
+
+    return GufiQuery(
+        index=index,
+        config=[f"threads={thread_count}"],
+        sql_options=[
+            GufiOption(option=GufiSQLOption.I, sql=i_sql),
+            GufiOption(option=GufiSQLOption.E, sql=extract_sql),
+            GufiOption(option=GufiSQLOption.K, sql=k_sql),
+            GufiOption(option=GufiSQLOption.J, sql=j_sql),
+            GufiOption(option=GufiSQLOption.G, sql=g_sql),
+        ],
+    )
+
+
+def build_mtime_count_query(
+    index: str,
+    cutoff_epoch: int,
+    *,
+    comparison: str = "<",
+    threads: int | None = None,
+) -> GufiQuery:
+    ''' Build an aggregate query that counts regular files matching an mtime cutoff index-wide. '''
+    thread_count = threads if threads is not None else (os.cpu_count() or 1)
+    return GufiQuery(
+        index=index,
+        config=[f"threads={thread_count}"],
+        sql_options=[
+            GufiOption(option=GufiSQLOption.I, sql="CREATE TABLE intermediate(count INT64)"),
+            GufiOption(
+                option=GufiSQLOption.E,
+                sql=(
+                    f"INSERT INTO intermediate SELECT 1 FROM vrpentries "
+                    f"WHERE type = 'f' AND mtime {comparison} {cutoff_epoch}"
+                ),
+            ),
+            GufiOption(option=GufiSQLOption.K, sql="CREATE TABLE aggregate(count INT64)"),
+            GufiOption(option=GufiSQLOption.J, sql="INSERT INTO aggregate SELECT COUNT(*) FROM intermediate"),
+            GufiOption(option=GufiSQLOption.G, sql="SELECT SUM(count) AS file_count FROM aggregate"),
+        ],
+    )
+
+
+def build_mtime_bucket_query(
+    index: str,
+    now_epoch: int,
+    *,
+    bucket_days: list[int] | None = None,
+    threads: int | None = None,
+) -> GufiQuery:
+    ''' Build an aggregate query that buckets regular files by modification age. '''
+    thread_count = threads if threads is not None else (os.cpu_count() or 1)
+    days = bucket_days or [7, 14]
+    if len(days) == 1:
+        day = days[0]
+        sec = day * 86400
+        case_sql = (
+            f"CASE WHEN mtime >= {now_epoch - sec} THEN 'modified_last_{day}_days' "
+            f"ELSE 'stale_over_{day}_days' END"
+        )
+    else:
+        d0, d1 = days[0], days[1]
+        sec0 = d0 * 86400
+        sec1 = d1 * 86400
+        case_sql = (
+            f"CASE WHEN mtime >= {now_epoch - sec0} THEN 'modified_last_{d0}_days' "
+            f"WHEN mtime >= {now_epoch - sec1} THEN 'stale_{d0}_to_{d1}_days' "
+            f"ELSE 'stale_over_{d1}_days' END"
+        )
+
+    return GufiQuery(
+        index=index,
+        config=[f"threads={thread_count}"],
+        sql_options=[
+            GufiOption(option=GufiSQLOption.I, sql="CREATE TABLE intermediate(bucket TEXT)"),
+            GufiOption(
+                option=GufiSQLOption.E,
+                sql=f"INSERT INTO intermediate SELECT {case_sql} FROM vrpentries WHERE type = 'f'",
+            ),
+            GufiOption(option=GufiSQLOption.K, sql="CREATE TABLE aggregate(bucket TEXT, file_count INT64)"),
+            GufiOption(
+                option=GufiSQLOption.J,
+                sql="INSERT INTO aggregate SELECT bucket, COUNT(*) FROM intermediate GROUP BY bucket",
+            ),
+            GufiOption(
+                option=GufiSQLOption.G,
+                sql="SELECT bucket, SUM(file_count) AS file_count FROM aggregate GROUP BY bucket ORDER BY file_count DESC",
+            ),
+        ],
+    )
+
 
 def resolve_local_index(index: str) -> str:
     ''' resolve name of a local index to the full path '''

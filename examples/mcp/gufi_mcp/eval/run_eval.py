@@ -124,6 +124,16 @@ PROMPTS = [
         ),
         "expected_tool": "aggregate_sql_query",
     },
+    {
+        "id": "stale_files_work",
+        "kind": "simple",
+        "text": (
+            "Using the work index, how many regular files have not been modified in "
+            "the last 7 days? List up to 20 example files with path or directory "
+            "context, name, mtime, and size."
+        ),
+        "expected_tool": "gufi_find plus aggregate_sql_query (target 2 calls)",
+    },
 ]
 
 
@@ -320,53 +330,77 @@ def tool_schema(name: str) -> dict[str, Any]:
             },
         },
         "gufi_ls": {
-            "description": "Run gufi_ls for quick directory-style listing.",
+            "description": "List entries under a GUFI index path.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {"type": "string"},
-                    "options": {"type": "array", "items": {"type": "string"}},
+                    "index": {"type": "string"},
+                    "subpath": {"type": "string"},
+                    "long_format": {"type": "boolean"},
+                    "human_readable": {"type": "boolean"},
+                    "recursive": {"type": "boolean"},
+                    "extra_flags": {"type": "array", "items": {"type": "string"}},
                 },
+                "required": ["index"],
             },
         },
         "gufi_du": {
-            "description": "Run gufi_du for disk-usage style summaries.",
+            "description": "Disk-usage summary for an index path (requires treesummary).",
             "parameters": {
                 "type": "object",
-                "properties": {"options": {"type": "array", "items": {"type": "string"}}},
+                "properties": {
+                    "index": {"type": "string"},
+                    "subpath": {"type": "string"},
+                    "human_readable": {"type": "boolean"},
+                    "summarize": {"type": "boolean"},
+                    "extra_flags": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["index"],
             },
         },
         "gufi_find": {
-            "description": "Run gufi_find for find-style metadata searches.",
+            "description": "Find files by name, type, mtime (+N = older than N days), or size.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {"type": "string"},
-                    "options": {"type": "array", "items": {"type": "string"}},
+                    "index": {"type": "string"},
+                    "subpath": {"type": "string"},
+                    "name": {"type": "string"},
+                    "type": {"type": "string"},
+                    "mtime": {"type": "string"},
+                    "size": {"type": "string"},
+                    "limit": {"type": "integer"},
+                    "largest": {"type": "boolean"},
+                    "extra_flags": {"type": "array", "items": {"type": "string"}},
                 },
+                "required": ["index"],
             },
         },
         "gufi_stat": {
-            "description": "Run gufi_stat for a single file/path.",
+            "description": "Stat one file under a GUFI index.",
             "parameters": {
                 "type": "object",
                 "properties": {
+                    "index": {"type": "string"},
                     "file": {"type": "string"},
-                    "options": {"type": "array", "items": {"type": "string"}},
+                    "extra_flags": {"type": "array", "items": {"type": "string"}},
                 },
-                "required": ["file"],
+                "required": ["index", "file"],
             },
         },
         "gufi_stats": {
-            "description": "Run gufi_stats for higher-level GUFI statistics.",
+            "description": "Run a canned GUFI statistic on an index path.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {"type": "string"},
+                    "index": {"type": "string"},
                     "stat": {"type": "string"},
-                    "options": {"type": "array", "items": {"type": "string"}},
+                    "subpath": {"type": "string"},
+                    "recursive": {"type": "boolean"},
+                    "num_results": {"type": "integer"},
+                    "extra_flags": {"type": "array", "items": {"type": "string"}},
                 },
-                "required": ["stat"],
+                "required": ["index", "stat"],
             },
         },
     }

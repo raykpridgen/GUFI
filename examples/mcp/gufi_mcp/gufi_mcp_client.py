@@ -148,42 +148,54 @@ async def main():
 
         # gufi_ls
         print(f"use gufi_ls tool")
-        result_stream = await client.call_tool("gufi_ls", {"path": "personal_data", "options": ["-l", "-h"]})
+        result_stream = await client.call_tool(
+            "gufi_ls",
+            {"index": "personal_data", "long_format": True, "human_readable": True},
+        )
         res = json.loads(result_stream.content[0].text)
         for row in range(res["row_count"]):
             print(res["rows"][row])
 
         # gufi_du
         print(f"use gufi_du tool")
-        result_stream = await client.call_tool("gufi_du", {"options": ["-h"]})
+        result_stream = await client.call_tool("gufi_du", {"index": "personal_data", "human_readable": True})
         res = json.loads(result_stream.content[0].text)
         for row in range(res["row_count"]):
             print(res["rows"][row])
 
         # gufi_find
         print(f"use gufi_find tool")
-        result_stream = await client.call_tool("gufi_find", {"path": "personal_data", "options": ["-name", "organizer*"]})
+        result_stream = await client.call_tool(
+            "gufi_find",
+            {"index": "personal_data", "name": "organizer*", "type": "f", "limit": 10},
+        )
         res = json.loads(result_stream.content[0].text)
         for row in range(res["row_count"]):
             print(res["rows"][row])
 
         # gufi_stat
         print(f"use gufi_stat tool")
-        result_stream = await client.call_tool("gufi_stat", {"file": "vault"})
+        result_stream = await client.call_tool("gufi_stat", {"index": "vault", "file": "."})
         res = json.loads(result_stream.content[0].text)
         for row in range(res["row_count"]):
             print(res["rows"][row])
 
         # gufi_stats
         print(f"use gufi_stats tool")
-        result_stream = await client.call_tool("gufi_stats", {"path": "personal_data", "stat": "leaf-dirs", "options": ["-r", "--num-results", "10"]})
+        result_stream = await client.call_tool(
+            "gufi_stats",
+            {"index": "personal_data", "stat": "leaf-dirs", "recursive": True, "num_results": 10},
+        )
         res = json.loads(result_stream.content[0].text)
         for row in range(res["row_count"]):
             print(res["rows"][row])
 
         # gufi_getfattr
         print(f"use gufi_getfattr tool")
-        result_stream = await client.call_tool("gufi_getfattr", {"path": "personal_data", "options": ["-R"]})
+        result_stream = await client.call_tool(
+            "gufi_getfattr",
+            {"index": "personal_data", "path": ".", "recursive": True},
+        )
         res = json.loads(result_stream.content[0].text)
         for row in range(res["row_count"]):
             print(res["rows"][row])
