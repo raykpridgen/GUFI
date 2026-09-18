@@ -416,12 +416,70 @@ def gufi_session_briefing() -> str:
 
     # What is GUFI
     # How writing sql to it works
+    # Importance and nuance of treesummary being available
     # Tools available
     # How to use tools
     # When to use a user tool vs sql query tool vs aggregate query tool
+    # A user tool (ls, du, etc) is used for high level searches and quick analysis. Some need treesummary
+    # An sql query is one level deeper, providing basic one line queries
+    # An aggregate query is used when the agent cannot get a quick answer from the tool above. An example might be a sum of several joined columns.
+    # A detailed explanation of the pipeline through I, TSE, J, K, G, F will need to be explained
+    # It should also be explained that an agent does not need to use all tools to complete a user request, and simpler actions are preferred. 
 
 
-    return "This is what you should do."
+    return """
+You are working with a GUFI MCP server. GUFI is a parallel file system
+indexer: it scans a file tree into SQLite databases so file metadata can be
+searched quickly without walking the live file system for every question.
+
+Prefer the simplest tool that can answer the user. You do not need to use every
+tool in a session. Start with high-level GUFI tools for quick inspection, move
+to SQL when the user needs a more specific query, and use aggregate SQL only
+when a simple tool or one-line SQL query cannot answer the request cleanly.
+
+Available context:
+- Use the gufi://indexes resource to list known indexes and see whether each
+  one has treesummary data.
+- Use the gufi://schemas/{schema} resource to inspect available GUFI tables or
+  a specific table schema before writing SQL.
+
+Tool guidance:
+- gufi_ls, gufi_du, gufi_find, gufi_stat, and gufi_stats are user-facing GUFI
+  command wrappers. Use these for high-level searches, quick metadata checks,
+  and common filesystem-style questions. Some commands need a rolled-up index
+  with treesummary data.
+- sql_file_index runs a direct SQL SELECT against gufi_vt table-valued
+  functions. Use it for focused one-line queries over entries, pentries,
+  summary, treesummary, vrpentries, or vrsummary when a command wrapper is not
+  precise enough.
+- aggregate_sql_query creates a temporary gufi_vt virtual table and runs GUFI's
+  aggregate pipeline. Use it for multi-stage calculations, grouped totals, or
+  cases where intermediate tables make the query clearer or faster.
+
+Treesummary nuance:
+treesummary exists only when an index has been rolled up. It stores precomputed
+subtree summary data and can make directory-level totals very fast. If an index
+does not have treesummary, prefer entry-level or pentry-level queries, or use an
+aggregate query that computes the needed value from available tables.
+
+Aggregate SQL pipeline:
+- I initializes per-thread intermediate tables, usually with CREATE TABLE
+  intermediate(...).
+- T, S, and E are the per-tree, per-summary, and per-entry SQL phases. These
+  usually INSERT rows into intermediate during aggregation. Use only the phases
+  needed for the question.
+- K initializes the final aggregate table, usually with CREATE TABLE
+  aggregate(...).
+- J merges each intermediate table into the aggregate table.
+- G selects the final result rows from aggregate. The MCP tool returns these
+  rows as typed SQLite values.
+- F is optional final SQL/cleanup used after query processing.
+
+For aggregate_sql_query, pass SQL phases as sql_options with options like -I,
+-E, -K, -J, and -G. Pass gufi_vt configuration such as threads=32 in config.
+The delimiter option from gufi_query is not needed because gufi_vt returns typed
+rows directly through SQLite.
+"""
 
 if __name__ == "__main__":
     # Run the server with HTTP transport
