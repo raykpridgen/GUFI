@@ -75,10 +75,10 @@ MCPSRVHOST = os.getenv('MCPSRVHOST')
 MCPSRVPORT = os.getenv('MCPSRVPORT')
 MCP_SERVER=f'http://{MCPSRVHOST}:{MCPSRVPORT}/mcp'
 LOCALSELECT='select path,name,size from gufi_vt_pentries'
-LOCALWHERE='where name like \'%\' limit 50'
-LOCALSEARCHPATH='documents'
+LOCALWHERE='where name like \'%\' limit 10'
+LOCALSEARCHPATH='Documents'
 REMOTESELECT='select path,name,size from gufi_vt_pentries'
-REMOTEWHERE='where name like \'%\' order by size desc limit 50'
+REMOTEWHERE='where name like \'%\' order by size desc limit 10'
 REMOTESEARCHPATH='/home/raykprid/search/documents/'
 
 async def main():
@@ -112,22 +112,11 @@ async def main():
         schema = result.contents[0].text.replace("],[", "|")[2:-2]
         print(schema)
 
-
         # get schema
         print("read one schema's columns")
         result = await client.read_resource("gufi://schemas/vrsummary")
         schema = result.contents[0].text.replace("],[", "|")[2:-2]
         print(schema)
-
-        # gufi local query
-        print(f"query local gufi  index")
-        result_stream= await client.call_tool("sql_local_file_index", {"sqlin": 'select name, type, sql from sqlite_master', "wherein": 'where sql is not null order by name, type',"index": LOCALSEARCHPATH})
-        deliminate=result_stream.content[0].text.replace("],[","|")[2:-2]
-        outlines=deliminate.split("|")
-        outlen=len(outlines)
-        for outi in range(outlen):
-            print (outlines[outi])
-
 
         ''' List available tools '''
 
@@ -150,29 +139,48 @@ async def main():
         print(f"Result: {result.content[0].text}")
         print("-" * 20)
 
-        # list vt_pentries schema
-        print("run vt_pentries list schema")
-        result = await client.call_tool("local_file_index_schema", {"schema": "gufi_query schema please"})
-        print(f"Result: {result.content[0].text}")
-        print("-" * 20)
-
         # gufi local query
-        print(f"query local gufi  index")
-        result_stream= await client.call_tool("sql_local_file_index", {"sqlin": LOCALSELECT, "wherein": LOCALWHERE,"index": LOCALSEARCHPATH})
+        print(f"query local gufi index")
+        result_stream= await client.call_tool("sql_file_index", {"sqlin": LOCALSELECT, "wherein": LOCALWHERE,"index": LOCALSEARCHPATH})
         res = json.loads(result_stream.content[0].text)
+        print(res["columns"])
         for row in range(res["row_count"]):
             print (res["rows"][row])
 
-        # gufi remote query
-        print(f"query remote gufi  index")
-        result_stream= await client.call_tool("sql_remote_file_index", {"sqlin": REMOTESELECT, "wherein": REMOTEWHERE,"searchpath": REMOTESEARCHPATH})
-        deliminate=result_stream.content[0].text.replace("],[","|")[2:-2]
-        outlines=deliminate.split("|")
-        outlen=len(outlines)
-        for outi in range(outlen):
-            print (outlines[outi])
+        # gufi_ls
+        print(f"use gufi_ls tool")
+        result_stream = await client.call_tool("gufi_ls", {"path": "personal_data", "options": ["-l", "-h"]})
+        res = json.loads(result_stream.content[0].text)
+        for row in range(res["row_count"]):
+            print(res["rows"][row])
 
+        # gufi_du
+        print(f"use gufi_du tool")
+        result_stream = await client.call_tool("gufi_du", {"options": ["-h"]})
+        res = json.loads(result_stream.content[0].text)
+        for row in range(res["row_count"]):
+            print(res["rows"][row])
 
+        # gufi_find
+        print(f"use gufi_find tool")
+        result_stream = await client.call_tool("gufi_find", {"path": "personal_data", "options": ["-name", "organizer*"]})
+        res = json.loads(result_stream.content[0].text)
+        for row in range(res["row_count"]):
+            print(res["rows"][row])
+
+        # gufi_stat
+        print(f"use gufi_stat tool")
+        result_stream = await client.call_tool("gufi_stat", {"file": "vault"})
+        res = json.loads(result_stream.content[0].text)
+        for row in range(res["row_count"]):
+            print(res["rows"][row])
+
+        # gufi_stats
+        print(f"use gufi_stats tool")
+        result_stream = await client.call_tool("gufi_stats", {"path": "personal_data", "stat": "leaf-dirs", "options": ["-r", "--num-results", "10"]})
+        res = json.loads(result_stream.content[0].text)
+        for row in range(res["row_count"]):
+            print(res["rows"][row])
 
 if __name__ == "__main__":
     asyncio.run(main())

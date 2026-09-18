@@ -1,14 +1,8 @@
-from mcp.server import MCPServer
-import asyncio
 import sqlite3
 import sys
-import subprocess
-import shutil
 from pathlib import Path
-from typing import Any, TypedDict
-from dataclasses import dataclass, field
+from typing import Any
 from sqlglot import parse_one, ParseError
-import sqlglot.expressions as exp
 import os
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
@@ -28,6 +22,11 @@ GUFI_QUERY = os.getenv('GUFI_QUERY')
 # Object to handle query returns
 class GufiQueryResult(BaseModel):
     columns: list[str] = Field(default_factory=list)
+    rows: list[list[Any]] = Field(default_factory=list)
+    row_count: int = 0
+
+# Object for tool results
+class GufiToolResult(BaseModel):
     rows: list[list[Any]] = Field(default_factory=list)
     row_count: int = 0
 
@@ -74,13 +73,20 @@ def get_columns_from_sqlin(sqlin) -> list[str]:
     col_string = re.match(r'(?i)SELECT\s+(.+?)\s+FROM', sqlin, flags=re.IGNORECASE | re.DOTALL).group(1)
     return [col.strip() for col in col_string.split(',')]
 
-def resolve_index(index: str) -> str:
-    ''' resolve name of an index to the full path '''
+def resolve_local_index(index: str) -> str:
+    ''' resolve name of a local index to the full path '''
 
     if index not in get_gufi_indexes():
         raise RuntimeError("Error: Index provided not found at index root.")
 
     return f'{GUFI_INDEX_ROOT}{index}'
+
+def resolve_remote_index(index: str) -> str:
+    ''' resolve name of a remote index to the full path '''
+
+    # SELECT * FROM paths WHERE path ~ '^/[^/]+/?$';
+
+    return f'{index}'
 
 def get_gufi_indexes() -> list[str]:
     index_root = Path(GUFI_INDEX_ROOT).resolve()
@@ -97,80 +103,60 @@ def get_gufi_indexes() -> list[str]:
 
     return indexes
 
-def execute_gufi_query(query: GufiQuery) -> GufiQueryResult:
-    ''' Helper function to execute gufi queries '''
+def execute_sql(sqlline: str, gufi_vt: bool, plain_index: str = None) -> list[Any]:
+    ''' Wrapper to execute SQL queries '''
 
-    allowed_prefixes = ('SELECT', 'SHOW', 'DESC', 'DESCRIBE', 'USE')
+    # GUFI_VT uses memory and operates through the function
+    if gufi_vt:
+        conn = sqlite3.connect(':memory:')
+    # Pulling schema needs a path to an index
+    else:
+        # Specific path / table to connect to
+        if plain_index:
+            index = f"{plain_index}" + "/db.db"
+        else:
+            index = f"{GUFI_INDEX_ROOT}" + "/db.db"
+        conn = sqlite3.connect(index)
 
-    # Do validation for a query to ensure safety
+    # Handle SQLITE3 errors
+    try:
+        # Using gufi_vt extension
+        if gufi_vt:
+            conn.enable_load_extension(True)
+            cursor = conn.cursor()
+            conn.load_extension(GUFIVTLIB)
+            conn.enable_load_extension(False)
+        # Plain SQL query
+        else:
+            cursor = conn.cursor()
 
-    '''
-    ### Get folders size from index
-        gufi_query \
-        -I "CREATE TABLE intermediate(size INT64);" \
-        -E "INSERT INTO intermediate SELECT size FROM entries WHERE type = 'd';" \
-        -K "CREATE TABLE aggregate(total INT64);" \
-        -J "INSERT INTO aggregate SELECT SUM(size) FROM intermediate;" \
-        -G "SELECT SUM(total) FROM aggregate;" \
-        -d '|' -n 32 index
+        print(sqlline, file=sys.stderr)
 
-    Flags that dictate SQL passed
-    -E entries tables
-    -S summary tables
-    -T tresummary table
-    -I init intermediate table
-    -K init final aggregate table
-    -J insert from intermediate to aggregate table
-    -G final select from aggregate table
-    -F SQL cleanup
+        # Call GUFI_VT
+        cursor.execute(sqlline)
 
-    Validation paradigms for valid gufi_query execution
-        - I flag must preceed every other flag
-            This will run once per thread, making per-thread tables
-            Anything references by future steps must exist in an I statement preceeding it
-        - E, S, T can occur multiple times and can also contain multiple SQL statements separated by semicolons
-        - However by default
-            If -T does not return, stop otherwise execute S
-            If -S does not return stop otherwise go to E
-            etc
-            -a changes short circuit behavior, BUT this should not be rigorously checked and should be left to agent to confirm through schema and other resources
-        - using T flag is only allowed when index has a treesummary table at the root
-        - K flag must precede J, it creates aggregation before insertion
-        - J flag aggregates parallel intermediate tables into aggregate table
-        - G runs SQL against final aggregation table, should be one statement
-        - F executes once per thread, after every other operation only
-            Should not be required for ordinary queries, but for aggregates like being detailed
+        return cursor.fetchall()
 
-    Potential Rule Structure
-    - I supplied first, any after others causes rejection
-    - At least one S, T, E
-    - Order for -T -> -S -> -E
-    - Last statement in T, S, E accounts for short circuiting
-    - T can encounter dirs without treesummary
-    - K precedes J
-    - J is dependent on existing intermediate and aggregate tables
-    - G operates on aggregate results
-    - F occurs after traversal only
-    - -a changes short circuiting semantics
+    except sqlite3.Error as e:
+        print(f"An SQLite error occurred: {e}",file=sys.stderr)
+        conn.close()
+        return [f"sql error:", f"{str(e)}"]
 
-    Potential Stages:
-    - CLI validation: are things arranged sensibly?
-    - SQL validation: is each statement valid according to SQL semantics?
-    - Dependency validation: do all components have existing dependencies when they are called?
-    - GUFI validation: Do requested tables and views adhere to GUFI?
+    finally:
+        conn.close()
 
-    '''
+def has_treesummary(index: str) -> bool:
 
-    # CLI validation
+    if index == GUFI_INDEX_ROOT:
+        response = execute_sql("SELECT name, type FROM sqlite_master WHERE sql IS NOT NULL", False)
 
-    # SQL validation
+    elif index not in get_gufi_indexes():
+        raise RuntimeError("Error: Index provided not found at index root.")
 
-    # is_allowed_query = any(query.startswith(prefix) for prefix in allowed_prefixes)
-    # if not is_allowed_query:
-    #    raise RuntimeError(f"Query {query} not allowed, must use a read-only prefix.")
+    else:
+        response = execute_sql("SELECT name FROM sqlite_master WHERE sql IS NOT NULL AND name == 'treesummary'", False, resolve_local_index(index))
 
-    # Dependency validation
-
-    # GUFI validation
-
-    # Execution
+    if len(response) == 0:
+        return False
+    else:
+        return True

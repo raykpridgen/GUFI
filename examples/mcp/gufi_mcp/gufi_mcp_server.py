@@ -60,22 +60,12 @@
 # OF SUCH DAMAGE.
 
 from mcp.server import MCPServer
-import asyncio
-import sqlite3
-import sys
 import subprocess
-import shutil
-from pathlib import Path
-from typing import Any, TypedDict
-from dataclasses import dataclass, field
-from sqlglot import parse_one, ParseError
-import sqlglot.expressions as exp
+from typing import Any
 import os
-from pydantic import BaseModel, Field
 from dotenv import load_dotenv
-from gufi_mcp_util import GufiQueryResult, GufiQuery, GufiOption
+from gufi_mcp_util import GufiQueryResult, GufiToolResult
 import gufi_mcp_util as util
-import re
 
 load_dotenv()
 
@@ -103,111 +93,202 @@ def gufi_location() -> str:
     return str(result.stdout)
 
 @mcp.tool()
-def local_file_index_schema() -> str:
-    """
-       sql query on local file information index
-    """
-    schemafile=SCHEMAFILE
-    try:
-        with open(schemafile, mode="r") as f:
-            content = f.read()
-        return content
-    except FileNotFoundError:
-        return "Schema file not found."
-
-@mcp.tool()
-def sql_local_file_index(sqlin: str, wherein: str, index: str, remote: bool = False) -> GufiQueryResult:
+def sql_file_index(sqlin: str, wherein: str, index: str, remote: bool = False) -> GufiQueryResult:
     """
         sql query on local file information index
     """
 
     query_result = GufiQueryResult()
 
-    # Verify index existence on local queries
-    if not remote:
-        searchpath = util.resolve_index(index)
+    # Build SQL line
+    if remote:
+        searchpath = util.resolve_remote_index(index)
+        sqlline = '%s(\'%s\',1,0,99,NULL,0,\'ssh\',\'%s\') %s' % (sqlin, searchpath, REMOTEHOST, wherein)
+    else:
+        searchpath = util.resolve_local_index(index)
         if not searchpath:
             raise RuntimeError(f"Error: Index {index} not found")
+        sqlline = '%s(\'%s\',1,1,99,NULL,1) %s' % (sqlin, searchpath, wherein)
 
-    conn=sqlite3.connect(':memory:')
-    try:
-        # Load GUFI_VT extension and connect
-        conn.enable_load_extension(True)
-        cursor = conn.cursor()
-        conn.load_extension(GUFIVTLIB)
-        conn.enable_load_extension(False)
+    # Execute Query using GUFI_VT
+    result = util.execute_sql(sqlline, True)
 
-        # Build SQL line
-        if remote:
-            sqlline = '%s(\'%s\',1,0,99,NULL,0,\'ssh\',\'%s\') %s' % (sqlin, searchpath, REMOTEHOST, wherein)
-        else:
-            sqlline = '%s(\'%s\',1,1,99,NULL,1) %s' % (sqlin, searchpath, wherein)
-
-        print(sqlline, file=sys.stderr)
-
-        # Call GUFI_VT
-        cursor.execute(sqlline)
-
+    if result[0] != "sql error:":
         # Format result into serialized object
+        query_result.rows = [list(res_row) for res_row in result]
         query_result.columns = util.get_columns_from_sqlin(sqlin)
-        query_result.rows = [list(res_row) for res_row in cursor.fetchall()]
         query_result.row_count = len(query_result.rows)
         return query_result
-        conn.close()
 
-    except sqlite3.Error as e:
-        print(f"An SQLite error occurred: {e}",file=sys.stderr)
-        conn.close()
-        return f"Error executing query: {str(e)}"
+    else:
+        raise RuntimeError(f"Error executing SQL: {result[1]}")
 
-    finally:
-        conn.close()
+@mcp.tool()
+def gufi_ls(path: str = None, options: list[str] = None) -> GufiToolResult:
+    ''' Execute user-facing tool: gufi equivalent of ls '''
+
+    tool_result = GufiQueryResult()
+    cmd = ["gufi_ls"]
+    # Build options string if options passed
+    if options:
+        for option in options:
+            cmd.append(option)
+
+    # Add delimiter explicitly for parsing
+    cmd.append("--delim")
+    cmd.append("\t")
+    if path:
+        cmd.append(path)
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    # Pack object and return
+    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
+    tool_result.row_count = len(tool_result.rows)
+
+    return tool_result
+
+@mcp.tool()
+def gufi_du(subpath: str = None, options: list[str] = None) -> GufiToolResult:
+    ''' Execute user-facing tool: gufi equivalent of ls '''
+
+    tool_result = GufiQueryResult()
+
+    cmd = ["gufi_du"]
+    # Build options string if options passed
+    if options:
+        for option in options:
+            cmd.append(option)
+
+    if subpath:
+        cmd.append(subpath)
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.stderr:
+        # treesummary existence error at subpath
+        if "have treesummary data?" in result.stderr:
+            return [[f"Treesummary error: The subpath {subpath} does not have a treesummary table, cannot use gufi_du."]]
+
+    # Pack object and return
+    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
+    tool_result.row_count = len(tool_result.rows)
+    return tool_result
+
+@mcp.tool()
+def gufi_find(options: list[str] = None) -> GufiToolResult:
+    ''' Execute user-facing tool: gufi equivalent of find '''
+
+    tool_result = GufiQueryResult()
+
+    cmd = ["gufi_find"]
+    # Build options string if options passed
+    if options:
+        for option in options:
+            cmd.append(option)
+
+    cmd.append("--delim")
+    cmd.append("\t")
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    # Pack object and return
+    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
+    tool_result.row_count = len(tool_result.rows)
+    return tool_result
+
+@mcp.tool()
+def gufi_stat(file: str, options: list[str] = None) -> GufiToolResult:
+    ''' Execute user-facing tool: gufi equivalent of ls '''
+
+    tool_result = GufiQueryResult()
+
+    cmd = ["gufi_stat"]
+    # Build options string if options passed
+    if options:
+        for option in options:
+            cmd.append(option)
+
+    cmd.append(file)
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.stderr:
+        # treesummary existence error at subpath
+        if "No such file or directory" in result.stderr:
+            return [[f"File error: gufi_stat was not able to find the file {file}."]]
+
+    # Pack object and return
+    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
+    tool_result.row_count = len(tool_result.rows)
+    return tool_result
+
+@mcp.tool()
+def gufi_stats(path: str, stat: str, options: list[str] = None) -> GufiToolResult:
+    ''' Execute user-facing tool: gufi equivalent of ls '''
+
+    tool_result = GufiQueryResult()
+
+    cmd = ["gufi_stats"]
+    # Build options string if options passed
+    if options:
+        for option in options:
+            cmd.append(option)
+
+    cmd.append(stat)
+    cmd.append(path)
+    cmd.append("--delim")
+    cmd.append("\t")
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.stderr:
+        # treesummary existence error at subpath
+        if "argument stat: invalid choice:" in result.stderr:
+            return [[f"Tool error: gufi_stats does not allow getting statistic {stat}."]]
+        if "No such file or directory" in result.stderr:
+            return [[f"Path error: gufi_stats was not able to find the path {path}."]]
+
+    # Pack object and return
+    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
+    tool_result.row_count = len(tool_result.rows)
+    return tool_result
 
 # resource that returns indexes available
 @mcp.resource("gufi://indexes")
-def gufi_indexes() -> list[str]:
-    ''' Access list of available gufi indexes '''
-    return util.get_gufi_indexes()
+def gufi_indexes() -> list[list[Any]]:
+    ''' Access list of available gufi indexes, as well as a boolean for if treesummary is active in this index '''
+
+    output = []
+    indexes = util.get_gufi_indexes()
+    for index in indexes:
+        output.append([index, util.has_treesummary(index)])
+
+    return output
 
 @mcp.resource("gufi://schemas/{schema}")
 def gufi_schemas(schema: str = "all") -> list[list[str]]:
     """ Return schemas of each gufi index table """
-    print(schema, file=sys.stderr)
-    # Pick any index to get schemas from, attach db since not using gufi_vt for this
-    index = f"{util.resolve_index(util.get_gufi_indexes()[0])}" + "/db.db"
 
-    conn=sqlite3.connect(index)
-
-    try:
-        conn.enable_load_extension(True)
-        cursor = conn.cursor()
-        conn.load_extension(GUFIVTLIB)
-        conn.enable_load_extension(False)
-        # select path,name,size from gufi_vt_pentries(\'%s\',1,0,99,NULL,0,\'ssh\',\'%s\') where name like \'%\' limit 50
-        # LOCALWHERE='where name like \'%\' limit 50'
-        # LOCALSEARCHPATH='documents'
-        if schema == "all":
-            sqlline=f'SELECT name, type FROM sqlite_master WHERE sql IS NOT NULL ORDER BY type DESC'
-            print(sqlline, file=sys.stderr)
-            cursor.execute(sqlline)
-            rows = [list(res_row) for res_row in cursor.fetchall()]
+    # Get all tables for GUFI
+    if schema == "all":
+        sqlline = f'SELECT name, type FROM sqlite_master WHERE sql IS NOT NULL ORDER BY type DESC'
+        result = util.execute_sql(sqlline, False)
+        if result[0] != "sql error:":
+            rows = [list(res_row) for res_row in result]
         else:
-            sqlline=f"PRAGMA table_info(\"{schema}\")"
-            print(sqlline, file=sys.stderr)
-            cursor.execute(sqlline)
-            rows = [[res_row[1], res_row[2]] for res_row in cursor.fetchall()]
+            raise RuntimeError(f"Error executing SQL: {result[1]}")
+    # Get schema of a specific table
+    else:
+        sqlline = f"PRAGMA table_info(\"{schema}\")"
+        result = util.execute_sql(sqlline, False)
+        if result[0] != "sql error:":
+            rows = [[res_row[1], res_row[2]] for res_row in result]
+        else:
+            raise RuntimeError(f"Error executing SQL: {result[1]}")
 
-        return rows
-        conn.close()
-    except sqlite3.Error as e:
-        print(f"An SQLite error occurred: {e}",file=sys.stderr)
-        conn.close()
-        return f"Error executing query: {str(e)}"
-    finally:
-        conn.close()
+    return rows
 
-
-ret = gufi_schemas("all")
 if __name__ == "__main__":
     # Run the server with HTTP transport
     mcp.run(transport=MCPTRANSPORT, host=MCPSRVHOST, port=MCPSRVPORT)
