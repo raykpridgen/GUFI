@@ -1,0 +1,3528 @@
+{
+    "tables": {
+        "vrsummary": {
+            "columns": {
+                "dname": {
+                    "type": "TEXT",
+                    "hint": "directory name"
+                },
+                "sname": {
+                    "type": "TEXT",
+                    "hint": "subdirectory or summary name"
+                },
+                "sroll": {
+                    "type": "INT64",
+                    "hint": "(used for rollup)"
+                },
+                "srollsubdirs": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) rollup subdirectories"
+                },
+                "name": {
+                    "type": "TEXT",
+                    "hint": "character name of directory"
+                },
+                "type": {
+                    "type": "TEXT",
+                    "hint": "character d for directory"
+                },
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "mode": {
+                    "type": "INT64",
+                    "hint": "unix mode bits"
+                },
+                "nlink": {
+                    "type": "INT64",
+                    "hint": "unix number of links"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                },
+                "size": {
+                    "type": "INT64",
+                    "hint": "unix logical file size in bytes"
+                },
+                "blksize": {
+                    "type": "INT64",
+                    "hint": "unix blksize for file"
+                },
+                "blocks": {
+                    "type": "INT64",
+                    "hint": "unix number of blocks"
+                },
+                "atime": {
+                    "type": "INT64",
+                    "hint": "unix access time epoch"
+                },
+                "mtime": {
+                    "type": "INT64",
+                    "hint": "unix modification time epoch"
+                },
+                "ctime": {
+                    "type": "INT64",
+                    "hint": "unix change time epoch"
+                },
+                "linkname": {
+                    "type": "TEXT",
+                    "hint": "unix string for link name"
+                },
+                "xattr_names": {
+                    "type": "TEXT",
+                    "hint": "concatenation of all extended attributes"
+                },
+                "crtime": {
+                    "type": "INT64",
+                    "hint": "create time epoch (some file systems provide)"
+                },
+                "totfiles": {
+                    "type": "INT64",
+                    "hint": "number files"
+                },
+                "totlinks": {
+                    "type": "INT64",
+                    "hint": "summed links"
+                },
+                "minuid": {
+                    "type": "INT64",
+                    "hint": "min uid"
+                },
+                "maxuid": {
+                    "type": "INT64",
+                    "hint": "max uid"
+                },
+                "mingid": {
+                    "type": "INT64",
+                    "hint": "min gid"
+                },
+                "maxgid": {
+                    "type": "INT64",
+                    "hint": "max gid"
+                },
+                "minsize": {
+                    "type": "INT64",
+                    "hint": "min size"
+                },
+                "maxsize": {
+                    "type": "INT64",
+                    "hint": "max size"
+                },
+                "totzero": {
+                    "type": "INT64",
+                    "hint": "number of zero-size files"
+                },
+                "totltk": {
+                    "type": "INT64",
+                    "hint": "number <= 1024"
+                },
+                "totmtk": {
+                    "type": "INT64",
+                    "hint": "number > 1024"
+                },
+                "totltm": {
+                    "type": "INT64",
+                    "hint": "number <= 1048576"
+                },
+                "totmtm": {
+                    "type": "INT64",
+                    "hint": "number > 1048576"
+                },
+                "totmtg": {
+                    "type": "INT64",
+                    "hint": "number <= 1073741824"
+                },
+                "totmtt": {
+                    "type": "INT64",
+                    "hint": "number > 1073741824"
+                },
+                "totsize": {
+                    "type": "INT64",
+                    "hint": "summed size"
+                },
+                "minctime": {
+                    "type": "INT64",
+                    "hint": "min ctime"
+                },
+                "maxctime": {
+                    "type": "INT64",
+                    "hint": "max ctime"
+                },
+                "totctime": {
+                    "type": "INT64",
+                    "hint": "summed ctime"
+                },
+                "minmtime": {
+                    "type": "INT64",
+                    "hint": "min mtime"
+                },
+                "maxmtime": {
+                    "type": "INT64",
+                    "hint": "max mtime"
+                },
+                "totmtime": {
+                    "type": "INT64",
+                    "hint": "summed mtime"
+                },
+                "minatime": {
+                    "type": "INT64",
+                    "hint": "min atime"
+                },
+                "maxatime": {
+                    "type": "INT64",
+                    "hint": "max atime"
+                },
+                "totatime": {
+                    "type": "INT64",
+                    "hint": "summed atime"
+                },
+                "minblocks": {
+                    "type": "INT64",
+                    "hint": "min blocks"
+                },
+                "maxblocks": {
+                    "type": "INT64",
+                    "hint": "max blocks"
+                },
+                "totblocks": {
+                    "type": "INT64",
+                    "hint": "summed blocks"
+                },
+                "totxattr": {
+                    "type": "INT64",
+                    "hint": "number of files/links with xattrs present"
+                },
+                "depth": {
+                    "type": "INT64",
+                    "hint": "depth (number of slashes in path)"
+                },
+                "mincrtime": {
+                    "type": "INT64",
+                    "hint": "min create time"
+                },
+                "maxcrtime": {
+                    "type": "INT64",
+                    "hint": "max create time"
+                },
+                "totcrtime": {
+                    "type": "INT64",
+                    "hint": "summed create time"
+                },
+                "minossint1": {
+                    "type": "INT64",
+                    "hint": "min ossint1"
+                },
+                "maxossint1": {
+                    "type": "INT64",
+                    "hint": "max ossint1"
+                },
+                "totossint1": {
+                    "type": "INT64",
+                    "hint": "summed ossint1"
+                },
+                "minossint2": {
+                    "type": "INT64",
+                    "hint": "min ossint2"
+                },
+                "maxossint2": {
+                    "type": "INT64",
+                    "hint": "max ossint2"
+                },
+                "totossint2": {
+                    "type": "INT64",
+                    "hint": "summed ossint2"
+                },
+                "minossint3": {
+                    "type": "INT64",
+                    "hint": "min ossint3"
+                },
+                "maxossint3": {
+                    "type": "INT64",
+                    "hint": "max ossint3"
+                },
+                "totossint3": {
+                    "type": "INT64",
+                    "hint": "summed ossint3"
+                },
+                "minossint4": {
+                    "type": "INT64",
+                    "hint": "min ossint4"
+                },
+                "maxossint4": {
+                    "type": "INT64",
+                    "hint": "max ossint4"
+                },
+                "totossint4": {
+                    "type": "INT64",
+                    "hint": "summed ossint4"
+                },
+                "rectype": {
+                    "type": "INT64",
+                    "hint": "0 for total for entire dir 1 for totals by user 2 for totals by group"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "isroot": {
+                    "type": "INT64",
+                    "hint": "(used for rollup)"
+                },
+                "canrollup": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) can rollup"
+                },
+                "isrolledup": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) is rolled up"
+                }
+            }
+        },
+        "pentries": {
+            "columns": {
+                "name": {
+                    "type": "TEXT",
+                    "hint": "character name of file or link"
+                },
+                "type": {
+                    "type": "TEXT",
+                    "hint": "character d for file or link"
+                },
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "mode": {
+                    "type": "INT64",
+                    "hint": "unix mode bits"
+                },
+                "nlink": {
+                    "type": "INT64",
+                    "hint": "unix number of links"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                },
+                "size": {
+                    "type": "INT64",
+                    "hint": "unix logical file size in bytes"
+                },
+                "blksize": {
+                    "type": "INT64",
+                    "hint": "unix blksize for file"
+                },
+                "blocks": {
+                    "type": "INT64",
+                    "hint": "unix number of blocks"
+                },
+                "atime": {
+                    "type": "INT64",
+                    "hint": "unix access time epoch"
+                },
+                "mtime": {
+                    "type": "INT64",
+                    "hint": "unix modification time epoch"
+                },
+                "ctime": {
+                    "type": "INT64",
+                    "hint": "unix change time epoch"
+                },
+                "linkname": {
+                    "type": "TEXT",
+                    "hint": "unix string for link name"
+                },
+                "xattr_names": {
+                    "type": "TEXT",
+                    "hint": "concatenation of all extended attributes"
+                },
+                "crtime": {
+                    "type": "INT64",
+                    "hint": "create time epoch (some file systems provide)"
+                },
+                "ossint1": {
+                    "type": "INT64",
+                    "hint": "storage system specific integer"
+                },
+                "ossint2": {
+                    "type": "INT64",
+                    "hint": "storage system specific integer"
+                },
+                "ossint3": {
+                    "type": "INT64",
+                    "hint": "storage system specific integer"
+                },
+                "ossint4": {
+                    "type": "INT64",
+                    "hint": "storage system specific integer"
+                },
+                "osstext1": {
+                    "type": "TEXT",
+                    "hint": "storage system specific string"
+                },
+                "osstext2": {
+                    "type": "TEXT",
+                    "hint": "storage system specific string"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "ppinode": {
+                    "type": "INT64",
+                    "hint": "parent parent directory inode"
+                }
+            }
+        },
+        "vrpentries": {
+            "columns": {
+                "dname": {
+                    "type": "TEXT",
+                    "hint": "directory name"
+                },
+                "sname": {
+                    "type": "TEXT",
+                    "hint": "subdirectory or summary name"
+                },
+                "dmode": {
+                    "type": "INT64",
+                    "hint": "directory unix mode bits"
+                },
+                "dnlink": {
+                    "type": "INT64",
+                    "hint": "directory unix number of links"
+                },
+                "duid": {
+                    "type": "INT64",
+                    "hint": "directory unix uid"
+                },
+                "dgid": {
+                    "type": "INT64",
+                    "hint": "directory unix gid"
+                },
+                "dsize": {
+                    "type": "INT64",
+                    "hint": "directory unix logical file size in bytes"
+                },
+                "dblksize": {
+                    "type": "INT64",
+                    "hint": "directory unix blksize for file"
+                },
+                "dblocks": {
+                    "type": "INT64",
+                    "hint": "directory unix number of blocks"
+                },
+                "datime": {
+                    "type": "INT64",
+                    "hint": "directory unix access time epoch"
+                },
+                "dmtime": {
+                    "type": "INT64",
+                    "hint": "directory unix modification time epoch"
+                },
+                "dctime": {
+                    "type": "INT64",
+                    "hint": "directory unix change time epoch"
+                },
+                "dlinkname": {
+                    "type": "TEXT",
+                    "hint": "directory unix string for link name"
+                },
+                "dtotfiles": {
+                    "type": "INT64",
+                    "hint": "directory number files"
+                },
+                "dtotlinks": {
+                    "type": "INT64",
+                    "hint": "directory summed links"
+                },
+                "dminuid": {
+                    "type": "INT64",
+                    "hint": "directory min uid"
+                },
+                "dmaxuid": {
+                    "type": "INT64",
+                    "hint": "directory max uid"
+                },
+                "dmingid": {
+                    "type": "INT64",
+                    "hint": "directory min gid"
+                },
+                "dmaxgid": {
+                    "type": "INT64",
+                    "hint": "directory max gid"
+                },
+                "dminsize": {
+                    "type": "INT64",
+                    "hint": "directory min size"
+                },
+                "dmaxsize": {
+                    "type": "INT64",
+                    "hint": "directory max size"
+                },
+                "dtotzero": {
+                    "type": "INT64",
+                    "hint": "directory number of zero-size files"
+                },
+                "dtotltk": {
+                    "type": "INT64",
+                    "hint": "directory number <= 1024"
+                },
+                "dtotmtk": {
+                    "type": "INT64",
+                    "hint": "directory number > 1024"
+                },
+                "totltm": {
+                    "type": "INT64",
+                    "hint": "number <= 1048576"
+                },
+                "dtotmtm": {
+                    "type": "INT64",
+                    "hint": "directory number > 1048576"
+                },
+                "dtotmtg": {
+                    "type": "INT64",
+                    "hint": "directory number <= 1073741824"
+                },
+                "dtotmtt": {
+                    "type": "INT64",
+                    "hint": "directory number > 1073741824"
+                },
+                "dtotsize": {
+                    "type": "INT64",
+                    "hint": "directory summed size"
+                },
+                "dminctime": {
+                    "type": "INT64",
+                    "hint": "directory min ctime"
+                },
+                "dmaxctime": {
+                    "type": "INT64",
+                    "hint": "directory max ctime"
+                },
+                "dtotctime": {
+                    "type": "INT64",
+                    "hint": "directory summed ctime"
+                },
+                "dminmtime": {
+                    "type": "INT64",
+                    "hint": "directory min mtime"
+                },
+                "dmaxmtime": {
+                    "type": "INT64",
+                    "hint": "directory max mtime"
+                },
+                "dtotmtime": {
+                    "type": "INT64",
+                    "hint": "directory summed mtime"
+                },
+                "dminatime": {
+                    "type": "INT64",
+                    "hint": "directory min atime"
+                },
+                "dmaxatime": {
+                    "type": "INT64",
+                    "hint": "directory max atime"
+                },
+                "dtotatime": {
+                    "type": "INT64",
+                    "hint": "directory summed atime"
+                },
+                "dminblocks": {
+                    "type": "INT64",
+                    "hint": "directory min blocks"
+                },
+                "dmaxblocks": {
+                    "type": "INT64",
+                    "hint": "directory max blocks"
+                },
+                "dtotblocks": {
+                    "type": "INT64",
+                    "hint": "directory summed blocks"
+                },
+                "dtotxattr": {
+                    "type": "INT64",
+                    "hint": "directory number of files/links with xattrs present"
+                },
+                "ddepth": {
+                    "type": "INT64",
+                    "hint": "directory depth (number of slashes in path)"
+                },
+                "dmincrtime": {
+                    "type": "INT64",
+                    "hint": "directory min create time"
+                },
+                "dmaxcrtime": {
+                    "type": "INT64",
+                    "hint": "directory max create time"
+                },
+                "dtotcrtime": {
+                    "type": "INT64",
+                    "hint": "directory summed create time"
+                },
+                "sroll": {
+                    "type": "INT64",
+                    "hint": "(used for rollup)"
+                },
+                "atroot": {
+                    "type": "INT64",
+                    "hint": "at index root"
+                },
+                "srollsubdirs": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) rollup subdirectories"
+                },
+                "name": {
+                    "type": "TEXT",
+                    "hint": "character name of file or link"
+                },
+                "type": {
+                    "type": "TEXT",
+                    "hint": "character d for file or link"
+                },
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "mode": {
+                    "type": "INT64",
+                    "hint": "unix mode bits"
+                },
+                "nlink": {
+                    "type": "INT64",
+                    "hint": "unix number of links"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                },
+                "size": {
+                    "type": "INT64",
+                    "hint": "unix logical file size in bytes"
+                },
+                "blksize": {
+                    "type": "INT64",
+                    "hint": "unix blksize for file"
+                },
+                "blocks": {
+                    "type": "INT64",
+                    "hint": "unix number of blocks"
+                },
+                "atime": {
+                    "type": "INT64",
+                    "hint": "unix access time epoch"
+                },
+                "mtime": {
+                    "type": "INT64",
+                    "hint": "unix modification time epoch"
+                },
+                "ctime": {
+                    "type": "INT64",
+                    "hint": "unix change time epoch"
+                },
+                "linkname": {
+                    "type": "TEXT",
+                    "hint": "unix string for link name"
+                },
+                "xattr_names": {
+                    "type": "TEXT",
+                    "hint": "concatenation of all extended attributes"
+                },
+                "crtime": {
+                    "type": "INT64",
+                    "hint": "create time epoch (some file systems provide)"
+                },
+                "ossint1": {
+                    "type": "INT64",
+                    "hint": "storage system specific integer"
+                },
+                "ossint2": {
+                    "type": "INT64",
+                    "hint": "storage system specific integer"
+                },
+                "ossint3": {
+                    "type": "INT64",
+                    "hint": "storage system specific integer"
+                },
+                "ossint4": {
+                    "type": "INT64",
+                    "hint": "storage system specific integer"
+                },
+                "osstext1": {
+                    "type": "TEXT",
+                    "hint": "storage system specific string"
+                },
+                "osstext2": {
+                    "type": "TEXT",
+                    "hint": "storage system specific string"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "ppinode": {
+                    "type": "INT64",
+                    "hint": "parent parent directory inode"
+                }
+            }
+        },
+        "vsummarydir": {
+            "columns": {
+                "name": {
+                    "type": "TEXT",
+                    "hint": "character name of directory"
+                },
+                "type": {
+                    "type": "TEXT",
+                    "hint": "character d for directory"
+                },
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "mode": {
+                    "type": "INT64",
+                    "hint": "unix mode bits"
+                },
+                "nlink": {
+                    "type": "INT64",
+                    "hint": "unix number of links"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                },
+                "size": {
+                    "type": "INT64",
+                    "hint": "unix logical file size in bytes"
+                },
+                "blksize": {
+                    "type": "INT64",
+                    "hint": "unix blksize for file"
+                },
+                "blocks": {
+                    "type": "INT64",
+                    "hint": "unix number of blocks"
+                },
+                "atime": {
+                    "type": "INT64",
+                    "hint": "unix access time epoch"
+                },
+                "mtime": {
+                    "type": "INT64",
+                    "hint": "unix modification time epoch"
+                },
+                "ctime": {
+                    "type": "INT64",
+                    "hint": "unix change time epoch"
+                },
+                "linkname": {
+                    "type": "TEXT",
+                    "hint": "unix string for link name"
+                },
+                "xattr_names": {
+                    "type": "TEXT",
+                    "hint": "concatenation of all extended attributes"
+                },
+                "crtime": {
+                    "type": "INT64",
+                    "hint": "create time epoch (some file systems provide)"
+                },
+                "totfiles": {
+                    "type": "INT64",
+                    "hint": "number files"
+                },
+                "totlinks": {
+                    "type": "INT64",
+                    "hint": "summed links"
+                },
+                "minuid": {
+                    "type": "INT64",
+                    "hint": "min uid"
+                },
+                "maxuid": {
+                    "type": "INT64",
+                    "hint": "max uid"
+                },
+                "mingid": {
+                    "type": "INT64",
+                    "hint": "min gid"
+                },
+                "maxgid": {
+                    "type": "INT64",
+                    "hint": "max gid"
+                },
+                "minsize": {
+                    "type": "INT64",
+                    "hint": "min size"
+                },
+                "maxsize": {
+                    "type": "INT64",
+                    "hint": "max size"
+                },
+                "totzero": {
+                    "type": "INT64",
+                    "hint": "number of zero-size files"
+                },
+                "totltk": {
+                    "type": "INT64",
+                    "hint": "number <= 1024"
+                },
+                "totmtk": {
+                    "type": "INT64",
+                    "hint": "number > 1024"
+                },
+                "totltm": {
+                    "type": "INT64",
+                    "hint": "number <= 1048576"
+                },
+                "totmtm": {
+                    "type": "INT64",
+                    "hint": "number > 1048576"
+                },
+                "totmtg": {
+                    "type": "INT64",
+                    "hint": "number <= 1073741824"
+                },
+                "totmtt": {
+                    "type": "INT64",
+                    "hint": "number > 1073741824"
+                },
+                "totsize": {
+                    "type": "INT64",
+                    "hint": "summed size"
+                },
+                "minctime": {
+                    "type": "INT64",
+                    "hint": "min ctime"
+                },
+                "maxctime": {
+                    "type": "INT64",
+                    "hint": "max ctime"
+                },
+                "totctime": {
+                    "type": "INT64",
+                    "hint": "summed ctime"
+                },
+                "minmtime": {
+                    "type": "INT64",
+                    "hint": "min mtime"
+                },
+                "maxmtime": {
+                    "type": "INT64",
+                    "hint": "max mtime"
+                },
+                "totmtime": {
+                    "type": "INT64",
+                    "hint": "summed mtime"
+                },
+                "minatime": {
+                    "type": "INT64",
+                    "hint": "min atime"
+                },
+                "maxatime": {
+                    "type": "INT64",
+                    "hint": "max atime"
+                },
+                "totatime": {
+                    "type": "INT64",
+                    "hint": "summed atime"
+                },
+                "minblocks": {
+                    "type": "INT64",
+                    "hint": "min blocks"
+                },
+                "maxblocks": {
+                    "type": "INT64",
+                    "hint": "max blocks"
+                },
+                "totblocks": {
+                    "type": "INT64",
+                    "hint": "summed blocks"
+                },
+                "totxattr": {
+                    "type": "INT64",
+                    "hint": "number of files/links with xattrs present"
+                },
+                "depth": {
+                    "type": "INT64",
+                    "hint": "depth (number of slashes in path)"
+                },
+                "mincrtime": {
+                    "type": "INT64",
+                    "hint": "min create time"
+                },
+                "maxcrtime": {
+                    "type": "INT64",
+                    "hint": "max create time"
+                },
+                "totcrtime": {
+                    "type": "INT64",
+                    "hint": "summed create time"
+                },
+                "minossint1": {
+                    "type": "INT64",
+                    "hint": "min ossint1"
+                },
+                "maxossint1": {
+                    "type": "INT64",
+                    "hint": "max ossint1"
+                },
+                "totossint1": {
+                    "type": "INT64",
+                    "hint": "summed ossint1"
+                },
+                "minossint2": {
+                    "type": "INT64",
+                    "hint": "min ossint2"
+                },
+                "maxossint2": {
+                    "type": "INT64",
+                    "hint": "max ossint2"
+                },
+                "totossint2": {
+                    "type": "INT64",
+                    "hint": "summed ossint2"
+                },
+                "minossint3": {
+                    "type": "INT64",
+                    "hint": "min ossint3"
+                },
+                "maxossint3": {
+                    "type": "INT64",
+                    "hint": "max ossint3"
+                },
+                "totossint3": {
+                    "type": "INT64",
+                    "hint": "summed ossint3"
+                },
+                "minossint4": {
+                    "type": "INT64",
+                    "hint": "min ossint4"
+                },
+                "maxossint4": {
+                    "type": "INT64",
+                    "hint": "max ossint4"
+                },
+                "totossint4": {
+                    "type": "INT64",
+                    "hint": "summed ossint4"
+                },
+                "rectype": {
+                    "type": "INT64",
+                    "hint": "0 for total for entire dir 1 for totals by user 2 for totals by group"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "isroot": {
+                    "type": "INT64",
+                    "hint": "(used for rollup)"
+                },
+                "canrollup": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) can rollup"
+                },
+                "isrolledup": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) is rolled up"
+                }
+            }
+        },
+        "vsummaryuser": {
+            "columns": {
+                "name": {
+                    "type": "TEXT",
+                    "hint": "character name of directory"
+                },
+                "type": {
+                    "type": "TEXT",
+                    "hint": "character d for directory"
+                },
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "mode": {
+                    "type": "INT64",
+                    "hint": "unix mode bits"
+                },
+                "nlink": {
+                    "type": "INT64",
+                    "hint": "unix number of links"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                },
+                "size": {
+                    "type": "INT64",
+                    "hint": "unix logical file size in bytes"
+                },
+                "blksize": {
+                    "type": "INT64",
+                    "hint": "unix blksize for file"
+                },
+                "blocks": {
+                    "type": "INT64",
+                    "hint": "unix number of blocks"
+                },
+                "atime": {
+                    "type": "INT64",
+                    "hint": "unix access time epoch"
+                },
+                "mtime": {
+                    "type": "INT64",
+                    "hint": "unix modification time epoch"
+                },
+                "ctime": {
+                    "type": "INT64",
+                    "hint": "unix change time epoch"
+                },
+                "linkname": {
+                    "type": "TEXT",
+                    "hint": "unix string for link name"
+                },
+                "xattr_names": {
+                    "type": "TEXT",
+                    "hint": "concatenation of all extended attributes"
+                },
+                "crtime": {
+                    "type": "INT64",
+                    "hint": "create time epoch (some file systems provide)"
+                },
+                "totfiles": {
+                    "type": "INT64",
+                    "hint": "number files"
+                },
+                "totlinks": {
+                    "type": "INT64",
+                    "hint": "summed links"
+                },
+                "minuid": {
+                    "type": "INT64",
+                    "hint": "min uid"
+                },
+                "maxuid": {
+                    "type": "INT64",
+                    "hint": "max uid"
+                },
+                "mingid": {
+                    "type": "INT64",
+                    "hint": "min gid"
+                },
+                "maxgid": {
+                    "type": "INT64",
+                    "hint": "max gid"
+                },
+                "minsize": {
+                    "type": "INT64",
+                    "hint": "min size"
+                },
+                "maxsize": {
+                    "type": "INT64",
+                    "hint": "max size"
+                },
+                "totzero": {
+                    "type": "INT64",
+                    "hint": "number of zero-size files"
+                },
+                "totltk": {
+                    "type": "INT64",
+                    "hint": "number <= 1024"
+                },
+                "totmtk": {
+                    "type": "INT64",
+                    "hint": "number > 1024"
+                },
+                "totltm": {
+                    "type": "INT64",
+                    "hint": "number <= 1048576"
+                },
+                "totmtm": {
+                    "type": "INT64",
+                    "hint": "number > 1048576"
+                },
+                "totmtg": {
+                    "type": "INT64",
+                    "hint": "number <= 1073741824"
+                },
+                "totmtt": {
+                    "type": "INT64",
+                    "hint": "number > 1073741824"
+                },
+                "totsize": {
+                    "type": "INT64",
+                    "hint": "summed size"
+                },
+                "minctime": {
+                    "type": "INT64",
+                    "hint": "min ctime"
+                },
+                "maxctime": {
+                    "type": "INT64",
+                    "hint": "max ctime"
+                },
+                "totctime": {
+                    "type": "INT64",
+                    "hint": "summed ctime"
+                },
+                "minmtime": {
+                    "type": "INT64",
+                    "hint": "min mtime"
+                },
+                "maxmtime": {
+                    "type": "INT64",
+                    "hint": "max mtime"
+                },
+                "totmtime": {
+                    "type": "INT64",
+                    "hint": "summed mtime"
+                },
+                "minatime": {
+                    "type": "INT64",
+                    "hint": "min atime"
+                },
+                "maxatime": {
+                    "type": "INT64",
+                    "hint": "max atime"
+                },
+                "totatime": {
+                    "type": "INT64",
+                    "hint": "summed atime"
+                },
+                "minblocks": {
+                    "type": "INT64",
+                    "hint": "min blocks"
+                },
+                "maxblocks": {
+                    "type": "INT64",
+                    "hint": "max blocks"
+                },
+                "totblocks": {
+                    "type": "INT64",
+                    "hint": "summed blocks"
+                },
+                "totxattr": {
+                    "type": "INT64",
+                    "hint": "number of files/links with xattrs present"
+                },
+                "depth": {
+                    "type": "INT64",
+                    "hint": "depth (number of slashes in path)"
+                },
+                "mincrtime": {
+                    "type": "INT64",
+                    "hint": "min create time"
+                },
+                "maxcrtime": {
+                    "type": "INT64",
+                    "hint": "max create time"
+                },
+                "totcrtime": {
+                    "type": "INT64",
+                    "hint": "summed create time"
+                },
+                "minossint1": {
+                    "type": "INT64",
+                    "hint": "min ossint1"
+                },
+                "maxossint1": {
+                    "type": "INT64",
+                    "hint": "max ossint1"
+                },
+                "totossint1": {
+                    "type": "INT64",
+                    "hint": "summed ossint1"
+                },
+                "minossint2": {
+                    "type": "INT64",
+                    "hint": "min ossint2"
+                },
+                "maxossint2": {
+                    "type": "INT64",
+                    "hint": "max ossint2"
+                },
+                "totossint2": {
+                    "type": "INT64",
+                    "hint": "summed ossint2"
+                },
+                "minossint3": {
+                    "type": "INT64",
+                    "hint": "min ossint3"
+                },
+                "maxossint3": {
+                    "type": "INT64",
+                    "hint": "max ossint3"
+                },
+                "totossint3": {
+                    "type": "INT64",
+                    "hint": "summed ossint3"
+                },
+                "minossint4": {
+                    "type": "INT64",
+                    "hint": "min ossint4"
+                },
+                "maxossint4": {
+                    "type": "INT64",
+                    "hint": "max ossint4"
+                },
+                "totossint4": {
+                    "type": "INT64",
+                    "hint": "summed ossint4"
+                },
+                "rectype": {
+                    "type": "INT64",
+                    "hint": "0 for total for entire dir 1 for totals by user 2 for totals by group"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "isroot": {
+                    "type": "INT64",
+                    "hint": "(used for rollup)"
+                },
+                "canrollup": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) can rollup"
+                },
+                "isrolledup": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) is rolled up"
+                }
+            }
+        },
+        "vsummarygroup": {
+            "columns": {
+                "name": {
+                    "type": "TEXT",
+                    "hint": "character name of directory"
+                },
+                "type": {
+                    "type": "TEXT",
+                    "hint": "character d for directory"
+                },
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "mode": {
+                    "type": "INT64",
+                    "hint": "unix mode bits"
+                },
+                "nlink": {
+                    "type": "INT64",
+                    "hint": "unix number of links"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                },
+                "size": {
+                    "type": "INT64",
+                    "hint": "unix logical file size in bytes"
+                },
+                "blksize": {
+                    "type": "INT64",
+                    "hint": "unix blksize for file"
+                },
+                "blocks": {
+                    "type": "INT64",
+                    "hint": "unix number of blocks"
+                },
+                "atime": {
+                    "type": "INT64",
+                    "hint": "unix access time epoch"
+                },
+                "mtime": {
+                    "type": "INT64",
+                    "hint": "unix modification time epoch"
+                },
+                "ctime": {
+                    "type": "INT64",
+                    "hint": "unix change time epoch"
+                },
+                "linkname": {
+                    "type": "TEXT",
+                    "hint": "unix string for link name"
+                },
+                "xattr_names": {
+                    "type": "TEXT",
+                    "hint": "concatenation of all extended attributes"
+                },
+                "crtime": {
+                    "type": "INT64",
+                    "hint": "create time epoch (some file systems provide)"
+                },
+                "totfiles": {
+                    "type": "INT64",
+                    "hint": "number files"
+                },
+                "totlinks": {
+                    "type": "INT64",
+                    "hint": "summed links"
+                },
+                "minuid": {
+                    "type": "INT64",
+                    "hint": "min uid"
+                },
+                "maxuid": {
+                    "type": "INT64",
+                    "hint": "max uid"
+                },
+                "mingid": {
+                    "type": "INT64",
+                    "hint": "min gid"
+                },
+                "maxgid": {
+                    "type": "INT64",
+                    "hint": "max gid"
+                },
+                "minsize": {
+                    "type": "INT64",
+                    "hint": "min size"
+                },
+                "maxsize": {
+                    "type": "INT64",
+                    "hint": "max size"
+                },
+                "totzero": {
+                    "type": "INT64",
+                    "hint": "number of zero-size files"
+                },
+                "totltk": {
+                    "type": "INT64",
+                    "hint": "number <= 1024"
+                },
+                "totmtk": {
+                    "type": "INT64",
+                    "hint": "number > 1024"
+                },
+                "totltm": {
+                    "type": "INT64",
+                    "hint": "number <= 1048576"
+                },
+                "totmtm": {
+                    "type": "INT64",
+                    "hint": "number > 1048576"
+                },
+                "totmtg": {
+                    "type": "INT64",
+                    "hint": "number <= 1073741824"
+                },
+                "totmtt": {
+                    "type": "INT64",
+                    "hint": "number > 1073741824"
+                },
+                "totsize": {
+                    "type": "INT64",
+                    "hint": "summed size"
+                },
+                "minctime": {
+                    "type": "INT64",
+                    "hint": "min ctime"
+                },
+                "maxctime": {
+                    "type": "INT64",
+                    "hint": "max ctime"
+                },
+                "totctime": {
+                    "type": "INT64",
+                    "hint": "summed ctime"
+                },
+                "minmtime": {
+                    "type": "INT64",
+                    "hint": "min mtime"
+                },
+                "maxmtime": {
+                    "type": "INT64",
+                    "hint": "max mtime"
+                },
+                "totmtime": {
+                    "type": "INT64",
+                    "hint": "summed mtime"
+                },
+                "minatime": {
+                    "type": "INT64",
+                    "hint": "min atime"
+                },
+                "maxatime": {
+                    "type": "INT64",
+                    "hint": "max atime"
+                },
+                "totatime": {
+                    "type": "INT64",
+                    "hint": "summed atime"
+                },
+                "minblocks": {
+                    "type": "INT64",
+                    "hint": "min blocks"
+                },
+                "maxblocks": {
+                    "type": "INT64",
+                    "hint": "max blocks"
+                },
+                "totblocks": {
+                    "type": "INT64",
+                    "hint": "summed blocks"
+                },
+                "totxattr": {
+                    "type": "INT64",
+                    "hint": "number of files/links with xattrs present"
+                },
+                "depth": {
+                    "type": "INT64",
+                    "hint": "depth (number of slashes in path)"
+                },
+                "mincrtime": {
+                    "type": "INT64",
+                    "hint": "min create time"
+                },
+                "maxcrtime": {
+                    "type": "INT64",
+                    "hint": "max create time"
+                },
+                "totcrtime": {
+                    "type": "INT64",
+                    "hint": "summed create time"
+                },
+                "minossint1": {
+                    "type": "INT64",
+                    "hint": "min ossint1"
+                },
+                "maxossint1": {
+                    "type": "INT64",
+                    "hint": "max ossint1"
+                },
+                "totossint1": {
+                    "type": "INT64",
+                    "hint": "summed ossint1"
+                },
+                "minossint2": {
+                    "type": "INT64",
+                    "hint": "min ossint2"
+                },
+                "maxossint2": {
+                    "type": "INT64",
+                    "hint": "max ossint2"
+                },
+                "totossint2": {
+                    "type": "INT64",
+                    "hint": "summed ossint2"
+                },
+                "minossint3": {
+                    "type": "INT64",
+                    "hint": "min ossint3"
+                },
+                "maxossint3": {
+                    "type": "INT64",
+                    "hint": "max ossint3"
+                },
+                "totossint3": {
+                    "type": "INT64",
+                    "hint": "summed ossint3"
+                },
+                "minossint4": {
+                    "type": "INT64",
+                    "hint": "min ossint4"
+                },
+                "maxossint4": {
+                    "type": "INT64",
+                    "hint": "max ossint4"
+                },
+                "totossint4": {
+                    "type": "INT64",
+                    "hint": "summed ossint4"
+                },
+                "rectype": {
+                    "type": "INT64",
+                    "hint": "0 for total for entire dir 1 for totals by user 2 for totals by group"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "isroot": {
+                    "type": "INT64",
+                    "hint": "(used for rollup)"
+                },
+                "canrollup": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) can rollup"
+                },
+                "isrolledup": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) is rolled up"
+                }
+            }
+        },
+        "summarylong": {
+            "columns": {
+                "name": {
+                    "type": "TEXT",
+                    "hint": "character name of directory"
+                },
+                "type": {
+                    "type": "TEXT",
+                    "hint": "character d for directory"
+                },
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "mode": {
+                    "type": "INT64",
+                    "hint": "unix mode bits"
+                },
+                "nlink": {
+                    "type": "INT64",
+                    "hint": "unix number of links"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                },
+                "size": {
+                    "type": "INT64",
+                    "hint": "unix logical file size in bytes"
+                },
+                "blksize": {
+                    "type": "INT64",
+                    "hint": "unix blksize for file"
+                },
+                "blocks": {
+                    "type": "INT64",
+                    "hint": "unix number of blocks"
+                },
+                "atime": {
+                    "type": "INT64",
+                    "hint": "unix access time epoch"
+                },
+                "mtime": {
+                    "type": "INT64",
+                    "hint": "unix modification time epoch"
+                },
+                "ctime": {
+                    "type": "INT64",
+                    "hint": "unix change time epoch"
+                },
+                "linkname": {
+                    "type": "TEXT",
+                    "hint": "unix string for link name"
+                },
+                "xattr_names": {
+                    "type": "TEXT",
+                    "hint": "concatenation of all extended attributes"
+                },
+                "crtime": {
+                    "type": "INT64",
+                    "hint": "create time epoch (some file systems provide)"
+                },
+                "totfiles": {
+                    "type": "INT64",
+                    "hint": "number files"
+                },
+                "totlinks": {
+                    "type": "INT64",
+                    "hint": "summed links"
+                },
+                "minuid": {
+                    "type": "INT64",
+                    "hint": "min uid"
+                },
+                "maxuid": {
+                    "type": "INT64",
+                    "hint": "max uid"
+                },
+                "mingid": {
+                    "type": "INT64",
+                    "hint": "min gid"
+                },
+                "maxgid": {
+                    "type": "INT64",
+                    "hint": "max gid"
+                },
+                "minsize": {
+                    "type": "INT64",
+                    "hint": "min size"
+                },
+                "maxsize": {
+                    "type": "INT64",
+                    "hint": "max size"
+                },
+                "totzero": {
+                    "type": "INT64",
+                    "hint": "number of zero-size files"
+                },
+                "totltk": {
+                    "type": "INT64",
+                    "hint": "number <= 1024"
+                },
+                "totmtk": {
+                    "type": "INT64",
+                    "hint": "number > 1024"
+                },
+                "totltm": {
+                    "type": "INT64",
+                    "hint": "number <= 1048576"
+                },
+                "totmtm": {
+                    "type": "INT64",
+                    "hint": "number > 1048576"
+                },
+                "totmtg": {
+                    "type": "INT64",
+                    "hint": "number <= 1073741824"
+                },
+                "totmtt": {
+                    "type": "INT64",
+                    "hint": "number > 1073741824"
+                },
+                "totsize": {
+                    "type": "INT64",
+                    "hint": "summed size"
+                },
+                "minctime": {
+                    "type": "INT64",
+                    "hint": "min ctime"
+                },
+                "maxctime": {
+                    "type": "INT64",
+                    "hint": "max ctime"
+                },
+                "totctime": {
+                    "type": "INT64",
+                    "hint": "summed ctime"
+                },
+                "minmtime": {
+                    "type": "INT64",
+                    "hint": "min mtime"
+                },
+                "maxmtime": {
+                    "type": "INT64",
+                    "hint": "max mtime"
+                },
+                "totmtime": {
+                    "type": "INT64",
+                    "hint": "summed mtime"
+                },
+                "minatime": {
+                    "type": "INT64",
+                    "hint": "min atime"
+                },
+                "maxatime": {
+                    "type": "INT64",
+                    "hint": "max atime"
+                },
+                "totatime": {
+                    "type": "INT64",
+                    "hint": "summed atime"
+                },
+                "minblocks": {
+                    "type": "INT64",
+                    "hint": "min blocks"
+                },
+                "maxblocks": {
+                    "type": "INT64",
+                    "hint": "max blocks"
+                },
+                "totblocks": {
+                    "type": "INT64",
+                    "hint": "summed blocks"
+                },
+                "totxattr": {
+                    "type": "INT64",
+                    "hint": "number of files/links with xattrs present"
+                },
+                "depth": {
+                    "type": "INT64",
+                    "hint": "depth (number of slashes in path)"
+                },
+                "mincrtime": {
+                    "type": "INT64",
+                    "hint": "min create time"
+                },
+                "maxcrtime": {
+                    "type": "INT64",
+                    "hint": "max create time"
+                },
+                "totcrtime": {
+                    "type": "INT64",
+                    "hint": "summed create time"
+                },
+                "minossint1": {
+                    "type": "INT64",
+                    "hint": "min ossint1"
+                },
+                "maxossint1": {
+                    "type": "INT64",
+                    "hint": "max ossint1"
+                },
+                "totossint1": {
+                    "type": "INT64",
+                    "hint": "summed ossint1"
+                },
+                "minossint2": {
+                    "type": "INT64",
+                    "hint": "min ossint2"
+                },
+                "maxossint2": {
+                    "type": "INT64",
+                    "hint": "max ossint2"
+                },
+                "totossint2": {
+                    "type": "INT64",
+                    "hint": "summed ossint2"
+                },
+                "minossint3": {
+                    "type": "INT64",
+                    "hint": "min ossint3"
+                },
+                "maxossint3": {
+                    "type": "INT64",
+                    "hint": "max ossint3"
+                },
+                "totossint3": {
+                    "type": "INT64",
+                    "hint": "summed ossint3"
+                },
+                "minossint4": {
+                    "type": "INT64",
+                    "hint": "min ossint4"
+                },
+                "maxossint4": {
+                    "type": "INT64",
+                    "hint": "max ossint4"
+                },
+                "totossint4": {
+                    "type": "INT64",
+                    "hint": "summed ossint4"
+                },
+                "rectype": {
+                    "type": "INT64",
+                    "hint": "0 for total for entire dir 1 for totals by user 2 for totals by group"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "isroot": {
+                    "type": "INT64",
+                    "hint": "(used for rollup)"
+                },
+                "canrollup": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) can rollup"
+                },
+                "isrolledup": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) is rolled up"
+                }
+            }
+        },
+        "vrsummarylong": {
+            "columns": {
+                "dname": {
+                    "type": "TEXT",
+                    "hint": "directory name"
+                },
+                "sname": {
+                    "type": "TEXT",
+                    "hint": "subdirectory or summary name"
+                },
+                "sroll": {
+                    "type": "INT64",
+                    "hint": "(used for rollup)"
+                },
+                "srollsubdirs": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) rollup subdirectories"
+                },
+                "name": {
+                    "type": "TEXT",
+                    "hint": "character name of directory"
+                },
+                "type": {
+                    "type": "TEXT",
+                    "hint": "character d for directory"
+                },
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "mode": {
+                    "type": "INT64",
+                    "hint": "unix mode bits"
+                },
+                "nlink": {
+                    "type": "INT64",
+                    "hint": "unix number of links"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                },
+                "size": {
+                    "type": "INT64",
+                    "hint": "unix logical file size in bytes"
+                },
+                "blksize": {
+                    "type": "INT64",
+                    "hint": "unix blksize for file"
+                },
+                "blocks": {
+                    "type": "INT64",
+                    "hint": "unix number of blocks"
+                },
+                "atime": {
+                    "type": "INT64",
+                    "hint": "unix access time epoch"
+                },
+                "mtime": {
+                    "type": "INT64",
+                    "hint": "unix modification time epoch"
+                },
+                "ctime": {
+                    "type": "INT64",
+                    "hint": "unix change time epoch"
+                },
+                "linkname": {
+                    "type": "TEXT",
+                    "hint": "unix string for link name"
+                },
+                "xattr_names": {
+                    "type": "TEXT",
+                    "hint": "concatenation of all extended attributes"
+                },
+                "crtime": {
+                    "type": "INT64",
+                    "hint": "create time epoch (some file systems provide)"
+                },
+                "totfiles": {
+                    "type": "INT64",
+                    "hint": "number files"
+                },
+                "totlinks": {
+                    "type": "INT64",
+                    "hint": "summed links"
+                },
+                "minuid": {
+                    "type": "INT64",
+                    "hint": "min uid"
+                },
+                "maxuid": {
+                    "type": "INT64",
+                    "hint": "max uid"
+                },
+                "mingid": {
+                    "type": "INT64",
+                    "hint": "min gid"
+                },
+                "maxgid": {
+                    "type": "INT64",
+                    "hint": "max gid"
+                },
+                "minsize": {
+                    "type": "INT64",
+                    "hint": "min size"
+                },
+                "maxsize": {
+                    "type": "INT64",
+                    "hint": "max size"
+                },
+                "totzero": {
+                    "type": "INT64",
+                    "hint": "number of zero-size files"
+                },
+                "totltk": {
+                    "type": "INT64",
+                    "hint": "number <= 1024"
+                },
+                "totmtk": {
+                    "type": "INT64",
+                    "hint": "number > 1024"
+                },
+                "totltm": {
+                    "type": "INT64",
+                    "hint": "number <= 1048576"
+                },
+                "totmtm": {
+                    "type": "INT64",
+                    "hint": "number > 1048576"
+                },
+                "totmtg": {
+                    "type": "INT64",
+                    "hint": "number <= 1073741824"
+                },
+                "totmtt": {
+                    "type": "INT64",
+                    "hint": "number > 1073741824"
+                },
+                "totsize": {
+                    "type": "INT64",
+                    "hint": "summed size"
+                },
+                "minctime": {
+                    "type": "INT64",
+                    "hint": "min ctime"
+                },
+                "maxctime": {
+                    "type": "INT64",
+                    "hint": "max ctime"
+                },
+                "totctime": {
+                    "type": "INT64",
+                    "hint": "summed ctime"
+                },
+                "minmtime": {
+                    "type": "INT64",
+                    "hint": "min mtime"
+                },
+                "maxmtime": {
+                    "type": "INT64",
+                    "hint": "max mtime"
+                },
+                "totmtime": {
+                    "type": "INT64",
+                    "hint": "summed mtime"
+                },
+                "minatime": {
+                    "type": "INT64",
+                    "hint": "min atime"
+                },
+                "maxatime": {
+                    "type": "INT64",
+                    "hint": "max atime"
+                },
+                "totatime": {
+                    "type": "INT64",
+                    "hint": "summed atime"
+                },
+                "minblocks": {
+                    "type": "INT64",
+                    "hint": "min blocks"
+                },
+                "maxblocks": {
+                    "type": "INT64",
+                    "hint": "max blocks"
+                },
+                "totblocks": {
+                    "type": "INT64",
+                    "hint": "summed blocks"
+                },
+                "totxattr": {
+                    "type": "INT64",
+                    "hint": "number of files/links with xattrs present"
+                },
+                "depth": {
+                    "type": "INT64",
+                    "hint": "depth (number of slashes in path)"
+                },
+                "mincrtime": {
+                    "type": "INT64",
+                    "hint": "min create time"
+                },
+                "maxcrtime": {
+                    "type": "INT64",
+                    "hint": "max create time"
+                },
+                "totcrtime": {
+                    "type": "INT64",
+                    "hint": "summed create time"
+                },
+                "minossint1": {
+                    "type": "INT64",
+                    "hint": "min ossint1"
+                },
+                "maxossint1": {
+                    "type": "INT64",
+                    "hint": "max ossint1"
+                },
+                "totossint1": {
+                    "type": "INT64",
+                    "hint": "summed ossint1"
+                },
+                "minossint2": {
+                    "type": "INT64",
+                    "hint": "min ossint2"
+                },
+                "maxossint2": {
+                    "type": "INT64",
+                    "hint": "max ossint2"
+                },
+                "totossint2": {
+                    "type": "INT64",
+                    "hint": "summed ossint2"
+                },
+                "minossint3": {
+                    "type": "INT64",
+                    "hint": "min ossint3"
+                },
+                "maxossint3": {
+                    "type": "INT64",
+                    "hint": "max ossint3"
+                },
+                "totossint3": {
+                    "type": "INT64",
+                    "hint": "summed ossint3"
+                },
+                "minossint4": {
+                    "type": "INT64",
+                    "hint": "min ossint4"
+                },
+                "maxossint4": {
+                    "type": "INT64",
+                    "hint": "max ossint4"
+                },
+                "totossint4": {
+                    "type": "INT64",
+                    "hint": "summed ossint4"
+                },
+                "rectype": {
+                    "type": "INT64",
+                    "hint": "0 for total for entire dir 1 for totals by user 2 for totals by group"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "isroot": {
+                    "type": "INT64",
+                    "hint": "(used for rollup)"
+                },
+                "canrollup": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) can rollup"
+                },
+                "isrolledup": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) is rolled up"
+                }
+            }
+        },
+        "external_dbs": {
+            "columns": {
+                "type": {
+                    "type": "TEXT",
+                    "hint": "external database type"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "filename": {
+                    "type": "TEXT",
+                    "hint": "external database filename"
+                },
+                "mode": {
+                    "type": "INT64",
+                    "hint": "unix mode bits"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                }
+            }
+        },
+        "xattrs_avail": {
+            "columns": {
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "name": {
+                    "type": "TEXT",
+                    "hint": "extended attribute name"
+                },
+                "value": {
+                    "type": "TEXT",
+                    "hint": "extended attribute value"
+                }
+            }
+        },
+        "vtsummarydir": {
+            "columns": {
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "totsubdirs": {
+                    "type": "INT64",
+                    "hint": "number directories under this directory"
+                },
+                "maxsubdirfiles": {
+                    "type": "INT64",
+                    "hint": "maximum number files in any subdir"
+                },
+                "maxsubdirlinks": {
+                    "type": "INT64",
+                    "hint": "maximum number of links in any subdir"
+                },
+                "maxsubdirsize": {
+                    "type": "INT64",
+                    "hint": "maximum summed size in any subdir"
+                },
+                "totfiles": {
+                    "type": "INT64",
+                    "hint": "number files"
+                },
+                "totlinks": {
+                    "type": "INT64",
+                    "hint": "summed links"
+                },
+                "minuid": {
+                    "type": "INT64",
+                    "hint": "min uid"
+                },
+                "maxuid": {
+                    "type": "INT64",
+                    "hint": "max uid"
+                },
+                "mingid": {
+                    "type": "INT64",
+                    "hint": "min gid"
+                },
+                "maxgid": {
+                    "type": "INT64",
+                    "hint": "max gid"
+                },
+                "minsize": {
+                    "type": "INT64",
+                    "hint": "min size"
+                },
+                "maxsize": {
+                    "type": "INT64",
+                    "hint": "max size"
+                },
+                "totzero": {
+                    "type": "INT64",
+                    "hint": "number of zero-size files"
+                },
+                "totltk": {
+                    "type": "INT64",
+                    "hint": "number <= 1024"
+                },
+                "totmtk": {
+                    "type": "INT64",
+                    "hint": "number > 1024"
+                },
+                "totltm": {
+                    "type": "INT64",
+                    "hint": "number <= 1048576"
+                },
+                "totmtm": {
+                    "type": "INT64",
+                    "hint": "number > 1048576"
+                },
+                "totmtg": {
+                    "type": "INT64",
+                    "hint": "number <= 1073741824"
+                },
+                "totmtt": {
+                    "type": "INT64",
+                    "hint": "number > 1073741824"
+                },
+                "totsize": {
+                    "type": "INT64",
+                    "hint": "summed size"
+                },
+                "minctime": {
+                    "type": "INT64",
+                    "hint": "min ctime"
+                },
+                "maxctime": {
+                    "type": "INT64",
+                    "hint": "max ctime"
+                },
+                "totctime": {
+                    "type": "INT64",
+                    "hint": "summed ctime"
+                },
+                "minmtime": {
+                    "type": "INT64",
+                    "hint": "min mtime"
+                },
+                "maxmtime": {
+                    "type": "INT64",
+                    "hint": "max mtime"
+                },
+                "totmtime": {
+                    "type": "INT64",
+                    "hint": "summed mtime"
+                },
+                "minatime": {
+                    "type": "INT64",
+                    "hint": "min atime"
+                },
+                "maxatime": {
+                    "type": "INT64",
+                    "hint": "max atime"
+                },
+                "totatime": {
+                    "type": "INT64",
+                    "hint": "summed atime"
+                },
+                "minblocks": {
+                    "type": "INT64",
+                    "hint": "min blocks"
+                },
+                "maxblocks": {
+                    "type": "INT64",
+                    "hint": "max blocks"
+                },
+                "totblocks": {
+                    "type": "INT64",
+                    "hint": "summed blocks"
+                },
+                "totxattr": {
+                    "type": "INT64",
+                    "hint": "number of files/links with xattrs present"
+                },
+                "depth": {
+                    "type": "INT64",
+                    "hint": "depth (number of slashes in path)"
+                },
+                "mincrtime": {
+                    "type": "INT64",
+                    "hint": "min create time"
+                },
+                "maxcrtime": {
+                    "type": "INT64",
+                    "hint": "max create time"
+                },
+                "totcrtime": {
+                    "type": "INT64",
+                    "hint": "summed create time"
+                },
+                "minossint1": {
+                    "type": "INT64",
+                    "hint": "min ossint1"
+                },
+                "maxossint1": {
+                    "type": "INT64",
+                    "hint": "max ossint1"
+                },
+                "totossint1": {
+                    "type": "INT64",
+                    "hint": "summed ossint1"
+                },
+                "minossint2": {
+                    "type": "INT64",
+                    "hint": "min ossint2"
+                },
+                "maxossint2": {
+                    "type": "INT64",
+                    "hint": "max ossint2"
+                },
+                "totossint2": {
+                    "type": "INT64",
+                    "hint": "summed ossint2"
+                },
+                "minossint3": {
+                    "type": "INT64",
+                    "hint": "min ossint3"
+                },
+                "maxossint3": {
+                    "type": "INT64",
+                    "hint": "max ossint3"
+                },
+                "totossint3": {
+                    "type": "INT64",
+                    "hint": "summed ossint3"
+                },
+                "minossint4": {
+                    "type": "INT64",
+                    "hint": "min ossint4"
+                },
+                "maxossint4": {
+                    "type": "INT64",
+                    "hint": "max ossint4"
+                },
+                "totossint4": {
+                    "type": "INT64",
+                    "hint": "summed ossint4"
+                },
+                "totextdbs": {
+                    "type": "INT64",
+                    "hint": "total external database references"
+                },
+                "rectype": {
+                    "type": "INT64",
+                    "hint": "0 for total for entire tree 1 for totals by user 2 for totals by group"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                }
+            }
+        },
+        "vtsummaryuser": {
+            "columns": {
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "totsubdirs": {
+                    "type": "INT64",
+                    "hint": "number directories under this directory"
+                },
+                "maxsubdirfiles": {
+                    "type": "INT64",
+                    "hint": "maximum number files in any subdir"
+                },
+                "maxsubdirlinks": {
+                    "type": "INT64",
+                    "hint": "maximum number of links in any subdir"
+                },
+                "maxsubdirsize": {
+                    "type": "INT64",
+                    "hint": "maximum summed size in any subdir"
+                },
+                "totfiles": {
+                    "type": "INT64",
+                    "hint": "number files"
+                },
+                "totlinks": {
+                    "type": "INT64",
+                    "hint": "summed links"
+                },
+                "minuid": {
+                    "type": "INT64",
+                    "hint": "min uid"
+                },
+                "maxuid": {
+                    "type": "INT64",
+                    "hint": "max uid"
+                },
+                "mingid": {
+                    "type": "INT64",
+                    "hint": "min gid"
+                },
+                "maxgid": {
+                    "type": "INT64",
+                    "hint": "max gid"
+                },
+                "minsize": {
+                    "type": "INT64",
+                    "hint": "min size"
+                },
+                "maxsize": {
+                    "type": "INT64",
+                    "hint": "max size"
+                },
+                "totzero": {
+                    "type": "INT64",
+                    "hint": "number of zero-size files"
+                },
+                "totltk": {
+                    "type": "INT64",
+                    "hint": "number <= 1024"
+                },
+                "totmtk": {
+                    "type": "INT64",
+                    "hint": "number > 1024"
+                },
+                "totltm": {
+                    "type": "INT64",
+                    "hint": "number <= 1048576"
+                },
+                "totmtm": {
+                    "type": "INT64",
+                    "hint": "number > 1048576"
+                },
+                "totmtg": {
+                    "type": "INT64",
+                    "hint": "number <= 1073741824"
+                },
+                "totmtt": {
+                    "type": "INT64",
+                    "hint": "number > 1073741824"
+                },
+                "totsize": {
+                    "type": "INT64",
+                    "hint": "summed size"
+                },
+                "minctime": {
+                    "type": "INT64",
+                    "hint": "min ctime"
+                },
+                "maxctime": {
+                    "type": "INT64",
+                    "hint": "max ctime"
+                },
+                "totctime": {
+                    "type": "INT64",
+                    "hint": "summed ctime"
+                },
+                "minmtime": {
+                    "type": "INT64",
+                    "hint": "min mtime"
+                },
+                "maxmtime": {
+                    "type": "INT64",
+                    "hint": "max mtime"
+                },
+                "totmtime": {
+                    "type": "INT64",
+                    "hint": "summed mtime"
+                },
+                "minatime": {
+                    "type": "INT64",
+                    "hint": "min atime"
+                },
+                "maxatime": {
+                    "type": "INT64",
+                    "hint": "max atime"
+                },
+                "totatime": {
+                    "type": "INT64",
+                    "hint": "summed atime"
+                },
+                "minblocks": {
+                    "type": "INT64",
+                    "hint": "min blocks"
+                },
+                "maxblocks": {
+                    "type": "INT64",
+                    "hint": "max blocks"
+                },
+                "totblocks": {
+                    "type": "INT64",
+                    "hint": "summed blocks"
+                },
+                "totxattr": {
+                    "type": "INT64",
+                    "hint": "number of files/links with xattrs present"
+                },
+                "depth": {
+                    "type": "INT64",
+                    "hint": "depth (number of slashes in path)"
+                },
+                "mincrtime": {
+                    "type": "INT64",
+                    "hint": "min create time"
+                },
+                "maxcrtime": {
+                    "type": "INT64",
+                    "hint": "max create time"
+                },
+                "totcrtime": {
+                    "type": "INT64",
+                    "hint": "summed create time"
+                },
+                "minossint1": {
+                    "type": "INT64",
+                    "hint": "min ossint1"
+                },
+                "maxossint1": {
+                    "type": "INT64",
+                    "hint": "max ossint1"
+                },
+                "totossint1": {
+                    "type": "INT64",
+                    "hint": "summed ossint1"
+                },
+                "minossint2": {
+                    "type": "INT64",
+                    "hint": "min ossint2"
+                },
+                "maxossint2": {
+                    "type": "INT64",
+                    "hint": "max ossint2"
+                },
+                "totossint2": {
+                    "type": "INT64",
+                    "hint": "summed ossint2"
+                },
+                "minossint3": {
+                    "type": "INT64",
+                    "hint": "min ossint3"
+                },
+                "maxossint3": {
+                    "type": "INT64",
+                    "hint": "max ossint3"
+                },
+                "totossint3": {
+                    "type": "INT64",
+                    "hint": "summed ossint3"
+                },
+                "minossint4": {
+                    "type": "INT64",
+                    "hint": "min ossint4"
+                },
+                "maxossint4": {
+                    "type": "INT64",
+                    "hint": "max ossint4"
+                },
+                "totossint4": {
+                    "type": "INT64",
+                    "hint": "summed ossint4"
+                },
+                "totextdbs": {
+                    "type": "INT64",
+                    "hint": "total external database references"
+                },
+                "rectype": {
+                    "type": "INT64",
+                    "hint": "0 for total for entire tree 1 for totals by user 2 for totals by group"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                }
+            }
+        },
+        "vtsummarygroup": {
+            "columns": {
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "totsubdirs": {
+                    "type": "INT64",
+                    "hint": "number directories under this directory"
+                },
+                "maxsubdirfiles": {
+                    "type": "INT64",
+                    "hint": "maximum number files in any subdir"
+                },
+                "maxsubdirlinks": {
+                    "type": "INT64",
+                    "hint": "maximum number of links in any subdir"
+                },
+                "maxsubdirsize": {
+                    "type": "INT64",
+                    "hint": "maximum summed size in any subdir"
+                },
+                "totfiles": {
+                    "type": "INT64",
+                    "hint": "number files"
+                },
+                "totlinks": {
+                    "type": "INT64",
+                    "hint": "summed links"
+                },
+                "minuid": {
+                    "type": "INT64",
+                    "hint": "min uid"
+                },
+                "maxuid": {
+                    "type": "INT64",
+                    "hint": "max uid"
+                },
+                "mingid": {
+                    "type": "INT64",
+                    "hint": "min gid"
+                },
+                "maxgid": {
+                    "type": "INT64",
+                    "hint": "max gid"
+                },
+                "minsize": {
+                    "type": "INT64",
+                    "hint": "min size"
+                },
+                "maxsize": {
+                    "type": "INT64",
+                    "hint": "max size"
+                },
+                "totzero": {
+                    "type": "INT64",
+                    "hint": "number of zero-size files"
+                },
+                "totltk": {
+                    "type": "INT64",
+                    "hint": "number <= 1024"
+                },
+                "totmtk": {
+                    "type": "INT64",
+                    "hint": "number > 1024"
+                },
+                "totltm": {
+                    "type": "INT64",
+                    "hint": "number <= 1048576"
+                },
+                "totmtm": {
+                    "type": "INT64",
+                    "hint": "number > 1048576"
+                },
+                "totmtg": {
+                    "type": "INT64",
+                    "hint": "number <= 1073741824"
+                },
+                "totmtt": {
+                    "type": "INT64",
+                    "hint": "number > 1073741824"
+                },
+                "totsize": {
+                    "type": "INT64",
+                    "hint": "summed size"
+                },
+                "minctime": {
+                    "type": "INT64",
+                    "hint": "min ctime"
+                },
+                "maxctime": {
+                    "type": "INT64",
+                    "hint": "max ctime"
+                },
+                "totctime": {
+                    "type": "INT64",
+                    "hint": "summed ctime"
+                },
+                "minmtime": {
+                    "type": "INT64",
+                    "hint": "min mtime"
+                },
+                "maxmtime": {
+                    "type": "INT64",
+                    "hint": "max mtime"
+                },
+                "totmtime": {
+                    "type": "INT64",
+                    "hint": "summed mtime"
+                },
+                "minatime": {
+                    "type": "INT64",
+                    "hint": "min atime"
+                },
+                "maxatime": {
+                    "type": "INT64",
+                    "hint": "max atime"
+                },
+                "totatime": {
+                    "type": "INT64",
+                    "hint": "summed atime"
+                },
+                "minblocks": {
+                    "type": "INT64",
+                    "hint": "min blocks"
+                },
+                "maxblocks": {
+                    "type": "INT64",
+                    "hint": "max blocks"
+                },
+                "totblocks": {
+                    "type": "INT64",
+                    "hint": "summed blocks"
+                },
+                "totxattr": {
+                    "type": "INT64",
+                    "hint": "number of files/links with xattrs present"
+                },
+                "depth": {
+                    "type": "INT64",
+                    "hint": "depth (number of slashes in path)"
+                },
+                "mincrtime": {
+                    "type": "INT64",
+                    "hint": "min create time"
+                },
+                "maxcrtime": {
+                    "type": "INT64",
+                    "hint": "max create time"
+                },
+                "totcrtime": {
+                    "type": "INT64",
+                    "hint": "summed create time"
+                },
+                "minossint1": {
+                    "type": "INT64",
+                    "hint": "min ossint1"
+                },
+                "maxossint1": {
+                    "type": "INT64",
+                    "hint": "max ossint1"
+                },
+                "totossint1": {
+                    "type": "INT64",
+                    "hint": "summed ossint1"
+                },
+                "minossint2": {
+                    "type": "INT64",
+                    "hint": "min ossint2"
+                },
+                "maxossint2": {
+                    "type": "INT64",
+                    "hint": "max ossint2"
+                },
+                "totossint2": {
+                    "type": "INT64",
+                    "hint": "summed ossint2"
+                },
+                "minossint3": {
+                    "type": "INT64",
+                    "hint": "min ossint3"
+                },
+                "maxossint3": {
+                    "type": "INT64",
+                    "hint": "max ossint3"
+                },
+                "totossint3": {
+                    "type": "INT64",
+                    "hint": "summed ossint3"
+                },
+                "minossint4": {
+                    "type": "INT64",
+                    "hint": "min ossint4"
+                },
+                "maxossint4": {
+                    "type": "INT64",
+                    "hint": "max ossint4"
+                },
+                "totossint4": {
+                    "type": "INT64",
+                    "hint": "summed ossint4"
+                },
+                "totextdbs": {
+                    "type": "INT64",
+                    "hint": "total external database references"
+                },
+                "rectype": {
+                    "type": "INT64",
+                    "hint": "0 for total for entire tree 1 for totals by user 2 for totals by group"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                }
+            }
+        },
+        "entries": {
+            "columns": {
+                "name": {
+                    "type": "TEXT",
+                    "hint": "character name of file or link"
+                },
+                "type": {
+                    "type": "TEXT",
+                    "hint": "character d for file or link"
+                },
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "mode": {
+                    "type": "INT64",
+                    "hint": "unix mode bits"
+                },
+                "nlink": {
+                    "type": "INT64",
+                    "hint": "unix number of links"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                },
+                "size": {
+                    "type": "INT64",
+                    "hint": "unix logical file size in bytes"
+                },
+                "blksize": {
+                    "type": "INT64",
+                    "hint": "unix blksize for file"
+                },
+                "blocks": {
+                    "type": "INT64",
+                    "hint": "unix number of blocks"
+                },
+                "atime": {
+                    "type": "INT64",
+                    "hint": "unix access time epoch"
+                },
+                "mtime": {
+                    "type": "INT64",
+                    "hint": "unix modification time epoch"
+                },
+                "ctime": {
+                    "type": "INT64",
+                    "hint": "unix change time epoch"
+                },
+                "linkname": {
+                    "type": "TEXT",
+                    "hint": "unix string for link name"
+                },
+                "xattr_names": {
+                    "type": "TEXT",
+                    "hint": "concatenation of all extended attributes"
+                },
+                "crtime": {
+                    "type": "INT64",
+                    "hint": "create time epoch (some file systems provide)"
+                },
+                "ossint1": {
+                    "type": "INT64",
+                    "hint": "storage system specific integer"
+                },
+                "ossint2": {
+                    "type": "INT64",
+                    "hint": "storage system specific integer"
+                },
+                "ossint3": {
+                    "type": "INT64",
+                    "hint": "storage system specific integer"
+                },
+                "ossint4": {
+                    "type": "INT64",
+                    "hint": "storage system specific integer"
+                },
+                "osstext1": {
+                    "type": "TEXT",
+                    "hint": "storage system specific string"
+                },
+                "osstext2": {
+                    "type": "TEXT",
+                    "hint": "storage system specific string"
+                }
+            }
+        },
+        "summary": {
+            "columns": {
+                "name": {
+                    "type": "TEXT",
+                    "hint": "character name of directory"
+                },
+                "type": {
+                    "type": "TEXT",
+                    "hint": "character d for directory"
+                },
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "mode": {
+                    "type": "INT64",
+                    "hint": "unix mode bits"
+                },
+                "nlink": {
+                    "type": "INT64",
+                    "hint": "unix number of links"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                },
+                "size": {
+                    "type": "INT64",
+                    "hint": "unix logical file size in bytes"
+                },
+                "blksize": {
+                    "type": "INT64",
+                    "hint": "unix blksize for file"
+                },
+                "blocks": {
+                    "type": "INT64",
+                    "hint": "unix number of blocks"
+                },
+                "atime": {
+                    "type": "INT64",
+                    "hint": "unix access time epoch"
+                },
+                "mtime": {
+                    "type": "INT64",
+                    "hint": "unix modification time epoch"
+                },
+                "ctime": {
+                    "type": "INT64",
+                    "hint": "unix change time epoch"
+                },
+                "linkname": {
+                    "type": "TEXT",
+                    "hint": "unix string for link name"
+                },
+                "xattr_names": {
+                    "type": "TEXT",
+                    "hint": "concatenation of all extended attributes"
+                },
+                "crtime": {
+                    "type": "INT64",
+                    "hint": "create time epoch (some file systems provide)"
+                },
+                "totfiles": {
+                    "type": "INT64",
+                    "hint": "number files"
+                },
+                "totlinks": {
+                    "type": "INT64",
+                    "hint": "summed links"
+                },
+                "minuid": {
+                    "type": "INT64",
+                    "hint": "min uid"
+                },
+                "maxuid": {
+                    "type": "INT64",
+                    "hint": "max uid"
+                },
+                "mingid": {
+                    "type": "INT64",
+                    "hint": "min gid"
+                },
+                "maxgid": {
+                    "type": "INT64",
+                    "hint": "max gid"
+                },
+                "minsize": {
+                    "type": "INT64",
+                    "hint": "min size"
+                },
+                "maxsize": {
+                    "type": "INT64",
+                    "hint": "max size"
+                },
+                "totzero": {
+                    "type": "INT64",
+                    "hint": "number of zero-size files"
+                },
+                "totltk": {
+                    "type": "INT64",
+                    "hint": "number <= 1024"
+                },
+                "totmtk": {
+                    "type": "INT64",
+                    "hint": "number > 1024"
+                },
+                "totltm": {
+                    "type": "INT64",
+                    "hint": "number <= 1048576"
+                },
+                "totmtm": {
+                    "type": "INT64",
+                    "hint": "number > 1048576"
+                },
+                "totmtg": {
+                    "type": "INT64",
+                    "hint": "number <= 1073741824"
+                },
+                "totmtt": {
+                    "type": "INT64",
+                    "hint": "number > 1073741824"
+                },
+                "totsize": {
+                    "type": "INT64",
+                    "hint": "summed size"
+                },
+                "minctime": {
+                    "type": "INT64",
+                    "hint": "min ctime"
+                },
+                "maxctime": {
+                    "type": "INT64",
+                    "hint": "max ctime"
+                },
+                "totctime": {
+                    "type": "INT64",
+                    "hint": "summed ctime"
+                },
+                "minmtime": {
+                    "type": "INT64",
+                    "hint": "min mtime"
+                },
+                "maxmtime": {
+                    "type": "INT64",
+                    "hint": "max mtime"
+                },
+                "totmtime": {
+                    "type": "INT64",
+                    "hint": "summed mtime"
+                },
+                "minatime": {
+                    "type": "INT64",
+                    "hint": "min atime"
+                },
+                "maxatime": {
+                    "type": "INT64",
+                    "hint": "max atime"
+                },
+                "totatime": {
+                    "type": "INT64",
+                    "hint": "summed atime"
+                },
+                "minblocks": {
+                    "type": "INT64",
+                    "hint": "min blocks"
+                },
+                "maxblocks": {
+                    "type": "INT64",
+                    "hint": "max blocks"
+                },
+                "totblocks": {
+                    "type": "INT64",
+                    "hint": "summed blocks"
+                },
+                "totxattr": {
+                    "type": "INT64",
+                    "hint": "number of files/links with xattrs present"
+                },
+                "depth": {
+                    "type": "INT64",
+                    "hint": "depth (number of slashes in path)"
+                },
+                "mincrtime": {
+                    "type": "INT64",
+                    "hint": "min create time"
+                },
+                "maxcrtime": {
+                    "type": "INT64",
+                    "hint": "max create time"
+                },
+                "totcrtime": {
+                    "type": "INT64",
+                    "hint": "summed create time"
+                },
+                "minossint1": {
+                    "type": "INT64",
+                    "hint": "min ossint1"
+                },
+                "maxossint1": {
+                    "type": "INT64",
+                    "hint": "max ossint1"
+                },
+                "totossint1": {
+                    "type": "INT64",
+                    "hint": "summed ossint1"
+                },
+                "minossint2": {
+                    "type": "INT64",
+                    "hint": "min ossint2"
+                },
+                "maxossint2": {
+                    "type": "INT64",
+                    "hint": "max ossint2"
+                },
+                "totossint2": {
+                    "type": "INT64",
+                    "hint": "summed ossint2"
+                },
+                "minossint3": {
+                    "type": "INT64",
+                    "hint": "min ossint3"
+                },
+                "maxossint3": {
+                    "type": "INT64",
+                    "hint": "max ossint3"
+                },
+                "totossint3": {
+                    "type": "INT64",
+                    "hint": "summed ossint3"
+                },
+                "minossint4": {
+                    "type": "INT64",
+                    "hint": "min ossint4"
+                },
+                "maxossint4": {
+                    "type": "INT64",
+                    "hint": "max ossint4"
+                },
+                "totossint4": {
+                    "type": "INT64",
+                    "hint": "summed ossint4"
+                },
+                "rectype": {
+                    "type": "INT64",
+                    "hint": "0 for total for entire dir 1 for totals by user 2 for totals by group"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "isroot": {
+                    "type": "INT64",
+                    "hint": "(used for rollup)"
+                },
+                "canrollup": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) can rollup"
+                },
+                "isrolledup": {
+                    "type": "INT64",
+                    "hint": "(used for rollup) is rolled up"
+                }
+            }
+        },
+        "pentries_rollup": {
+            "columns": {
+                "name": {
+                    "type": "TEXT",
+                    "hint": "character name of file or link"
+                },
+                "type": {
+                    "type": "TEXT",
+                    "hint": "character d for file or link"
+                },
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "mode": {
+                    "type": "INT64",
+                    "hint": "unix mode bits"
+                },
+                "nlink": {
+                    "type": "INT64",
+                    "hint": "unix number of links"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                },
+                "size": {
+                    "type": "INT64",
+                    "hint": "unix logical file size in bytes"
+                },
+                "blksize": {
+                    "type": "INT64",
+                    "hint": "unix blksize for file"
+                },
+                "blocks": {
+                    "type": "INT64",
+                    "hint": "unix number of blocks"
+                },
+                "atime": {
+                    "type": "INT64",
+                    "hint": "unix access time epoch"
+                },
+                "mtime": {
+                    "type": "INT64",
+                    "hint": "unix modification time epoch"
+                },
+                "ctime": {
+                    "type": "INT64",
+                    "hint": "unix change time epoch"
+                },
+                "linkname": {
+                    "type": "TEXT",
+                    "hint": "unix string for link name"
+                },
+                "xattr_names": {
+                    "type": "TEXT",
+                    "hint": "concatenation of all extended attributes"
+                },
+                "crtime": {
+                    "type": "INT64",
+                    "hint": "create time epoch (some file systems provide)"
+                },
+                "ossint1": {
+                    "type": "INT64",
+                    "hint": "storage system specific integer"
+                },
+                "ossint2": {
+                    "type": "INT64",
+                    "hint": "storage system specific integer"
+                },
+                "ossint3": {
+                    "type": "INT64",
+                    "hint": "storage system specific integer"
+                },
+                "ossint4": {
+                    "type": "INT64",
+                    "hint": "storage system specific integer"
+                },
+                "osstext1": {
+                    "type": "TEXT",
+                    "hint": "storage system specific string"
+                },
+                "osstext2": {
+                    "type": "TEXT",
+                    "hint": "storage system specific string"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "ppinode": {
+                    "type": "INT64",
+                    "hint": "parent parent directory inode"
+                }
+            }
+        },
+        "external_dbs_pwd": {
+            "columns": {
+                "type": {
+                    "type": "TEXT",
+                    "hint": "external database type"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "filename": {
+                    "type": "TEXT",
+                    "hint": "external database filename"
+                },
+                "mode": {
+                    "type": "INT64",
+                    "hint": "unix mode bits"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                }
+            }
+        },
+        "external_dbs_rollup": {
+            "columns": {
+                "type": {
+                    "type": "TEXT",
+                    "hint": "external database type"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "filename": {
+                    "type": "TEXT",
+                    "hint": "external database filename"
+                },
+                "mode": {
+                    "type": "INT64",
+                    "hint": "unix mode bits"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                }
+            }
+        },
+        "xattrs_pwd": {
+            "columns": {
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "name": {
+                    "type": "TEXT",
+                    "hint": "extended attribute name"
+                },
+                "value": {
+                    "type": "TEXT",
+                    "hint": "extended attribute value"
+                }
+            }
+        },
+        "xattrs_rollup": {
+            "columns": {
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "name": {
+                    "type": "TEXT",
+                    "hint": "extended attribute name"
+                },
+                "value": {
+                    "type": "TEXT",
+                    "hint": "extended attribute value"
+                }
+            }
+        },
+        "treesummary": {
+            "columns": {
+                "inode": {
+                    "type": "INT64",
+                    "hint": "inode number from source system"
+                },
+                "pinode": {
+                    "type": "INT64",
+                    "hint": "parent directory inode"
+                },
+                "totsubdirs": {
+                    "type": "INT64",
+                    "hint": "number directories under this directory"
+                },
+                "maxsubdirfiles": {
+                    "type": "INT64",
+                    "hint": "maximum number files in any subdir"
+                },
+                "maxsubdirlinks": {
+                    "type": "INT64",
+                    "hint": "maximum number of links in any subdir"
+                },
+                "maxsubdirsize": {
+                    "type": "INT64",
+                    "hint": "maximum summed size in any subdir"
+                },
+                "totfiles": {
+                    "type": "INT64",
+                    "hint": "number files"
+                },
+                "totlinks": {
+                    "type": "INT64",
+                    "hint": "summed links"
+                },
+                "minuid": {
+                    "type": "INT64",
+                    "hint": "min uid"
+                },
+                "maxuid": {
+                    "type": "INT64",
+                    "hint": "max uid"
+                },
+                "mingid": {
+                    "type": "INT64",
+                    "hint": "min gid"
+                },
+                "maxgid": {
+                    "type": "INT64",
+                    "hint": "max gid"
+                },
+                "minsize": {
+                    "type": "INT64",
+                    "hint": "min size"
+                },
+                "maxsize": {
+                    "type": "INT64",
+                    "hint": "max size"
+                },
+                "totzero": {
+                    "type": "INT64",
+                    "hint": "number of zero-size files"
+                },
+                "totltk": {
+                    "type": "INT64",
+                    "hint": "number <= 1024"
+                },
+                "totmtk": {
+                    "type": "INT64",
+                    "hint": "number > 1024"
+                },
+                "totltm": {
+                    "type": "INT64",
+                    "hint": "number <= 1048576"
+                },
+                "totmtm": {
+                    "type": "INT64",
+                    "hint": "number > 1048576"
+                },
+                "totmtg": {
+                    "type": "INT64",
+                    "hint": "number <= 1073741824"
+                },
+                "totmtt": {
+                    "type": "INT64",
+                    "hint": "number > 1073741824"
+                },
+                "totsize": {
+                    "type": "INT64",
+                    "hint": "summed size"
+                },
+                "minctime": {
+                    "type": "INT64",
+                    "hint": "min ctime"
+                },
+                "maxctime": {
+                    "type": "INT64",
+                    "hint": "max ctime"
+                },
+                "totctime": {
+                    "type": "INT64",
+                    "hint": "summed ctime"
+                },
+                "minmtime": {
+                    "type": "INT64",
+                    "hint": "min mtime"
+                },
+                "maxmtime": {
+                    "type": "INT64",
+                    "hint": "max mtime"
+                },
+                "totmtime": {
+                    "type": "INT64",
+                    "hint": "summed mtime"
+                },
+                "minatime": {
+                    "type": "INT64",
+                    "hint": "min atime"
+                },
+                "maxatime": {
+                    "type": "INT64",
+                    "hint": "max atime"
+                },
+                "totatime": {
+                    "type": "INT64",
+                    "hint": "summed atime"
+                },
+                "minblocks": {
+                    "type": "INT64",
+                    "hint": "min blocks"
+                },
+                "maxblocks": {
+                    "type": "INT64",
+                    "hint": "max blocks"
+                },
+                "totblocks": {
+                    "type": "INT64",
+                    "hint": "summed blocks"
+                },
+                "totxattr": {
+                    "type": "INT64",
+                    "hint": "number of files/links with xattrs present"
+                },
+                "depth": {
+                    "type": "INT64",
+                    "hint": "depth (number of slashes in path)"
+                },
+                "mincrtime": {
+                    "type": "INT64",
+                    "hint": "min create time"
+                },
+                "maxcrtime": {
+                    "type": "INT64",
+                    "hint": "max create time"
+                },
+                "totcrtime": {
+                    "type": "INT64",
+                    "hint": "summed create time"
+                },
+                "minossint1": {
+                    "type": "INT64",
+                    "hint": "min ossint1"
+                },
+                "maxossint1": {
+                    "type": "INT64",
+                    "hint": "max ossint1"
+                },
+                "totossint1": {
+                    "type": "INT64",
+                    "hint": "summed ossint1"
+                },
+                "minossint2": {
+                    "type": "INT64",
+                    "hint": "min ossint2"
+                },
+                "maxossint2": {
+                    "type": "INT64",
+                    "hint": "max ossint2"
+                },
+                "totossint2": {
+                    "type": "INT64",
+                    "hint": "summed ossint2"
+                },
+                "minossint3": {
+                    "type": "INT64",
+                    "hint": "min ossint3"
+                },
+                "maxossint3": {
+                    "type": "INT64",
+                    "hint": "max ossint3"
+                },
+                "totossint3": {
+                    "type": "INT64",
+                    "hint": "summed ossint3"
+                },
+                "minossint4": {
+                    "type": "INT64",
+                    "hint": "min ossint4"
+                },
+                "maxossint4": {
+                    "type": "INT64",
+                    "hint": "max ossint4"
+                },
+                "totossint4": {
+                    "type": "INT64",
+                    "hint": "summed ossint4"
+                },
+                "totextdbs": {
+                    "type": "INT64",
+                    "hint": "total external database references"
+                },
+                "rectype": {
+                    "type": "INT64",
+                    "hint": "0 for total for entire tree 1 for totals by user 2 for totals by group"
+                },
+                "uid": {
+                    "type": "INT64",
+                    "hint": "unix uid"
+                },
+                "gid": {
+                    "type": "INT64",
+                    "hint": "unix gid"
+                }
+            }
+        }
+    }
+}

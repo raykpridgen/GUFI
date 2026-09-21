@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 import re
 import subprocess
+import json
 
 load_dotenv()
 
@@ -841,3 +842,21 @@ def validate_aggregate_order(query: GufiQuery) -> tuple[bool, str | None]:
                 )
 
     return True, None
+
+def load_schema_hints(name: str, schema: list[list[str]]) -> dict:
+    ''' Attach static hints to dynamically loaded schema from PRAGMA '''
+
+    with open(SCHEMAFILE, "r") as f:
+        hints = json.load(f)
+    schema_hints = hints["tables"][name]["columns"]
+    schema_comp = {}
+
+    # For each column in the schema, attach hint to a dictionary entry
+    for col in schema:
+        # Fill type from file if blank
+        if col[1] == '':
+            schema_comp[col[0]] = {"type": schema_hints[col[0]]["type"], "hint": schema_hints[col[0]]["hint"]}
+        else:
+            schema_comp[col[0]] = {"type": col[1], "hint": schema_hints[col[0]]["hint"]}
+
+    return schema_comp
