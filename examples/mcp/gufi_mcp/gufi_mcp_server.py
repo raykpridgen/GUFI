@@ -386,6 +386,9 @@ def gufi_schemas(
         result = util.execute_sql(sqlline, False)
         if result[0] != "sql error:":
             rows = [list(res_row) for res_row in result]
+            rowsd = {row[0]: row[1] for row in rows}
+            return rowsd
+
         else:
             raise RuntimeError(f"Error executing SQL: {result[1]}")
     # Get schema of a specific table
@@ -397,21 +400,9 @@ def gufi_schemas(
         else:
             raise RuntimeError(f"Error executing SQL: {result[1]}")
 
-    return rows
-
-#@mcp.resource("gufi://naive_indexes")
-def naive_index_scheme() -> str:
-    """
-       sql query on local file information index
-    """
-    schemafile=SCHEMAFILE
-    try:
-        with open(schemafile, mode="r") as f:
-            content = f.read()
-        return content
-    except FileNotFoundError:
-        return "Schema file not found."
-
+        # Attach hints and convert to dict
+        schema_with_hints = util.load_schema_hints(schema, rows)
+        return schema_with_hints
 
 @mcp.resource("gufi://session-brief")
 def gufi_session_briefing() -> str:
