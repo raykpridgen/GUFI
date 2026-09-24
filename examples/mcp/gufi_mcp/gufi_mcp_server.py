@@ -82,6 +82,42 @@ GUFI_QUERY = os.getenv('GUFI_QUERY')
 
 mcp = MCPServer(name="gufi-mcp")
 
+EVENT_LOGGER = EventLogger.from_env()
+attach_event_logging(mcp, EVENT_LOGGER)
+
+util.warm_tool_help_cache()
+
+_GUFI_FIND_DESC = util.format_tool_description(
+    "Find files in a GUFI index by name, type, modification age, or size.",
+    "gufi_find",
+    '{"index": "work", "type": "f", "mtime": "+7", "limit": 50}',
+)
+_GUFI_LS_DESC = util.format_tool_description(
+    "List entries under an index path (GUFI ls wrapper).",
+    "gufi_ls",
+    '{"index": "personal_data", "subpath": "Videos", "long_format": true, "human_readable": true}',
+)
+_GUFI_DU_DESC = util.format_tool_description(
+    "Disk-usage summary for an index path. Requires treesummary on the target.",
+    "gufi_du",
+    '{"index": "personal_data", "human_readable": true}',
+)
+_GUFI_STAT_DESC = util.format_tool_description(
+    "Stat one file under a GUFI index.",
+    "gufi_stat",
+    '{"index": "personal_data", "file": "Mail/example.mbox"}',
+)
+_GUFI_STATS_DESC = util.format_tool_description(
+    "Run a canned GUFI statistic (for example leaf-dirs, total-files).",
+    "gufi_stats",
+    '{"index": "personal_data", "stat": "leaf-dirs", "recursive": true, "num_results": 10}',
+)
+_GUFI_GETFATTR_DESC = util.format_tool_description(
+    "Read extended attributes for a path under a GUFI index.",
+    "gufi_getfattr",
+    '{"index": "personal_data", "path": "Videos", "recursive": false}',
+)
+
 @mcp.tool()
 def gufi_version() -> str:
     """gufi_query -- version"""
@@ -96,234 +132,331 @@ def gufi_location() -> str:
 
 @mcp.tool()
 def sql_file_index(
-        sqlin: Annotated[str, Field(description="SELECT and FROM portion of the SQL query.")],
-        wherein: Annotated[str, Field(description="WHERE, ORDER, and LIMIT portion of the SQL query.")],
+        sqlin: Annotated[str, Field(description="One SQL SELECT against a GUFI view (vrpentries, pentries, vrsummary, summary, etc.). Prefer views over base tables. Returns shard-local rows; ORDER BY, LIMIT, GROUP BY, and aggregates are applied per subtree, not index-wide. Use aggregate_sql_query for global ordering or totals.")],
         index: Annotated[str, Field(description="Index / subpath to query. This will be resolved internally so the name obtained from the gufi_indexes resource should be used.")],
         remote: Annotated[bool, Field(description="Boolean for if this is a remote connection. Leave untouched unless user specifies otherwise. Config will be handled before invokation if remote is needed.")] = False
 ) -> GufiQueryResult:
+    """Run a direct SQL SELECT against gufi_vt. Results are shard-local."""
+
+    query_result = GufiQueryResult(execution_mode="shard_local")
+
+    try:
+        if remote:
+            searchpath = util.resolve_remote_index(index)
+            threads = os.cpu_count() or 1
+            vt_config = [
+                util.sqlite_string(searchpath),
+                f"threads={threads}",
+                "min_level=0",
+                "max_level=99",
+                "verbose=0",
+                "remote_cmd='ssh'",
+                f"remote_arg={util.sqlite_string(REMOTEHOST)}",
+            ]
+        else:
+            searchpath = util.resolve_local_index(index)
+            threads = os.cpu_count() or 1
+            vt_config = [
+                util.sqlite_string(searchpath),
+                f"threads={threads}",
+                "min_level=1",
+                "max_level=99",
+                "verbose=0",
+            ]
+    except RuntimeError as exc:
+        query_result.error = str(exc)
+        return query_result.model_dump()
+
+    logical_sql = util.normalize_gufi_query_sql(sqlin.strip())
+    util.apply_shard_local_warnings(query_result, logical_sql)
+
+    stage = util.gufi_query_stage_from_sql(logical_sql)
+    if not stage:
+        query_result.error = "Could not find a supported GUFI table in the SQL FROM clause."
+        query_result.sql = logical_sql
+        return query_result.model_dump()
+
+    vt_config.append(f'{stage}={util.sqlite_string(util.ensure_sql_statement(logical_sql), '"')}')
+    create_sql = f"""
+        CREATE VIRTUAL TABLE temp.gufi
+        USING gufi_vt({", ".join(vt_config)})
     """
-        sql query on local file information index
-    """
+    query_result.sql = create_sql
+    query_result.compiled_sql = create_sql
 
-    query_result = GufiQueryResult()
+    try:
+        conn = sqlite3.connect(":memory:")
+        conn.enable_load_extension(True)
+        conn.load_extension(GUFIVTLIB)
+        conn.enable_load_extension(False)
 
-    # Build SQL line
-    if remote:
-        searchpath = util.resolve_remote_index(index)
-        sqlline = '%s(\'%s\',1,0,99,NULL,0,\'ssh\',\'%s\') %s' % (sqlin, searchpath, REMOTEHOST, wherein)
-    else:
-        searchpath = util.resolve_local_index(index)
-        if not searchpath:
-            raise RuntimeError(f"Error: Index {index} not found")
-        sqlline = '%s(\'%s\',1,1,99,NULL,1) %s' % (sqlin, searchpath, wherein)
+        cursor = conn.cursor()
+        cursor.execute(create_sql)
+        cursor.execute("SELECT * FROM temp.gufi")
+        result = cursor.fetchall()
 
-    # Execute Query using GUFI_VT
-    result = util.execute_sql(sqlline, True)
-
-    if result[0] != "sql error:":
-        # Format result into serialized object
         query_result.rows = [list(res_row) for res_row in result]
-        query_result.columns = util.get_columns_from_sqlin(sqlin)
+        query_result.columns = [description[0] for description in cursor.description]
         query_result.row_count = len(query_result.rows)
         return query_result.model_dump()
 
-    else:
-        raise RuntimeError(f"Error executing SQL: {result[1]}")
+    except sqlite3.Error as e:
+        query_result.error = str(e)
+        return query_result.model_dump()
+
+    finally:
+        try:
+            conn.execute("DROP TABLE IF EXISTS temp.gufi")
+        except (NameError, sqlite3.Error):
+            pass
+        try:
+            conn.close()
+        except (NameError, sqlite3.Error):
+            pass
 
 @mcp.tool()
 def aggregate_sql_query(
-        query: Annotated[GufiQuery, Field(description="Constructed object for the aggregate SQL query.")],
+        query: Annotated[GufiQuery, Field(description="GUFI aggregate pipeline object. Use -I, -E, -K, -J, -G for index-wide merge, sort, and totals. Put global ORDER BY/LIMIT in -G, not -E or -F.")],
 ) -> GufiQueryResult:
+    """Run GUFI aggregate SQL phases through gufi_vt for index-wide results."""
 
-    index = query.index
-    if not util.subpath_exists(index):
-        raise RuntimeError(f"Error: Index or subpath {index} does not exist")
+    query_result = GufiQueryResult(execution_mode="aggregate")
+    normalized_query = util.normalize_aggregate_query(query)
 
-    if not util.validate_aggregate_order(query):
-        raise RuntimeError(f"Error: Aggregate order is not valid")
+    if not util.subpath_exists(normalized_query.index):
+        query_result.error = f"Error: Index or subpath {normalized_query.index} does not exist"
+        return query_result.model_dump()
 
-    query_result = GufiQueryResult()
+    valid, validation_error = util.validate_aggregate_order(normalized_query)
+    if not valid:
+        query_result.error = validation_error
+        return query_result.model_dump()
 
-    # CREATE VIRTUAL TABLE temp.gufi
-    # USING gufi_vt(
-    options = []
-    for item in query.sql_options:
+    options = [util.sqlite_string(util.resolve_query_index(normalized_query.index))]
+    for config in normalized_query.config:
+        options.append(config)
+    for item in normalized_query.sql_options:
         option = item.option.lstrip("-")
-        sql = item.sql.replace("'", "''")
-        options.append(f"{option}='{sql}'")
-
-    options.append(f"index='{query.index}'")
+        sql = util.ensure_sql_statement(item.sql)
+        options.append(f"{option}={util.sqlite_string(sql, '"')}")
 
     sql_query = f"""
-        CREATE VIRTUAL TABLE temp.gufi.mcp
-        USING gufi_vt({", ".join(options)}
+        CREATE VIRTUAL TABLE temp.gufi
+        USING gufi_vt({", ".join(options)})
     """
+    query_result.sql = sql_query
+    query_result.compiled_sql = sql_query
 
-    result = util.execute_sql(sql_query, True)
+    conn = sqlite3.connect(":memory:")
+    try:
+        conn.enable_load_extension(True)
+        conn.load_extension(GUFIVTLIB)
+        conn.enable_load_extension(False)
 
-    if result[0] != "sql error:":
-        # Format result into serialized object
+        cursor = conn.cursor()
+        cursor.execute(sql_query)
+        cursor.execute("SELECT * FROM temp.gufi")
+        result = cursor.fetchall()
+
         query_result.rows = [list(res_row) for res_row in result]
-        query_result.columns = [""]
+        query_result.columns = [description[0] for description in cursor.description]
         query_result.row_count = len(query_result.rows)
-        return query_result
+        return query_result.model_dump()
 
-    else:
-        raise RuntimeError(f"Error executing SQL: {result[1]}")
+    except sqlite3.Error as e:
+        query_result.error = str(e)
+        return query_result.model_dump()
 
-@mcp.tool()
+    finally:
+        try:
+            conn.execute("DROP TABLE IF EXISTS temp.gufi")
+        except (NameError, sqlite3.Error):
+            pass
+        try:
+            conn.close()
+        except (NameError, sqlite3.Error):
+            pass
+
+@mcp.tool(description=_GUFI_LS_DESC)
 def gufi_ls(
-        path: Annotated[str, Field(description="Optional subpath of gufi_ls. This path should have the desired index as the root, since the underlying tool resolves from a configured root.")] = None,
-        options: Annotated[list[str], Field(description="Options to submit for gufi_ls. submit '--help' to view these options. Do not use --delim, the tool uses its own to give structured output. A value supplied after an option should be a new list entry.")] = None
+        index: Annotated[str, Field(description="GUFI index name from gufi://indexes (for example personal_data).")],
+        subpath: Annotated[str, Field(description="Optional subdirectory under the index root.")] = None,
+        long_format: Annotated[bool, Field(description="Pass -l for long listing format.")] = False,
+        human_readable: Annotated[bool, Field(description="Pass -h for human-readable sizes.")] = False,
+        recursive: Annotated[bool, Field(description="Pass -R for recursive listing.")] = False,
+        extra_flags: Annotated[list[str], Field(description="Rare extra CLI flags only; prefer named parameters.")] = None,
 ) -> GufiToolResult:
-    ''' Execute user-facing tool: gufi equivalent of ls '''
+    ''' List entries under a GUFI index path. '''
+    try:
+        cmd = util.build_ls_argv(
+            index,
+            subpath=subpath,
+            long_format=long_format,
+            human_readable=human_readable,
+            recursive=recursive,
+            extra_flags=extra_flags,
+        )
+    except RuntimeError as exc:
+        return GufiToolResult(error=str(exc)).model_dump()
+    return util.pack_command_result(util.run_gufi_cli(cmd))
 
-    tool_result = GufiQueryResult()
-    cmd = ["gufi_ls"]
-    # Build options string if options passed
-    if options:
-        for option in options:
-            cmd.append(option)
 
-    # Add delimiter explicitly for parsing
-    cmd.append("--delim")
-    cmd.append("\t")
-    if path:
-        cmd.append(path)
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    # Pack object and return
-    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
-    tool_result.row_count = len(tool_result.rows)
-
-    return tool_result.model_dump()
-
-@mcp.tool()
+@mcp.tool(description=_GUFI_DU_DESC)
 def gufi_du(
-        subpath: Annotated[str, Field(description="Optional subpath to input for du. This directory must have treesummary active to get results.")] = None,
-        options: Annotated[list[str], Field(description="Options to submit for gufi_du. submit '--help' to view these options. A value supplied after an option should be a new list entry.")] = None
+        index: Annotated[str, Field(description="GUFI index name from gufi://indexes.")],
+        subpath: Annotated[str, Field(description="Optional subdirectory; must have treesummary for results.")] = None,
+        human_readable: Annotated[bool, Field(description="Pass -h for human-readable sizes.")] = False,
+        summarize: Annotated[bool, Field(description="Pass -s to summarize totals only.")] = False,
+        extra_flags: Annotated[list[str], Field(description="Rare extra CLI flags only; prefer named parameters.")] = None,
 ) -> GufiToolResult:
-    ''' Execute user-facing tool: gufi equivalent of ls '''
+    ''' Disk-usage summary for a GUFI index path. '''
+    try:
+        cmd = util.build_du_argv(
+            index,
+            subpath=subpath,
+            human_readable=human_readable,
+            summarize=summarize,
+            extra_flags=extra_flags,
+        )
+    except RuntimeError as exc:
+        return GufiToolResult(error=str(exc)).model_dump()
 
-    tool_result = GufiQueryResult()
+    result = util.run_gufi_cli(cmd)
+    if result.stderr and "have treesummary data?" in result.stderr:
+        target = util.resolve_index_path(index, subpath)
+        return GufiToolResult(
+            rows=[],
+            row_count=0,
+            stderr=result.stderr.strip(),
+            returncode=result.returncode,
+            error=f"Treesummary error: {target} does not have treesummary; use SQL or aggregate_sql_query instead.",
+        ).model_dump()
+    return util.pack_command_result(result)
 
-    cmd = ["gufi_du"]
-    # Build options string if options passed
-    if options:
-        for option in options:
-            cmd.append(option)
 
-    if subpath:
-        cmd.append(subpath)
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    if result.stderr:
-        # treesummary existence error at subpath
-        if "have treesummary data?" in result.stderr:
-            return [[f"Treesummary error: The subpath {subpath} does not have a treesummary table, cannot use gufi_du."]]
-
-    # Pack object and return
-    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
-    tool_result.row_count = len(tool_result.rows)
-    return tool_result.model_dump()
-
-@mcp.tool()
+@mcp.tool(description=_GUFI_FIND_DESC)
 def gufi_find(
-        options: Annotated[list[str], Field(description="Options to submit for gufi_find. submit '--help' to view these options. Do not use --delim, the tool uses its own to give structured output. A value supplied after an option should be a new list entry.")] = None
+        index: Annotated[str, Field(description="GUFI index name from gufi://indexes.")],
+        subpath: Annotated[str, Field(description="Optional subdirectory under the index to search.")] = None,
+        name: Annotated[str, Field(description="Filename glob for -name (for example organizer*).")] = None,
+        type: Annotated[str, Field(description="Entry type for -type: f=file, d=directory, l=symlink. Default f.")] = "f",
+        mtime: Annotated[str, Field(description="Modification age in days for -mtime. +N means older than N days (for example +7).")] = None,
+        size: Annotated[str, Field(description="Size predicate for -size (for example +100M).")] = None,
+        limit: Annotated[int, Field(description="Maximum rows to return (--num-results).")] = None,
+        largest: Annotated[bool, Field(description="Sort by size descending (--largest).")] = False,
+        extra_flags: Annotated[list[str], Field(description="Rare extra CLI flags only; prefer named parameters.")] = None,
 ) -> GufiToolResult:
-    ''' Execute user-facing tool: gufi equivalent of find '''
+    ''' Find files in a GUFI index. '''
+    try:
+        cmd = util.build_find_argv(
+            index,
+            subpath=subpath,
+            name=name,
+            type=type,
+            mtime=mtime,
+            size=size,
+            limit=limit,
+            largest=largest,
+            extra_flags=extra_flags,
+        )
+    except RuntimeError as exc:
+        return GufiToolResult(error=str(exc)).model_dump()
+    return util.pack_command_result(util.run_gufi_cli(cmd))
 
-    tool_result = GufiQueryResult()
 
-    cmd = ["gufi_find"]
-    # Build options string if options passed
-    if options:
-        for option in options:
-            cmd.append(option)
-
-    cmd.append("--delim")
-    cmd.append("\t")
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    # Pack object and return
-    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
-    tool_result.row_count = len(tool_result.rows)
-    return tool_result.model_dump()
-
-@mcp.tool()
+@mcp.tool(description=_GUFI_STAT_DESC)
 def gufi_stat(
-        file: Annotated[str, Field(description="File to stat.")],
-        options: Annotated[list[str], Field(description="Options to submit for gufi_stat. submit '--help' to view these options. A value supplied after an option should be a new list entry.")] = None
+        index: Annotated[str, Field(description="GUFI index name from gufi://indexes.")],
+        file: Annotated[str, Field(description="File path relative to the index root, unless absolute.")],
+        extra_flags: Annotated[list[str], Field(description="Rare extra CLI flags only; prefer named parameters.")] = None,
 ) -> GufiToolResult:
-    ''' Execute user-facing tool: gufi equivalent of ls '''
+    ''' Stat one file under a GUFI index. '''
+    try:
+        cmd = util.build_stat_argv(index, file, extra_flags=extra_flags)
+    except RuntimeError as exc:
+        return GufiToolResult(error=str(exc)).model_dump()
 
-    tool_result = GufiQueryResult()
+    result = util.run_gufi_cli(cmd)
+    if result.returncode != 0 and result.stderr and "No such file or directory" in result.stderr:
+        return GufiToolResult(
+            rows=[],
+            row_count=0,
+            stderr=result.stderr.strip(),
+            returncode=result.returncode,
+            error=f"File error: gufi_stat could not find {file} under index {index}.",
+        ).model_dump()
+    return util.pack_command_result(result)
 
-    cmd = ["gufi_stat"]
-    # Build options string if options passed
-    if options:
-        for option in options:
-            cmd.append(option)
 
-    cmd.append(file)
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    if result.stderr:
-        # treesummary existence error at subpath
-        if "No such file or directory" in result.stderr:
-            return [[f"File error: gufi_stat was not able to find the file {file}."]]
-
-    # Pack object and return
-    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
-    tool_result.row_count = len(tool_result.rows)
-    return tool_result.model_dump()
-
-@mcp.tool()
+@mcp.tool(description=_GUFI_STATS_DESC)
 def gufi_stats(
-        path: Annotated[str, Field(description="Path to obtain statistic from. Resolved with tool internally.")],
-        stat: Annotated[str, Field(description="Statistic to use. Use the --help option to view these statistics.")],
-        options: Annotated[list[str], Field(description="Options to submit for gufi_stats. submit '--help' to view these options. Do not use --delim, the tool uses its own to give structured output. A value supplied after an option should be a new list entry.")] = None
+        index: Annotated[str, Field(description="GUFI index name from gufi://indexes.")],
+        stat: Annotated[str, Field(description="Statistic name (see tool description for choices).")],
+        subpath: Annotated[str, Field(description="Optional subdirectory under the index.")] = None,
+        recursive: Annotated[bool, Field(description="Pass -r for recursive stats.")] = False,
+        num_results: Annotated[int, Field(description="Limit rows returned (--num-results).")] = None,
+        extra_flags: Annotated[list[str], Field(description="Rare extra CLI flags only; prefer named parameters.")] = None,
 ) -> GufiToolResult:
-    ''' Execute user-facing tool: gufi equivalent of ls '''
+    ''' Run a canned GUFI statistic on an index path. '''
+    try:
+        cmd = util.build_stats_argv(
+            index,
+            stat,
+            subpath=subpath,
+            recursive=recursive,
+            num_results=num_results,
+            extra_flags=extra_flags,
+        )
+    except RuntimeError as exc:
+        return GufiToolResult(error=str(exc)).model_dump()
 
-    tool_result = GufiQueryResult()
+    result = util.run_gufi_cli(cmd)
+    stderr = result.stderr.strip() if result.stderr else ""
+    if result.returncode != 0:
+        if "argument stat: invalid choice:" in stderr:
+            return GufiToolResult(
+                rows=[],
+                row_count=0,
+                stderr=stderr,
+                returncode=result.returncode,
+                error=f"Tool error: gufi_stats does not support statistic {stat!r}.",
+            ).model_dump()
+        if "No such file or directory" in stderr:
+            target = util.resolve_index_path(index, subpath)
+            return GufiToolResult(
+                rows=[],
+                row_count=0,
+                stderr=stderr,
+                returncode=result.returncode,
+                error=f"Path error: gufi_stats could not find {target}.",
+            ).model_dump()
+    return util.pack_command_result(result)
 
-    cmd = ["gufi_stats"]
-    help = False
-    # Build options string if options passed
-    if options:
-        for option in options:
-            if option == "--help":
-                help = True
-            cmd.append(option)
 
-    # Override previous build for clean help, since required vars are used
-    if help:
-        cmd = ['gufi_stats', '--help']
-        result = subprocess.run(cmd, capture_output=True, text=True)
-    else:
-        cmd.append(stat)
-        cmd.append(path)
-        cmd.append("--delim")
-        cmd.append("\t")
+@mcp.tool(description=_GUFI_GETFATTR_DESC)
+def gufi_getfattr(
+        index: Annotated[str, Field(description="GUFI index name from gufi://indexes.")],
+        path: Annotated[str, Field(description="Path relative to the index root.")],
+        recursive: Annotated[bool, Field(description="Pass -R to recurse.")] = False,
+        extra_flags: Annotated[list[str], Field(description="Rare extra CLI flags only; prefer named parameters.")] = None,
+) -> GufiToolResult:
+    ''' Read extended attributes for a path under a GUFI index. '''
+    try:
+        cmd = util.build_getfattr_argv(index, path, recursive=recursive, extra_flags=extra_flags)
+    except RuntimeError as exc:
+        return GufiToolResult(error=str(exc)).model_dump()
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    if result.stderr:
-        # treesummary existence error at subpath
-        if "argument stat: invalid choice:" in result.stderr:
-            return [[f"Tool error: gufi_stats does not allow getting statistic {stat}."]]
-        if "No such file or directory" in result.stderr:
-            return [[f"Path error: gufi_stats was not able to find the path {path}."]]
-
-    # Pack object and return
-    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
-    tool_result.row_count = len(tool_result.rows)
-    return tool_result.model_dump()
+    result = util.run_gufi_cli(cmd)
+    if result.returncode != 0 and result.stderr and "No such file or directory" in result.stderr:
+        target = util.resolve_index_path(index, path)
+        return GufiToolResult(
+            rows=[],
+            row_count=0,
+            stderr=result.stderr.strip(),
+            returncode=result.returncode,
+            error=f"Path error: gufi_getfattr could not find {target}.",
+        ).model_dump()
+    return util.pack_command_result(result)
 
 # resource that returns indexes available
 @mcp.resource("gufi://indexes")
@@ -336,6 +469,17 @@ def gufi_indexes() -> list[list[Any]]:
         output.append([index, util.has_treesummary(index)])
 
     return output
+
+@mcp.resource("gufi://tool-guide/{tool}")
+def gufi_tool_guide(
+        tool: Annotated[str, Field(description="Wrapper tool name: gufi_find, gufi_ls, gufi_du, gufi_stat, gufi_stats, or gufi_getfattr.")]
+) -> str:
+    ''' Return full cached CLI help for one command wrapper tool. '''
+    normalized = tool.strip()
+    if normalized not in util.WRAPPER_TOOLS:
+        return f"Unknown tool {tool!r}. Valid names: {', '.join(util.WRAPPER_TOOLS)}"
+    return util.get_tool_help(normalized)
+
 
 @mcp.resource("gufi://schemas/{schema}")
 def gufi_schemas(
@@ -424,9 +568,10 @@ instead of guessing column names from entries.
 
 Tool guidance:
 - gufi_ls, gufi_du, gufi_find, gufi_stat, and gufi_stats are user-facing GUFI
-  command wrappers. Use these for high-level searches, quick metadata checks,
-  and common filesystem-style questions. Some commands need treesummary. Pass
-  --help in options to see usage; help text may appear in stderr.
+  command wrappers with structured parameters (index, subpath, name, mtime, etc.).
+  Each tool schema includes usage and a copy-paste JSON example. Do not call tools
+  solely to fetch help. For full CLI flag lists read gufi://tool-guide/{tool}.
+  Some commands need treesummary (notably gufi_du).
 - sql_file_index runs a direct SQL SELECT against gufi_vt. It returns
   shard-local rows: ORDER BY, LIMIT, GROUP BY, and aggregate functions are
   applied per GUFI subtree, not across the full index. Use it for filtered row
@@ -469,8 +614,30 @@ Common task patterns:
 Name-filtered file listing:
 - Goal: find a small set of regular files matching a name pattern with path and
   size.
-- Start with gufi_find when appropriate, or sql_file_index against vrpentries.
-- Filter type = 'f'. Keep output bounded.
+- Use gufi_find with index, name, type="f", and limit. Example:
+  {"index": "personal_data", "name": "organizer*", "type": "f", "limit": 10}
+- Or sql_file_index against vrpentries when find filters are insufficient.
+
+Files by modification age (mtime):
+- Goal: list or count files not modified recently (for example older than 7 days).
+- Bounded listing with paths: gufi_find with mtime="+7" (GNU find: +N means
+  strictly older than N days). Example:
+  {"index": "work", "type": "f", "mtime": "+7", "limit": 50}
+- Index-wide count or grouping: one aggregate_sql_query, not multiple probes.
+  mtime in SQL is Unix epoch (INT64). Cutoff for N days ago:
+  CAST(strftime('%s','now') AS INT64) - N*86400, or a precomputed epoch.
+- Prefer vrpentries for (sname, dname, name) context in aggregates; use path()
+  from pentries only when full absolute paths are required.
+- Target at most 2 tool calls: gufi_find for samples plus one aggregate for
+  index-wide count, or a single aggregate when only totals are needed.
+- Aggregate recipes (build with sql_options -I/-E/-K/-J/-G):
+  Count files with mtime before cutoff:
+  - -E INSERT INTO intermediate SELECT 1 FROM vrpentries WHERE type='f' AND mtime < CUTOFF
+  - -G SELECT SUM(count) AS file_count FROM aggregate
+  List oldest files index-wide:
+  - -E INSERT INTO intermediate SELECT sname, dname, name, mtime, size FROM vrpentries
+    WHERE type='f' AND mtime < CUTOFF
+  - -G SELECT ... FROM aggregate ORDER BY mtime ASC LIMIT 100
 
 Directory or index summary:
 - Goal: determine whether summary or treesummary exists and report directory-level
