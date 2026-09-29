@@ -170,7 +170,7 @@ def getfattr(args, indexroot, dirname, nondirname):
 
     return query_args + [dirname]
 
-def parse_args(argv):
+def build_parser():
     parser = argparse.ArgumentParser(
         'gufi_getfattr',
         description='GUFI version of getfattr\n\nNote: -h/--no-dereference and -P/--physical are always set',
@@ -202,6 +202,10 @@ def parse_args(argv):
 
     gufi_common.add_common_flags(parser)
 
+    return parser
+
+def parse_args(argv):
+    parser = build_parser()
     return parser.parse_args(argv[1:])
 
 def gen_cmd(config, args, path):

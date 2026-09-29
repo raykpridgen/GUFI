@@ -67,7 +67,7 @@ import sys
 import gufi_common
 import gufi_config
 
-def parse_args(argv):
+def build_parser():
     # parse the arguments
     parser = argparse.ArgumentParser('gufi_stat', description='GUFI version of stat', add_help=False)
 
@@ -104,6 +104,10 @@ def parse_args(argv):
                         action='store_true',
                         help='Show the actual command being run')
 
+    return parser
+
+def parse_args(argv):
+    parser = build_parser()
     return parser.parse_args(argv[1:])
 
 def gen_cmd(config, args, paths):

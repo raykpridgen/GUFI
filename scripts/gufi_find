@@ -542,7 +542,7 @@ def build_output(args, name):
 
     return output
 
-def parse_args(argv, offset=1):
+def build_parser():
     # pylint: disable=too-many-statements
 
     EPILOG='''Report bugs to the GitHub Issues page at https://github.com/mar-file-system/GUFI/issues
@@ -784,6 +784,11 @@ or by sending an email to <gufi-lanl@lanl.gov>'''
                         help='Try to reduce memory usage by compressing with zlib (if available).')
 
     gufi_common.add_common_flags(parser)
+
+    return parser
+
+def parse_args(argv, offset=1):
+    parser = build_parser()
 
     try:
         args, unknown = parser.parse_known_args(argv[offset:])

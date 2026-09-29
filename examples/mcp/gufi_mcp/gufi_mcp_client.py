@@ -59,184 +59,252 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+"""Smoke-test client for the GUFI MCP server.
 
+Run the MCP server first (same .env as this script), then:
 
+    uv run python gufi_mcp_client.py
+    uv run python gufi_mcp_client.py --index work --full
+
+SQL tools (sql_file_index, aggregate_sql_query) need GUFIVTLIB and a working
+gufi_vt install. If you see ``libsqlite3-pcre.so: cannot open shared object
+file``, install GUFI deps (sqlite3-pcre) and start the server with
+``LD_LIBRARY_PATH`` including that library directory.
+"""
+
+from __future__ import annotations
+
+import argparse
 import asyncio
-from mcp import Client
-from mcp.server import MCPServer
-import sys
-import os
-from dotenv import load_dotenv
 import json
+import os
+import sys
+from typing import Any
+
+from dotenv import load_dotenv
+from mcp import Client
 
 load_dotenv()
 
-MCPSRVHOST = os.getenv('MCPSRVHOST')
-MCPSRVPORT = os.getenv('MCPSRVPORT')
-MCP_SERVER=f'http://{MCPSRVHOST}:{MCPSRVPORT}/mcp'
-LOCALSELECT='select path,name,size from pentries where name like \'%\' limit 10'
-LOCALSEARCHPATH='vault'
-REMOTESELECT='select path,name,size from gufi_vt_pentries'
-REMOTEWHERE='where name like \'%\' order by size desc limit 10'
-REMOTESEARCHPATH='/home/raykprid/search/vault/'
+MCPSRVHOST = os.getenv("MCPSRVHOST", "127.0.0.1")
+MCPSRVPORT = os.getenv("MCPSRVPORT", "8000")
+MCP_SERVER = f"http://{MCPSRVHOST}:{MCPSRVPORT}/mcp"
 
-async def main():
-    # Connect to FastMCP server
+
+def parse_tool_payload(result: Any) -> dict[str, Any]:
+    """Normalize a call_tool result into a dict."""
+    if getattr(result, "structured_content", None):
+        data = result.structured_content
+        if isinstance(data, dict):
+            return data
+    if getattr(result, "content", None):
+        for block in result.content:
+            text = getattr(block, "text", None)
+            if not text:
+                continue
+            try:
+                parsed = json.loads(text)
+                if isinstance(parsed, dict):
+                    return parsed
+            except json.JSONDecodeError:
+                return {"raw_text": text}
+    return {}
+
+
+def report_step(name: str, payload: dict[str, Any], *, expect_rows: bool = False) -> bool:
+    """Print one step; return True if the step looks successful."""
+    err = payload.get("error")
+    if err:
+        print(f"  FAIL {name}: {err}")
+        if payload.get("sql"):
+            print(f"       sql: {str(payload['sql'])[:200]}...")
+        return False
+
+    row_count = payload.get("row_count")
+    rows = payload.get("rows")
+    if expect_rows and not row_count and not rows:
+        print(f"  WARN {name}: ok but no rows (row_count={row_count})")
+        return True
+
+    preview = ""
+    if rows:
+        preview = f" first_row={rows[0]!r}"
+    elif payload.get("raw_text"):
+        preview = f" text={payload['raw_text'][:80]!r}"
+    print(f"  OK   {name}: row_count={row_count}{preview}")
+    return True
+
+
+async def run_smoke(index: str, full: bool) -> int:
+    failures = 0
     client = Client(MCP_SERVER)
 
     async with client:
+        print(f"Connected: {client.server_info.name} @ {MCP_SERVER}")
+        print("-" * 60)
 
-        print(f"Connected to Server: {client.server_info.name}")
-        print(f"Connected to Server")
-        print("-" * 20)
+        # --- core ---
+        print("[gufi_version]")
+        version_result = await client.call_tool("gufi_version", {})
+        r = parse_tool_payload(version_result)
+        if r.get("raw_text"):
+            print(f"  OK   version: {r['raw_text'].strip()[:80]}")
+        elif r:
+            print(f"  OK   version: {r}")
+        elif version_result.content:
+            print(f"  OK   version: {version_result.content[0].text.strip()[:80]}")
+        else:
+            print("  FAIL gufi_version: empty response")
+            failures += 1
 
-        ''' List available resources '''
+        print("[gufi://indexes]")
+        res = await client.read_resource("gufi://indexes")
+        print(f"  OK   {res.contents[0].text[:120]}...")
 
-        avail_resources = await client.list_resources()
-        print("Resources Available")
-        for resource in avail_resources.resources:
-            print("-" * 20)
-            print(f"Resource Name: {resource.name}")
-            print(f"Description: {resource.description}")
-
-        # get available indexes
-        print("read gufi_indexes")
-        result = await client.read_resource("gufi://indexes")
-        print(f"Result: {result.contents[0].text}")
-        print("-" * 20)
-
-        # get schema
-        print("read all schemas")
-        result = await client.read_resource("gufi://schemas/all")
-        schema = result.contents[0].text.replace("],[", "|")[2:-2]
-        print(schema)
-
-        # get schema
-        print("read one schema's columns")
-        result = await client.read_resource("gufi://schemas/vrsummary")
-        schema = result.contents[0].text.replace("],[", "|")[2:-2]
-        print(schema)
-
-        ''' List available tools '''
-
-        avail_tools = await client.list_tools()
-        print("Tools Available")
-        for tool in avail_tools.tools:
-            print("-" * 20)
-            print(f"Tool Name: {tool.name}")
-            print(f"Description: {tool.description}")
-
-        # locate gufi_query
-        print("run locate gufi_query")
-        result = await client.call_tool("gufi_location", {"a": "gufi_query location please"})
-        print(f"Result: {result.content[0].text}")
-        print("-" * 20)
-
-        # locate gufi_query
-        print("run gufi_query version")
-        result = await client.call_tool("gufi_version", {"a": "gufi_query version please"})
-        print(f"Result: {result.content[0].text}")
-        print("-" * 20)
-
-        # gufi local query
-        print(f"query local gufi index")
-        result_stream= await client.call_tool("sql_file_index", {"sqlin": LOCALSELECT, "index": LOCALSEARCHPATH})
-        res = json.loads(result_stream.content[0].text)
-        print(res["columns"])
-        for row in range(res["row_count"]):
-            print (res["rows"][row])
-
-        # gufi_ls
-        print(f"use gufi_ls tool")
-        result_stream = await client.call_tool(
-            "gufi_ls",
-            {"index": "personal_data", "long_format": True, "human_readable": True},
+        # --- user tools (flat top-level arguments) ---
+        print(f"[gufi_find top-N largest on index={index!r}]")
+        r = parse_tool_payload(
+            await client.call_tool(
+                "gufi_find",
+                {
+                    "index": index,
+                    "type": ["f"],
+                    "largest": True,
+                    "ls": True,
+                    "num_results": 5,
+                },
+            )
         )
-        res = json.loads(result_stream.content[0].text)
-        for row in range(res["row_count"]):
-            print(res["rows"][row])
+        if not report_step("gufi_find largest+ls", r, expect_rows=True):
+            failures += 1
 
-        # gufi_du
-        print(f"use gufi_du tool")
-        result_stream = await client.call_tool("gufi_du", {"index": "personal_data", "human_readable": True})
-        res = json.loads(result_stream.content[0].text)
-        for row in range(res["row_count"]):
-            print(res["rows"][row])
-
-        # gufi_find
-        print(f"use gufi_find tool")
-        result_stream = await client.call_tool(
-            "gufi_find",
-            {"index": "personal_data", "name": "organizer*", "type": "f", "limit": 10},
+        print("[gufi_find ls+print coercion: print should be dropped server-side]")
+        r = parse_tool_payload(
+            await client.call_tool(
+                "gufi_find",
+                {
+                    "index": index,
+                    "type": ["f"],
+                    "largest": True,
+                    "ls": True,
+                    "print": True,
+                    "num_results": 3,
+                },
+            )
         )
-        res = json.loads(result_stream.content[0].text)
-        for row in range(res["row_count"]):
-            print(res["rows"][row])
+        if not report_step("gufi_find ls+print", r, expect_rows=True):
+            failures += 1
 
-        # gufi_stat
-        print(f"use gufi_stat tool")
-        result_stream = await client.call_tool("gufi_stat", {"index": "vault", "file": "."})
-        res = json.loads(result_stream.content[0].text)
-        for row in range(res["row_count"]):
-            print(res["rows"][row])
-
-        # gufi_stats
-        print(f"use gufi_stats tool")
-        result_stream = await client.call_tool(
-            "gufi_stats",
-            {"index": "personal_data", "stat": "leaf-dirs", "recursive": True, "num_results": 10},
+        print(f"[gufi_stats total-filecount index={index!r}]")
+        r = parse_tool_payload(
+            await client.call_tool(
+                "gufi_stats",
+                {"index": index, "stat": "total-filecount"},
+            )
         )
-        res = json.loads(result_stream.content[0].text)
-        for row in range(res["row_count"]):
-            print(res["rows"][row])
+        if not report_step("gufi_stats total-filecount", r, expect_rows=True):
+            failures += 1
 
-        # gufi_getfattr
-        print(f"use gufi_getfattr tool")
-        result_stream = await client.call_tool(
-            "gufi_getfattr",
-            {"index": "personal_data", "path": ".", "recursive": True},
+        print(f"[gufi_ls index={index!r}]")
+        r = parse_tool_payload(
+            await client.call_tool(
+                "gufi_ls",
+                {"index": index, "long_listing": True, "human_readable": True},
+            )
         )
-        res = json.loads(result_stream.content[0].text)
-        for row in range(res["row_count"]):
-            print(res["rows"][row])
+        if not report_step("gufi_ls", r, expect_rows=True):
+            failures += 1
 
-        # aggregate query: total size
-        print("Use aggregate query tool for total size")
-        total_size_query = {
-            "index": "Downloads",
-            "config": ["threads=32"],
-            "sql_options": [
-                {"option": "-I", "sql": "CREATE TABLE intermediate(size INT64)"},
-                {"option": "-E", "sql": "INSERT INTO intermediate SELECT size FROM entries WHERE type='f'"},
-                {"option": "-K", "sql": "CREATE TABLE aggregate(total INT64)"},
-                {"option": "-J", "sql": "INSERT INTO aggregate SELECT SUM(size) FROM intermediate"},
-                {"option": "-G", "sql": "SELECT SUM(total) FROM aggregate"},
-            ],
+        # --- SQL / aggregate (same gufi_vt path as the server) ---
+        print(f"[aggregate_sql_query file count index={index!r}]")
+        aggregate_count = {
+            "query": {
+                "index": index,
+                "config": ["threads=4"],
+                "sql_options": [
+                    {"option": "-I", "sql": "CREATE TABLE intermediate(n INT64)"},
+                    {
+                        "option": "-E",
+                        "sql": "INSERT INTO intermediate SELECT 1 FROM vrpentries WHERE type = 'f'",
+                    },
+                    {"option": "-K", "sql": "CREATE TABLE aggregate(n INT64)"},
+                    {"option": "-J", "sql": "INSERT INTO aggregate SELECT COUNT(*) FROM intermediate"},
+                    {"option": "-G", "sql": "SELECT SUM(n) AS file_count FROM aggregate"},
+                ],
+            }
         }
-        result_stream = await client.call_tool("aggregate_sql_query", {"query": total_size_query})
-        res = json.loads(result_stream.content[0].text)
-        print(f"Total size columns: {res['columns']}")
-        for row in range(res["row_count"]):
-            print(res["rows"][row])
+        r = parse_tool_payload(await client.call_tool("aggregate_sql_query", aggregate_count))
+        if not report_step("aggregate_sql_query count", r, expect_rows=True):
+            failures += 1
+            if r.get("error") and "libsqlite3-pcre" in str(r["error"]):
+                print(
+                    "       hint: build/install sqlite3-pcre (GUFI deps) and restart the "
+                    "MCP server with LD_LIBRARY_PATH set to its lib directory."
+                )
+            if r.get("error") and "gufi_vt.so.so" in str(r["error"]):
+                print("       hint: restart MCP server after GUFIVTLIB / load_extension fix.")
 
-        # grouped aggregate example (uid totals)
-        print("Use aggregate query tool for grouped uid totals")
-        uid_totals_query = {
-            "index": "personal_data",
-            "config": ["threads=12"],
-            "sql_options": [
-                {"option": "-I", "sql": "CREATE TABLE intermediate(uid INT64, total_bytes INT64)"},
-                {"option": "-E", "sql": "INSERT INTO intermediate SELECT uid, size FROM vrpentries WHERE type = 'f'"},
-                {"option": "-K", "sql": "CREATE TABLE aggregate(uid INT64, total_bytes INT64)"},
-                {"option": "-J", "sql": "INSERT INTO aggregate SELECT uid, SUM(total_bytes) FROM intermediate GROUP BY uid"},
-                {"option": "-G", "sql": "SELECT uid, total_bytes FROM aggregate ORDER BY total_bytes DESC LIMIT 10"},
-            ],
-        }
-        result_stream = await client.call_tool("aggregate_sql_query", {"query": uid_totals_query})
-        res = json.loads(result_stream.content[0].text)
-        print(f"UID totals columns: {res['columns']}")
-        for row in range(min(res["row_count"], 5)):
-            print(res["rows"][row])
+        print(f"[sql_file_index LIMIT 3 index={index!r}]")
+        r = parse_tool_payload(
+            await client.call_tool(
+                "sql_file_index",
+                {
+                    "index": index,
+                    "sqlin": "SELECT name, size FROM vrpentries",
+                    "wherein": "WHERE type = 'f' LIMIT 3",
+                },
+            )
+        )
+        if not report_step("sql_file_index", r, expect_rows=True):
+            failures += 1
+
+        if full:
+            print(f"[gufi_du index={index!r}]")
+            r = parse_tool_payload(
+                await client.call_tool("gufi_du", {"index": index, "human_readable": True})
+            )
+            if not report_step("gufi_du", r, expect_rows=True):
+                failures += 1
+
+            print(f"[gufi_stats extensions cumulative index={index!r}]")
+            r = parse_tool_payload(
+                await client.call_tool(
+                    "gufi_stats",
+                    {
+                        "index": index,
+                        "stat": "extensions",
+                        "cumulative": True,
+                        "order": "DESC",
+                        "num_results": 5,
+                    },
+                )
+            )
+            if not report_step("gufi_stats extensions", r, expect_rows=True):
+                failures += 1
+
+        print("-" * 60)
+        if failures:
+            print(f"Finished with {failures} failed step(s).")
+        else:
+            print("All smoke steps passed.")
+        return 1 if failures else 0
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Smoke-test the GUFI MCP server.")
+    parser.add_argument(
+        "--index",
+        default=os.getenv("GUFI_MCP_TEST_INDEX", "personal_data"),
+        help="GUFI index name from gufi://indexes (default: personal_data)",
+    )
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help="Also run gufi_du and gufi_stats extensions",
+    )
+    args = parser.parse_args()
+    raise SystemExit(asyncio.run(run_smoke(args.index, args.full)))
+
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

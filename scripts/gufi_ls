@@ -180,7 +180,7 @@ def build_order_by(args):
 
     return order_by
 
-def parse_args(argv):
+def build_parser():
     parser = argparse.ArgumentParser('gufi_ls', description='GUFI version of ls', add_help=False)
 
     gufi_common.add_help_version(parser)
@@ -247,6 +247,10 @@ def parse_args(argv):
     # GUFI specific arguments
     gufi_common.add_common_flags(parser)
 
+    return parser
+
+def parse_args(argv):
+    parser = build_parser()
     return parser.parse_args(argv[1:])
 
 def gen_cmd(config, args, paths):

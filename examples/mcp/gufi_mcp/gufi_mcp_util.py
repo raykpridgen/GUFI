@@ -1,10 +1,17 @@
+import argparse
+import contextlib
+import importlib.machinery
+import importlib.util
+import inspect
+import io
 import sqlite3
 import sys
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Callable, Literal, Self
 from sqlglot import parse_one, ParseError, exp
 import os
-from pydantic import BaseModel, Field
+from enum import Enum
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, create_model, model_validator
 from dotenv import load_dotenv
 import re
 import subprocess
@@ -21,11 +28,46 @@ GUFIVTLIB = os.getenv('GUFIVTLIB')
 GUFI_INDEX_ROOT = os.getenv('GUFI_INDEX_ROOT')
 GUFI_QUERY = os.getenv('GUFI_QUERY')
 GUFI_LIB = os.getenv('GUFI_LIB')
-from enum import Enum
 
 WRAPPER_TOOLS = ("gufi_find", "gufi_ls", "gufi_du", "gufi_stat", "gufi_stats", "gufi_getfattr")
 _WRAPPER_TOOLS = WRAPPER_TOOLS
 _TOOL_HELP_CACHE: dict[str, str] = {}
+_TOOL_MODULE_CACHE: dict[str, Any] = {}
+_TOOL_METADATA_CACHE: dict[str, dict[str, Any]] = {}
+_TOOL_MODEL_CACHE: dict[str, type[BaseModel]] = {}
+_ENUM_CACHE: dict[tuple[str, str], type[Enum]] = {}
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_SCRIPTS_DIR = _REPO_ROOT / "scripts"
+_INTERNAL_DESTS = {"help", "version", "verbose", "delim"}
+
+_SUBPATH_HELP = (
+    "Optional path under index (e.g. organized/Videos). Do not repeat the index name."
+)
+_TOOL_PATH_FIELDS: dict[str, dict[str, Any]] = {
+    "gufi_find": {"field": "subpath", "help": _SUBPATH_HELP},
+    "gufi_ls": {"field": "subpath", "help": _SUBPATH_HELP},
+    "gufi_du": {"field": "subpath", "help": _SUBPATH_HELP},
+    "gufi_stat": {
+        "field": "file",
+        "required": True,
+        "help": "File path relative to the index root, not the index name itself.",
+    },
+    "gufi_stats": {"field": "subpath", "help": _SUBPATH_HELP},
+    "gufi_getfattr": {
+        "field": "path",
+        "required": True,
+        "help": "Path relative to the index root, not the index name itself.",
+    },
+}
+
+_PATH_POSITIONAL_DESTS: dict[str, set[str]] = {
+    "gufi_ls": {"paths"},
+    "gufi_du": {"paths"},
+    "gufi_stat": {"paths"},
+    "gufi_stats": {"path"},
+    "gufi_getfattr": {"path"},
+}
 
 class GufiSQLOption(str, Enum):
     I = "-I"
@@ -131,6 +173,469 @@ def pack_command_result(result: subprocess.CompletedProcess, delimiter: str = "\
         error=error,
     )
     return tool_result.model_dump()
+
+
+def _module_from_file(module_name: str, file_path: Path) -> Any:
+    loader = importlib.machinery.SourceFileLoader(module_name, str(file_path))
+    spec = importlib.util.spec_from_loader(module_name, loader)
+    if spec is None:
+        raise ImportError(f"Could not create module spec for {file_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    loader.exec_module(module)
+    return module
+
+
+def _load_script_dependency(module_name: str) -> Any:
+    cached = sys.modules.get(module_name)
+    expected = (_SCRIPTS_DIR / f"{module_name}.py").resolve()
+    if cached is not None and Path(getattr(cached, "__file__", "")).resolve() == expected:
+        return cached
+    return _module_from_file(module_name, expected)
+
+
+def load_tool_module(tool_name: str) -> Any:
+    ''' Load an extensionless GUFI script with its local script dependencies. '''
+    if tool_name in _TOOL_MODULE_CACHE:
+        return _TOOL_MODULE_CACHE[tool_name]
+    if tool_name not in _WRAPPER_TOOLS:
+        raise ValueError(f"Unsupported GUFI tool: {tool_name}")
+
+    scripts_dir = str(_SCRIPTS_DIR)
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+
+    _load_script_dependency("gufi_common")
+    _load_script_dependency("gufi_config")
+
+    module = _module_from_file(f"_mcp_{tool_name}", _SCRIPTS_DIR / tool_name)
+    _TOOL_MODULE_CACHE[tool_name] = module
+    return module
+
+
+def _action_flag(action: argparse.Action) -> str | None:
+    for option in action.option_strings:
+        if option.startswith("--"):
+            return option
+    return action.option_strings[0] if action.option_strings else None
+
+
+def _action_kind(action: argparse.Action) -> str:
+    if isinstance(action, argparse._StoreTrueAction): # pylint: disable=protected-access
+        return "store_true"
+    if isinstance(action, argparse._StoreFalseAction): # pylint: disable=protected-access
+        return "store_false"
+    if isinstance(action, argparse._AppendAction): # pylint: disable=protected-access
+        return "append"
+    if action.option_strings:
+        return "option"
+    return "positional"
+
+
+def _action_metadata(action: argparse.Action) -> dict[str, Any] | None:
+    if isinstance(action, (argparse._HelpAction, argparse._VersionAction)): # pylint: disable=protected-access
+        return None
+    if action.dest in _INTERNAL_DESTS:
+        return None
+
+    choices = list(action.choices) if action.choices is not None else None
+    return {
+        "dest": action.dest,
+        "flag": _action_flag(action),
+        "option_strings": list(action.option_strings),
+        "kind": _action_kind(action),
+        "choices": choices,
+        "default": action.default,
+        "required": bool(getattr(action, "required", False)),
+        "nargs": action.nargs,
+        "help": action.help,
+        "metavar": action.metavar,
+        "type": getattr(action.type, "__name__", str(action.type)) if action.type else None,
+    }
+
+
+def tool_metadata(tool_name: str) -> dict[str, Any]:
+    ''' Return neutral argparse metadata for a GUFI user-facing script. '''
+    if tool_name in _TOOL_METADATA_CACHE:
+        return _TOOL_METADATA_CACHE[tool_name]
+
+    module = load_tool_module(tool_name)
+    if not hasattr(module, "build_parser"):
+        raise AttributeError(f"{tool_name} does not expose build_parser()")
+
+    parser = module.build_parser()
+    actions = [
+        metadata
+        for action in parser._actions # pylint: disable=protected-access
+        for metadata in [_action_metadata(action)]
+        if metadata is not None
+    ]
+    mutually_exclusive = [
+        [action.dest for action in group._group_actions if action.dest not in _INTERNAL_DESTS] # pylint: disable=protected-access
+        for group in parser._mutually_exclusive_groups # pylint: disable=protected-access
+    ]
+
+    metadata = {
+        "tool": tool_name,
+        "prog": parser.prog,
+        "description": parser.description,
+        "actions": actions,
+        "mutually_exclusive": [group for group in mutually_exclusive if len(group) > 1],
+    }
+    _TOOL_METADATA_CACHE[tool_name] = metadata
+    return metadata
+
+
+def _enum_member_name(value: Any, fallback: int) -> str:
+    name = re.sub(r"\W+", "_", str(value)).strip("_").upper()
+    if not name or name[0].isdigit():
+        name = f"VALUE_{fallback}_{name}"
+    return name
+
+
+def _enum_type(tool_name: str, dest: str, choices: list[Any]) -> type[Enum]:
+    cache_key = (tool_name, dest)
+    if cache_key in _ENUM_CACHE:
+        return _ENUM_CACHE[cache_key]
+
+    members: dict[str, Any] = {}
+    for index, choice in enumerate(choices):
+        member_name = _enum_member_name(choice, index)
+        while member_name in members:
+            member_name = f"{member_name}_{index}"
+        members[member_name] = choice
+
+    enum_cls = Enum(f"{tool_name.title().replace('_', '')}{dest.title().replace('_', '')}", members, type=str)
+    _ENUM_CACHE[cache_key] = enum_cls
+    return enum_cls
+
+
+def _field_type(tool_name: str, action: dict[str, Any]) -> Any:
+    if action["choices"]:
+        base_type = _enum_type(tool_name, action["dest"], action["choices"])
+    elif action["kind"] in {"store_true", "store_false"}:
+        base_type = bool
+    elif action["dest"] == "reftime":
+        base_type = int
+    elif isinstance(action["default"], float):
+        base_type = float
+    elif action["type"] in {"get_non_negative", "get_positive", "int"}:
+        base_type = int
+    else:
+        base_type = str
+
+    if action["kind"] == "append" or action["nargs"] in {"+", "*"}:
+        return list[base_type]
+    return base_type
+
+
+def _coerce_epoch_int(value: Any) -> Any:
+    if isinstance(value, float):
+        return int(value)
+    return value
+
+
+def _field_default(action: dict[str, Any]) -> Any:
+    if action["kind"] in {"store_true", "store_false"}:
+        return bool(action["default"])
+    if action["kind"] == "positional" and action["nargs"] not in {"?", "*"}:
+        return ...
+    if action["default"] is argparse.SUPPRESS:
+        return None
+    return action["default"]
+
+
+def _is_action_active(action: dict[str, Any], value: Any, dest_in_fields_set: bool) -> bool:
+    kind = action["kind"]
+    default = action["default"]
+    if kind == "store_true":
+        return value is True
+    if kind == "store_false":
+        return value is False and dest_in_fields_set
+    if not dest_in_fields_set:
+        return False
+    if value is None:
+        return False
+    if isinstance(value, list):
+        return len(value) > 0
+    if default is argparse.SUPPRESS:
+        return True
+    return value != default
+
+
+_GUFI_FIND_OUTPUT_DESTS = frozenset({"fprint", "ls", "print", "print0", "printf"})
+
+
+def _action_field_description(tool_name: str, action: dict[str, Any]) -> str:
+    base = action["help"] or action["dest"]
+    if tool_name != "gufi_find":
+        return base
+    dest = action["dest"]
+    if dest in _GUFI_FIND_OUTPUT_DESTS:
+        return (
+            f"{base} Mutually exclusive with other find output actions (-ls, -print, "
+            "-printf, -fprint, -print0). For ranked paths with sizes use ls with largest "
+            "or smallest—not print together with ls."
+        )
+    if dest in {"smallest", "largest"}:
+        return f"{base} Mutually exclusive with the other size sort option."
+    return base
+
+
+def _prefer_ls_over_other_find_outputs(model: BaseModel) -> None:
+    if not getattr(model, "ls", False):
+        return
+    if getattr(model, "print", False):
+        object.__setattr__(model, "print", False)
+    if getattr(model, "print0", False):
+        object.__setattr__(model, "print0", False)
+    if getattr(model, "fprint", None):
+        object.__setattr__(model, "fprint", None)
+    if getattr(model, "printf", None):
+        object.__setattr__(model, "printf", None)
+
+
+def _attach_tool_validators(
+    model: type[BaseModel],
+    metadata: dict[str, Any],
+    tool_name: str,
+) -> type[BaseModel]:
+    exclusive_groups = metadata.get("mutually_exclusive") or []
+    actions_by_dest = {action["dest"]: action for action in metadata["actions"]}
+
+    @model_validator(mode="after")
+    def validate_tool_request(self) -> Self:
+        if tool_name == "gufi_find":
+            _prefer_ls_over_other_find_outputs(self)
+        fields_set = self.model_fields_set
+        for group in exclusive_groups:
+            active_dests: list[str] = []
+            for dest in group:
+                action = actions_by_dest.get(dest)
+                if action is None:
+                    continue
+                value = getattr(self, dest, None)
+                if _is_action_active(action, value, dest in fields_set):
+                    active_dests.append(dest)
+            if len(active_dests) > 1:
+                first = actions_by_dest[active_dests[0]]
+                second = actions_by_dest[active_dests[1]]
+                flag_first = first.get("flag") or active_dests[0]
+                flag_second = second.get("flag") or active_dests[1]
+                raise ValueError(f"argument {flag_second}: not allowed with argument {flag_first}")
+
+        return self
+
+    return type(model.__name__, (model,), {"validate_tool_request": validate_tool_request})
+
+
+def tool_input_model(tool_name: str) -> type[BaseModel]:
+    ''' Build a strict Pydantic model from a script parser plus MCP path overlay. '''
+    if tool_name in _TOOL_MODEL_CACHE:
+        return _TOOL_MODEL_CACHE[tool_name]
+
+    metadata = tool_metadata(tool_name)
+    fields: dict[str, tuple[Any, Any]] = {
+        "index": (
+            str,
+            Field(
+                description=(
+                    "GUFI index name from gufi://indexes (not a filesystem path). "
+                    "Use subpath for directories under the index."
+                ),
+            ),
+        ),
+    }
+
+    path_overlay = _TOOL_PATH_FIELDS.get(tool_name)
+    if path_overlay:
+        path_default = ... if path_overlay.get("required") else None
+        path_type = str if path_overlay.get("required") else str | None
+        fields[path_overlay["field"]] = (path_type, Field(default=path_default, description=path_overlay["help"]))
+
+    skip_dests = _PATH_POSITIONAL_DESTS.get(tool_name, set())
+    for action in metadata["actions"]:
+        if action["dest"] in skip_dests:
+            continue
+        default = _field_default(action)
+        field_type = _field_type(tool_name, action)
+        if action["dest"] == "reftime":
+            field_type = Annotated[int, BeforeValidator(_coerce_epoch_int)]
+            if isinstance(default, float):
+                default = int(default)
+        if default is None and default is not ...:
+            field_type = field_type | None
+        fields[action["dest"]] = (
+            field_type,
+            Field(default=default, description=_action_field_description(tool_name, action)),
+        )
+
+    raw_model = create_model(
+        f"{tool_name.title().replace('_', '')}Request",
+        __config__=ConfigDict(extra="forbid", use_enum_values=True),
+        **fields,
+    )
+    model = _attach_tool_validators(raw_model, metadata, tool_name)
+    _TOOL_MODEL_CACHE[tool_name] = model
+    return model
+
+
+def flat_mcp_tool_function(
+    tool_name: str,
+    on_value_error: Callable[[ValueError], dict[str, Any]],
+) -> Callable[..., dict[str, Any]]:
+    ''' Build an MCP tool handler with flat top-level parameters matching the input model. '''
+    request_model = tool_input_model(tool_name)
+    parameters: list[inspect.Parameter] = []
+    for field_name, field_info in request_model.model_fields.items():
+        default = inspect.Parameter.empty if field_info.is_required() else field_info.default
+        parameters.append(
+            inspect.Parameter(
+                field_name,
+                inspect.Parameter.KEYWORD_ONLY,
+                default=default,
+                annotation=field_info.annotation,
+            )
+        )
+
+    def impl(**kwargs: Any) -> dict[str, Any]:
+        if len(kwargs) == 1 and "request" in kwargs:
+            nested = kwargs["request"]
+            if isinstance(nested, dict):
+                kwargs = nested
+            elif isinstance(nested, BaseModel):
+                kwargs = nested.model_dump(exclude_none=True)
+        request = request_model.model_validate(kwargs)
+        try:
+            return execute_generated_tool(tool_name, request)
+        except ValueError as exc:
+            return on_value_error(exc)
+
+    impl.__name__ = tool_name
+    impl.__signature__ = inspect.Signature(parameters=parameters)
+    impl.__annotations__ = {param.name: param.annotation for param in parameters}
+    impl.__annotations__["return"] = dict[str, Any]
+    return impl
+
+
+def _append_action_argv(argv: list[str], action: dict[str, Any], value: Any) -> None:
+    if value is None:
+        return
+
+    flag = action["flag"]
+    if action["kind"] == "store_true":
+        if value:
+            argv.append(flag)
+        return
+    if action["kind"] == "store_false":
+        if value is False:
+            argv.append(flag)
+        return
+
+    values = value if isinstance(value, list) else [value]
+    for item in values:
+        if action["kind"] == "positional":
+            argv.append(str(item))
+        elif flag:
+            argv.extend([flag, str(item)])
+
+
+def _request_path(tool_name: str, request_data: dict[str, Any]) -> str:
+    overlay = _TOOL_PATH_FIELDS[tool_name]
+    field = overlay["field"]
+    if field == "file":
+        return cli_target_path(request_data["index"], request_data[field])
+    return cli_target_path(request_data["index"], request_data.get(field))
+
+
+def request_to_argv(tool_name: str, request: BaseModel) -> list[str]:
+    ''' Convert a generated MCP request model back to the script argv shape. '''
+    metadata = tool_metadata(tool_name)
+    request_data = request.model_dump(exclude_none=True)
+    fields_set = request.model_fields_set
+
+    argv = [tool_name]
+    path_arg = _request_path(tool_name, request_data)
+
+    if tool_name == "gufi_find":
+        argv.append(path_arg)
+
+    skip_dests = {"index", _TOOL_PATH_FIELDS.get(tool_name, {}).get("field")}
+    path_positionals = _PATH_POSITIONAL_DESTS.get(tool_name, set())
+
+    option_actions = [action for action in metadata["actions"] if action["kind"] != "positional"]
+    positional_actions = [action for action in metadata["actions"] if action["kind"] == "positional"]
+
+    for action in option_actions:
+        dest = action["dest"]
+        if dest in skip_dests:
+            continue
+        if dest not in request_data:
+            continue
+        if dest not in fields_set and request_data[dest] == action["default"]:
+            continue
+        _append_action_argv(argv, action, request_data[dest])
+
+    if tool_name in {"gufi_find", "gufi_ls", "gufi_stats", "gufi_getfattr"}:
+        argv.extend(["--delim", "\t"])
+
+    for action in positional_actions:
+        dest = action["dest"]
+        if dest in path_positionals:
+            continue
+        if dest in request_data:
+            _append_action_argv(argv, action, request_data[dest])
+
+    if tool_name != "gufi_find":
+        argv.append(path_arg)
+
+    return argv
+
+
+def _parse_argv_for_validation(tool_name: str, argv: list[str]) -> None:
+    module = load_tool_module(tool_name)
+    if tool_name != "gufi_find":
+        module.parse_args(argv)
+        return
+
+    arg_offset = 1
+    real_handled = {"P"}
+    real_not_handled = {"H", "L", "D", "O"}
+    while (arg_offset < len(argv)) and argv[arg_offset].startswith("-"):
+        if argv[arg_offset][1:] not in real_handled | real_not_handled:
+            break
+        arg_offset += 1
+
+    while (arg_offset < len(argv)) and not argv[arg_offset].startswith("-"):
+        arg_offset += 1
+
+    module.parse_args(argv, arg_offset)
+
+
+def execute_generated_tool(tool_name: str, request: BaseModel) -> dict[str, Any]:
+    argv = request_to_argv(tool_name, request)
+    stderr = io.StringIO()
+    try:
+        with contextlib.redirect_stderr(stderr):
+            _parse_argv_for_validation(tool_name, argv)
+    except SystemExit as exc:
+        message = stderr.getvalue().strip() or f"{tool_name} argument validation failed"
+        raise ValueError(message) from exc
+    delimiter = " " if tool_name == "gufi_du" else "\t"
+    return pack_command_result(run_gufi_cli(argv), delimiter)
+
+
+def tool_description(tool_name: str) -> str:
+    metadata = tool_metadata(tool_name)
+    description = metadata.get("description") or f"Run {tool_name}."
+    return (
+        f"{description}\n\n"
+        "Pass fields as top-level tool arguments (e.g. index, filters); do not nest "
+        "under a request object. Use only schema fields and enum values—no raw CLI "
+        "flags. For top-N largest files use largest, ls, and num_results together "
+        "(do not combine print with ls). Read gufi://tool-guide/{tool} only if a "
+        "field meaning is unclear."
+    ).replace("{tool}", tool_name)
 
 
 def capture_tool_help(tool_name: str) -> str:
@@ -444,6 +949,40 @@ def normalize_aggregate_query(query: GufiQuery) -> GufiQuery:
     )
 
 
+def _gufi_vt_phase_literal(sql: str) -> str:
+    escaped = ensure_sql_statement(sql).replace('"', '""')
+    return f'"{escaped}"'
+
+
+def build_aggregate_create_sql(query: GufiQuery) -> str:
+    ''' Build CREATE VIRTUAL TABLE ... USING gufi_vt(...) for aggregate_sql_query. '''
+    normalized = normalize_aggregate_query(query)
+    if normalized.index in get_gufi_indexes():
+        index_path = resolve_local_index(normalized.index)
+    else:
+        index_path = resolve_query_index(normalized.index)
+
+    vt_params: dict[str, str] = {
+        "threads": str(os.cpu_count() or 1),
+        "min_level": "1",
+        "max_level": "99",
+        "verbose": "0",
+    }
+    for entry in normalized.config or []:
+        if "=" not in entry:
+            continue
+        key, value = entry.split("=", 1)
+        vt_params[key.strip()] = value.strip()
+
+    parts = [sqlite_string(index_path)]
+    parts.extend(f"{key}={value}" for key, value in vt_params.items())
+    for item in normalized.sql_options:
+        phase = item.option.lstrip("-")
+        parts.append(f"{phase}={_gufi_vt_phase_literal(item.sql)}")
+
+    return f"CREATE VIRTUAL TABLE temp.gufi USING gufi_vt({', '.join(parts)});"
+
+
 def detect_shard_local_clauses(sql: str) -> dict[str, Any]:
     ''' Detect SQL clauses that gufi_vt applies per subtree rather than globally. '''
     defaults = {
@@ -706,6 +1245,21 @@ def get_gufi_indexes() -> list[str]:
 
     return indexes
 
+
+def gufi_vt_load_path() -> str:
+    ''' Return the path passed to sqlite3.load_extension for gufi_vt.
+
+    Python's SQLite binding appends ``.so`` on Linux; strip a trailing ``.so``
+    from GUFIVTLIB so the loader does not look for ``gufi_vt.so.so``.
+    '''
+    if not GUFIVTLIB:
+        raise RuntimeError("GUFIVTLIB environment variable is not set")
+    path = Path(GUFIVTLIB)
+    if path.suffix == ".so":
+        return str(path.with_suffix(""))
+    return str(path)
+
+
 def execute_sql(sqlline: str, gufi_vt: bool, plain_index: str = None) -> list[Any]:
     ''' Wrapper to execute SQL queries '''
 
@@ -727,7 +1281,7 @@ def execute_sql(sqlline: str, gufi_vt: bool, plain_index: str = None) -> list[An
         if gufi_vt:
             conn.enable_load_extension(True)
             cursor = conn.cursor()
-            conn.load_extension(GUFIVTLIB)
+            conn.load_extension(gufi_vt_load_path())
             conn.enable_load_extension(False)
         # Plain SQL query
         else:

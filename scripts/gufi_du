@@ -95,7 +95,7 @@ def get_blocksize(value):
 
     return int(str_val[:units]) * (multiplier ** exponent)
 
-def parse_args(argv):
+def build_parser():
     parser = argparse.ArgumentParser('gufi_du', description='GUFI version of du', add_help=False)
 
     gufi_common.add_help_version(parser)
@@ -141,6 +141,10 @@ def parse_args(argv):
     # GUFI specific arguments
     gufi_common.add_verbose_flag(parser)
 
+    return parser
+
+def parse_args(argv):
+    parser = build_parser()
     return parser.parse_args(argv[1:])
 
 # process files/links
