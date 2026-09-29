@@ -74,10 +74,10 @@ load_dotenv()
 MCPSRVHOST = os.getenv('MCPSRVHOST')
 MCPSRVPORT = os.getenv('MCPSRVPORT')
 MCP_SERVER=f'http://{MCPSRVHOST}:{MCPSRVPORT}/mcp'
-LOCALSELECT='select path,name,size from pentries where name like \'%\' limit 10'
+LOCALSELECT='select path,name,size from vrpentries where size > 1048576'
 LOCALSEARCHPATH='vault'
 REMOTESELECT='select path,name,size from gufi_vt_pentries'
-REMOTEWHERE='where name like \'%\' order by size desc limit 10'
+REMOTEWHERE='where name like \'%.log%\''
 REMOTESEARCHPATH='/home/raykprid/search/vault/'
 
 async def main():
