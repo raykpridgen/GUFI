@@ -1,10 +1,10 @@
 import sqlite3
 import sys
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 from sqlglot import parse_one, ParseError, exp
 import os
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from dotenv import load_dotenv
 import re
 import subprocess
@@ -54,6 +54,118 @@ class GufiQueryResult(BaseModel):
 class GufiToolResult(BaseModel):
     rows: list[list[Any]] = Field(default_factory=list)
     row_count: int = 0
+
+class GufiToolArgsLS(BaseModel):
+    """GUFI equivalent of ls: List directory contents."""
+
+    path: str = Field(
+        default=".",
+        description=(
+            "Directory to list. Absolute path preferred (starts with /). "
+            "Relative paths are resolved from the current working directory. "
+            "Example: '/home/user/project' or 'src'."
+        ),
+        min_length=1,
+    )
+
+    all: bool = Field(
+        default=False,
+        description="If true, include files/directories starting with '.' (like ls -a)",
+    )
+
+    almost_all: bool = Field(
+        default=False,
+        description="If true, include files/directories starting with '.' (like ls -a), without implied '.' and '..'",
+    )
+
+    ignore_backups: bool = Field(
+        default=False,
+        description="If true, exclude implied entries ending with ~",
+    )
+
+    full_time: bool = Field(
+        default=False,
+        description="If true, list entries with full time, similar to 'ls -l --time-style=full-iso'",
+    )
+
+    no_group: bool = Field(
+        default=False,
+        description="If true, exclude group names. Use during long output executions",
+    )
+
+    ignore_backups: bool = Field(
+        default=False,
+        description="If true, exclude implied entries ending with ~",
+    )
+
+    human_readable: bool = Field(
+        default=False,
+        description="If true, print sizes with common suffixes like k, m, g etc",
+    )
+
+    inode: bool = Field(
+        default=False,
+        description="If true, print index number of each file",
+    )
+
+    list_format: bool = Field(
+        default=False,
+        description="If true, print entries in list format, like 'ls -l'",
+    )
+
+    numeric_uid_gid: bool = Field(
+        default=False,
+        description="If true, print in list format with numeric UID and GID for entries",
+    )
+
+    reverse: bool = Field(
+        default=False,
+        description="If true, reverse order when sorting output",
+    )
+
+    recursive: bool = Field(
+        default=False,
+        description="If true, list subdirectories recursively",
+    )
+
+    size: bool = Field(
+        default=False,
+        description="If true, print allocated size of each file in blocks",
+    )
+
+    sort_size: bool = Field(
+        default=False,
+        description="If true, sort by file size descending before output",
+    )
+
+    sort_time: bool = Field(
+        default=False,
+        description="If true, sort by newest modification time before output",
+    )
+
+    block_size: Optional[int] = Field(
+        default=4096,
+        ge=1,
+        le=1048576,
+        description=(
+            "Only affects output when listing options with -l"
+            "Scales by input integer when listing options"
+        ),
+    )
+
+    time_style: Literal["full-iso", "iso", "locale", "long-iso"] = Field(
+        default="iso",
+        description="Specify how to format time/date when using list_format",
+    )
+
+    delim: str = Field(
+        default="\n",
+        description="Specify how to delimit output columns when using list_format",
+    )
+
+    model_config = {
+        "extra": "forbid",
+    }
 
 def is_valid_sql_query(sql_query: str, dialect: str = "sqlite") -> bool:
     try:
