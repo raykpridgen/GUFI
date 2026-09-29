@@ -68,6 +68,7 @@ import os
 from dotenv import load_dotenv
 from gufi_mcp_util import GufiQueryResult, GufiToolResult, GufiQuery
 import gufi_mcp_util as util
+import re
 
 load_dotenv()
 
@@ -79,6 +80,7 @@ MCPSRVPORT = os.getenv('MCPSRVPORT')
 GUFIVTLIB = os.getenv('GUFIVTLIB')
 GUFI_INDEX_ROOT = os.getenv('GUFI_INDEX_ROOT')
 GUFI_QUERY = os.getenv('GUFI_QUERY')
+THREADS=os.cpu_count()
 
 mcp = MCPServer(name="gufi-mcp")
 
@@ -96,26 +98,42 @@ def gufi_location() -> str:
 
 @mcp.tool()
 def sql_file_index(
-        sqlin: Annotated[str, Field(description="SELECT and FROM portion of the SQL query.")],
-        wherein: Annotated[str, Field(description="WHERE, ORDER, and LIMIT portion of the SQL query.")],
+        sqlin: Annotated[str, Field(description="Full SQL query to be submitted to GUFI.")],
         index: Annotated[str, Field(description="Index / subpath to query. This will be resolved internally so the name obtained from the gufi_indexes resource should be used.")],
         remote: Annotated[bool, Field(description="Boolean for if this is a remote connection. Leave untouched unless user specifies otherwise. Config will be handled before invokation if remote is needed.")] = False
 ) -> GufiQueryResult:
     """
         sql query on local file information index
     """
-
     query_result = GufiQueryResult()
+
+    sqlin = sqlin.lower()
+
+    if not util.is_valid_sql_query(sqlin):
+        return [[f"SQL error: {sqlin} is invalid SQL syntax."]]
+
+    # Split sqlin and wherein for GUFI_VT
+    parts = re.split(r"(?=\bwhere\b)", sqlin, maxsplit=1, flags=re.IGNORECASE)
+    sql_select = parts[0].strip()
+    wherein = parts[1].strip()
+
+    # Check that table queried is prefixed with gufi_vt_
+    prefix_match = re.search(r"from\s+(\w+)", sql_select)
+    if prefix_match:
+        table = prefix_match.group(1)
+        # Replace string with vt prefix if not matched
+        if not table.startswith("gufi_vt_"):
+            sql_select = sql_select.replace(table, f"gufi_vt_{table}", 1)
 
     # Build SQL line
     if remote:
         searchpath = util.resolve_remote_index(index)
-        sqlline = '%s(\'%s\',1,0,99,NULL,0,\'ssh\',\'%s\') %s' % (sqlin, searchpath, REMOTEHOST, wherein)
+        sqlline = '%s(\'%s\',%s,0,99,NULL,0,\'ssh\',\'%s\') %s' % (sql_select, searchpath, THREADS, REMOTEHOST, wherein)
     else:
         searchpath = util.resolve_local_index(index)
         if not searchpath:
             raise RuntimeError(f"Error: Index {index} not found")
-        sqlline = '%s(\'%s\',1,1,99,NULL,1) %s' % (sqlin, searchpath, wherein)
+        sqlline = '%s(\'%s\',%s,1,99,NULL,1) %s' % (sql_select, searchpath, THREADS, wherein)
 
     # Execute Query using GUFI_VT
     result = util.execute_sql(sqlline, True)
