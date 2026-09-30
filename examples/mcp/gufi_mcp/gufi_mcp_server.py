@@ -67,6 +67,12 @@ from pydantic import Field
 import os
 from dotenv import load_dotenv
 from gufi_mcp_util import GufiQueryResult, GufiToolResult, GufiQuery
+from gufi_mcp_util import GufiToolArgsLS, args_ls_dict
+from gufi_mcp_util import GufiToolArgsDU, args_du_dict
+from gufi_mcp_util import GufiToolArgsFind, args_find_dict
+from gufi_mcp_util import GufiToolArgsStat, args_stat_dict
+from gufi_mcp_util import GufiToolArgsStats, args_stats_dict, GufiStatsStatistic
+from gufi_mcp_util import GufiToolArgsGetfattr, args_getfattr_dict
 import gufi_mcp_util as util
 import re
 
@@ -191,23 +197,22 @@ def aggregate_sql_query(
 
 @mcp.tool()
 def gufi_ls(
-        path: Annotated[str, Field(description="Optional subpath of gufi_ls. This path should have the desired index as the root, since the underlying tool resolves from a configured root.")] = None,
-        options: Annotated[list[str], Field(description="Options to submit for gufi_ls. submit '--help' to view these options. Do not use --delim, the tool uses its own to give structured output. A value supplied after an option should be a new list entry.")] = None
+        args: Annotated[GufiToolArgsLS, Field(description="Pydantic structure expected to be submitted to the tool.")] = None,
 ) -> GufiToolResult:
     ''' Execute user-facing tool: gufi equivalent of ls '''
 
     tool_result = GufiQueryResult()
-    cmd = ["gufi_ls"]
-    # Build options string if options passed
-    if options:
-        for option in options:
-            cmd.append(option)
+
+    # parse args from struct into
+    cmd = util.parse_tool_args(args, args_ls_dict)
+    cmd.insert(0, "gufi_ls")
 
     # Add delimiter explicitly for parsing
     cmd.append("--delim")
     cmd.append("\t")
-    if path:
-        cmd.append(path)
+
+    # Append positional argument path
+    cmd.append(args.path)
 
     result = subprocess.run(cmd, capture_output=True, text=True)
 
@@ -219,28 +224,25 @@ def gufi_ls(
 
 @mcp.tool()
 def gufi_du(
-        subpath: Annotated[str, Field(description="Optional subpath to input for du. This directory must have treesummary active to get results.")] = None,
-        options: Annotated[list[str], Field(description="Options to submit for gufi_du. submit '--help' to view these options. A value supplied after an option should be a new list entry.")] = None
+        args: Annotated[GufiToolArgsDU, Field(description="Pydantic structure expected to be submitted to the tool.")] = None,
 ) -> GufiToolResult:
     ''' Execute user-facing tool: gufi equivalent of ls '''
 
     tool_result = GufiQueryResult()
 
-    cmd = ["gufi_du"]
-    # Build options string if options passed
-    if options:
-        for option in options:
-            cmd.append(option)
+    cmd = util.parse_tool_args(args, args_du_dict)
+    cmd.insert(0, "gufi_du")
 
-    if subpath:
-        cmd.append(subpath)
+    # Append positional argument path
+    for path in args.paths:
+        cmd.append(path)
 
     result = subprocess.run(cmd, capture_output=True, text=True)
 
     if result.stderr:
         # treesummary existence error at subpath
         if "have treesummary data?" in result.stderr:
-            return [[f"Treesummary error: The subpath {subpath} does not have a treesummary table, cannot use gufi_du."]]
+            return [[f"Treesummary error: One of the paths in {args.paths} does not have a treesummary table, cannot use gufi_du."]]
 
     # Pack object and return
     tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
@@ -249,17 +251,14 @@ def gufi_du(
 
 @mcp.tool()
 def gufi_find(
-        options: Annotated[list[str], Field(description="Options to submit for gufi_find. submit '--help' to view these options. Do not use --delim, the tool uses its own to give structured output. A value supplied after an option should be a new list entry.")] = None
+        args: Annotated[GufiToolArgsFind, Field(description="Pydantic structure expected to be submitted to the tool.")] = None
 ) -> GufiToolResult:
     ''' Execute user-facing tool: gufi equivalent of find '''
 
     tool_result = GufiQueryResult()
 
-    cmd = ["gufi_find"]
-    # Build options string if options passed
-    if options:
-        for option in options:
-            cmd.append(option)
+    cmd = util.parse_tool_args(args, args_find_dict)
+    cmd.insert(0, "gufi_find")
 
     cmd.append("--delim")
     cmd.append("\t")
@@ -273,20 +272,17 @@ def gufi_find(
 
 @mcp.tool()
 def gufi_stat(
-        file: Annotated[str, Field(description="File to stat.")],
-        options: Annotated[list[str], Field(description="Options to submit for gufi_stat. submit '--help' to view these options. A value supplied after an option should be a new list entry.")] = None
+        args: Annotated[GufiToolArgsStat, Field(description="Pydantic structure expected to be submitted to the tool.")] = None
 ) -> GufiToolResult:
     ''' Execute user-facing tool: gufi equivalent of ls '''
 
     tool_result = GufiQueryResult()
 
-    cmd = ["gufi_stat"]
-    # Build options string if options passed
-    if options:
-        for option in options:
-            cmd.append(option)
+    cmd = util.parse_tool_args(args, args_stat_dict)
+    cmd.insert(0, "gufi_stat")
 
-    cmd.append(file)
+    for file in args.files:
+        cmd.append(file)
 
     result = subprocess.run(cmd, capture_output=True, text=True)
 
@@ -302,46 +298,59 @@ def gufi_stat(
 
 @mcp.tool()
 def gufi_stats(
-        path: Annotated[str, Field(description="Path to obtain statistic from. Resolved with tool internally.")],
-        stat: Annotated[str, Field(description="Statistic to use. Use the --help option to view these statistics.")],
-        options: Annotated[list[str], Field(description="Options to submit for gufi_stats. submit '--help' to view these options. Do not use --delim, the tool uses its own to give structured output. A value supplied after an option should be a new list entry.")] = None
+        args: Annotated[GufiToolArgsStats, Field(description="Pydantic structure expected to be submitted to the tool.")] = None
 ) -> GufiToolResult:
     ''' Execute user-facing tool: gufi equivalent of ls '''
 
     tool_result = GufiQueryResult()
 
-    cmd = ["gufi_stats"]
-    help = False
-    # Build options string if options passed
-    if options:
-        for option in options:
-            if option == "--help":
-                help = True
-            cmd.append(option)
+    cmd = util.parse_tool_args(args, args_stats_dict)
+    cmd.insert(0, "gufi_stats")
 
-    # Override previous build for clean help, since required vars are used
-    if help:
-        cmd = ['gufi_stats', '--help']
-        result = subprocess.run(cmd, capture_output=True, text=True)
-    else:
-        cmd.append(stat)
-        cmd.append(path)
-        cmd.append("--delim")
-        cmd.append("\t")
+    cmd.append(GufiStatsStatistic[args.statistic])
+    cmd.append(args.path)
+    cmd.append("--delim")
+    cmd.append("\t")
 
     result = subprocess.run(cmd, capture_output=True, text=True)
 
     if result.stderr:
         # treesummary existence error at subpath
-        if "argument stat: invalid choice:" in result.stderr:
-            return [[f"Tool error: gufi_stats does not allow getting statistic {stat}."]]
-        if "No such file or directory" in result.stderr:
-            return [[f"Path error: gufi_stats was not able to find the path {path}."]]
+        return {"error": result.stderr.strip()}
 
     # Pack object and return
     tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
     tool_result.row_count = len(tool_result.rows)
     return tool_result.model_dump()
+
+@mcp.tool()
+def gufi_get_fattr(
+        args: Annotated[GufiToolArgsGetfattr, Field(description="Pydantic structure expected to be submitted to the tool.")] = None
+) -> GufiToolResult:
+    ''' Execute user-facing tool: gufi equivalent of ls '''
+
+    tool_result = GufiQueryResult()
+
+    cmd = util.parse_tool_args(args, args_getfattr_dict)
+    cmd.insert(0, "gufi_getfattr")
+
+    # Append positional argument path
+    for path in args.paths:
+        cmd.append(path)
+    cmd.append("--delim")
+    cmd.append("\t")
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.stderr:
+        # treesummary existence error at subpath
+        return {"error": result.stderr.strip()}
+
+    # Pack object and return
+    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
+    tool_result.row_count = len(tool_result.rows)
+    return tool_result.model_dump()
+
 
 # resource that returns indexes available
 @mcp.resource("gufi://indexes")
