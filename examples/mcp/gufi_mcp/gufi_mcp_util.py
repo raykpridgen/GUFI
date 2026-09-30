@@ -22,13 +22,222 @@ GUFI_INDEX_ROOT = os.getenv('GUFI_INDEX_ROOT')
 GUFI_QUERY = os.getenv('GUFI_QUERY')
 from enum import Enum
 
+class AggregateOption(BaseModel):
+    option: Literal["treesummary", "vrsummary", "vrpentries"] = Field(
+        default="vrpentries",
+        description=(
+            "One of three tables to query for compilation in an aggregate pipeline."
+            "These three tables have context for columns available in the gufi_schemas resource."
+        )
+    )
+    sql: str = Field(
+        default="select name, size from vrpentries where type = 'f'",
+        description=(
+            "The actual SQL line that will be queried for the table specified"
+            "Although table was specified in a separate attribute, the entire line of sql, INCLUDING the table should be included like the default of this model."
+            "The additional condition WHERE is encouraged, however it is advised not to use LIMIT, ORDER BY, or other modifiers since per-thread functionality of GUFI may cause unexpected output."
+        )
+    )
+
+    @field_validator("sql")
+    @classmethod
+    def sql_heuristic(cls, sql: Optional[str]) -> Optional[str]:
+        if sql is None or not is_valid_sql_query(sql):
+            raise ValueError("must have valid SQL with an aggregate option")
+        return sql
+
+    @model_validator(mode="after")
+    def confirm_columns(self):
+        ''' Confirm that each column mentioned in SQL exists in the table it references '''
+        # Columns used in SQL of this option
+        cols_referenced = get_columns_from_sqlin(self.sql)
+
+        cols = get_schema_hints(self.option)
+
+        for col in cols_referenced:
+            try:
+                cols[col]
+            except KeyError:
+                raise ValueError(f"column {col} not found in schema for {self.option}")
+
 class GufiAggregateQuery(BaseModel):
     index: str = Field(
         default=".",
-        description=("The index to be queried. Must be present in the results of the gufi_indexes resource.")
+        description=("The index to be queried. Must be present in the results of the gufi_indexes resource."
+                     "If using treesummary as one of the scatter options, note that the index must it active for complete results. This can be confirmed through the gufi_indexes resource.")
+    )
+    # I, K managed internally
+
+    # T, S, E managed here
+    scatter_sql: list[AggregateOption] = Field(
+        default_factory=list,
+        min_length=1,
+        description=(
+            "Each entry in this list is a query from etiher treesummary, vrsummary, or vrpentries."
+            "These entries serve as the 'scatter' portion of the query, where separate threads compile their own tables of the queried data based on distributed responsibility of the index tree."
+            "The queried data will be compiled into intermediate tables further down the pipeline, which will be gathered and further queried from."
+        ),
     )
 
-    
+    # I spec
+    intermediate_specs: str = Field(
+        default="size INT64",
+        description=(
+            "This is the specifier for the comma separated data types of the intermediate tables. They should include any columns addressed in the scatter sql."
+        )
+    )
+
+    # J logic
+    gather_sql: str = Field(
+        default="select SUM(size) from intermediate",
+        description=("This SQL is responsible for the 'gather' portion of the query, where GUFI logic compiles data queried in the previous step from per-thread tables into a single table."
+                     "This allows for additional SQL to be applied between tables, as seen in the default.")
+    )
+
+    # K spec
+    aggregate_spec: str = Field(
+        default="total INT64",
+        description = (
+            "This is the specifier for the comma separated data types of the aggregate table. They should include any columns addressed in the aggregate SQL."
+        )
+    )
+
+    # G logic
+    final_sql: str = Field(
+        default="select SUM(total) from aggregate",
+        description = (
+            "This is the final SQL the pipeline uses to extract the result from the aggregate SQL table."
+            "It extracts columns defined in the aggregate table that have been transformed from the intermediate table."
+        )
+    )
+
+    @field_validator("index")
+    @classmethod
+    def index_valid(cls, index: str) -> str:
+        if index not in get_gufi_indexes():
+            raise ValueError("Invalid index, not found in root.")
+        else:
+            return index
+
+    @model_validator(mode="after")
+    def check_scatter_treesum(self):
+        if has_treesummary(self.index):
+            return self
+        else:
+            for scatter_opt in self.scatter_sql:
+                if scatter_opt.option == "treesummary":
+                    raise ValueError("This index does not have treesummary active, but the SQL references using the treesummary table.")
+
+    @model_validator(mode="after")
+    def arrange_scatter_order(self):
+
+        if len(self.scatter_sql < 1):
+            raise ValueError("Scatter SQL is empty.")
+        elif len(self.scatter_sql) < 2:
+            return self
+
+        treesum_bound = 0
+        scan = 0
+        entries_bound = len(self.scatter_sql) - 1
+
+        option_list = self.scatter_sql
+
+        # Dutch national flag problem
+        # T = 0 S = 1 E = 2
+        while scan <= entries_bound:
+            if option_list[scan] == 0:
+                option_list[treesum_bound], option_list[scan] = option_list[scan], option_list[treesum_bound]
+                treesum_bound += 1
+                scan += 1
+            elif option_list[scan] == 1:
+                scan += 1
+            else:  # arr[scan] == 2
+                option_list[scan], option_list[entries_bound] = option_list[entries_bound], option_list[scan]
+                entries_bound -= 1
+
+        # Should be 3-tiered sorted
+        self.scatter_sql = option_list
+        return self
+
+    @model_validator(mode="after")
+    def check_intermediate_specs(self):
+        ''' Confirm that the intermediate_specs exist as columns of the same type in each aggregate option '''
+
+        # Pull from schemas like before
+        # If col not found, error
+        # If type wrong, simply fix the type with regex insertion
+
+        return self
+
+    @model_validator(mode="after")
+    def check_gather(self):
+        ''' Confirm that the column being selected from intermediate exists in it '''
+
+        # Pull from own class
+        # If col not found in intermediate, error
+        # Also fix any inconsistency with temp table naming, class should use its own for consistency
+        # Finally, use heuristic SQL function to check syntax
+
+        return self
+
+    @model_validator(mode="after")
+    def check_aggreagate_specs(self):
+        ''' Confirm that the aggregate_specs exist as columns of the same type in intermediate table '''
+
+        # Pull from own class
+        # If col not found, error
+
+        return self
+
+    @model_validator(mode="after")
+    def check_final_sql(self):
+        ''' Confirm that the final SQL is valid '''
+
+
+        # Pull from own class
+        # If col not found in aggregate, error
+        # Also check syntax with sql heuristic func
+
+        return self
+
+    def build_query_string(self):
+
+        sql_query_string = f'''
+        CREATE VIRTUAL TABLE temp.gufi_mcp USING gufi_vt(
+        I='CREATE TABLE intermediate({self.intermediate_specs}',
+        '''
+
+        # Build T, S, E portion
+        for agg_opt in self.scatter_sql:
+            if agg_opt.option == "treesummary":
+                sql_query_string += f"T='INSERT INTO intermediate {agg_opt.sql}',"
+            elif agg_opt.option == "vrsummary":
+                sql_query_string += f"S='INSERT INTO intermediate {agg_opt.sql}',"
+            elif agg_opt.option == "vrpentries":
+                sql_query_string += f"E='INSERT INTO intermediate {agg_opt.sql}',"
+
+        sql_query_string += f"K='CREATE TABLE aggregate({self.aggregate_specs}',"
+        sql_query_string += f"J='INSERT INTO aggregate {self.gather_sql}',"
+        sql_query_string += f"G='{self.final_sql}',"
+        sql_query_string += f"index='{self.index}'"
+
+        return sql_query_string
+
+# Reference:
+'''
+
+        CREATE VIRTUAL TABLE temp.gufi_mcp
+        USING gufi_vt(
+            I='CREATE TABLE intermediate(size INT64)', 
+            E='INSERT INTO intermediate SELECT size FROM entries WHERE type="f"', 
+            K='CREATE TABLE aggregate(total INT64)', 
+            J='INSERT INTO aggregate SELECT SUM(size) FROM intermediate', 
+            G='SELECT SUM(total) FROM aggregate', 
+            index='Downloads'
+        )
+'''
+
+
 
 class GufiSQLOption(str, Enum):
     I = "-I"
@@ -1070,6 +1279,12 @@ def load_schema_hints(name: str, schema: list[list[str]]) -> dict:
             schema_comp[col[0]] = {"type": col[1], "hint": schema_hints[col[0]]["hint"]}
 
     return schema_comp
+
+def get_schema_hints(name: str) -> dict:
+    with open(SCHEMAFILE, "r") as f:
+        hints = json.load(f)
+    return hints["tables"][name]["columns"]
+
 
 def parse_tool_args(args: dict, tool_dict: dict) -> list:
     ''' Take a pydantic model and convert it into a list subprocess can run'''

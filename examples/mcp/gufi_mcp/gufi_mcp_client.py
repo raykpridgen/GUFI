@@ -146,6 +146,25 @@ async def main():
         for row in range(res["row_count"]):
             print (res["rows"][row])
 
+        # aggregate query: total size
+        print("Use aggregate query tool for total size")
+        total_size_query = {
+            "index": "Downloads",
+            "config": ["threads=32"],
+            "sql_options": [
+                {"option": "-I", "sql": "CREATE TABLE intermediate(size INT64)"},
+                {"option": "-E", "sql": "INSERT INTO intermediate SELECT size FROM entries WHERE type='f'"},
+                {"option": "-K", "sql": "CREATE TABLE aggregate(total INT64)"},
+                {"option": "-J", "sql": "INSERT INTO aggregate SELECT SUM(size) FROM intermediate"},
+                {"option": "-G", "sql": "SELECT SUM(total) FROM aggregate"},
+            ],
+        }
+        result_stream = await client.call_tool("aggregate_sql_query", {"query": total_size_query})
+        res = json.loads(result_stream.content[0].text)
+        print(f"Total size columns: {res['columns']}")
+        for row in range(res["row_count"]):
+            print(res["rows"][row])
+
         # gufi_ls
         print(f"use gufi_ls tool")
         result_stream = await client.call_tool(
@@ -200,24 +219,7 @@ async def main():
         for row in range(res["row_count"]):
             print(res["rows"][row])
 
-        # aggregate query: total size
-        print("Use aggregate query tool for total size")
-        total_size_query = {
-            "index": "Downloads",
-            "config": ["threads=32"],
-            "sql_options": [
-                {"option": "-I", "sql": "CREATE TABLE intermediate(size INT64)"},
-                {"option": "-E", "sql": "INSERT INTO intermediate SELECT size FROM entries WHERE type='f'"},
-                {"option": "-K", "sql": "CREATE TABLE aggregate(total INT64)"},
-                {"option": "-J", "sql": "INSERT INTO aggregate SELECT SUM(size) FROM intermediate"},
-                {"option": "-G", "sql": "SELECT SUM(total) FROM aggregate"},
-            ],
-        }
-        result_stream = await client.call_tool("aggregate_sql_query", {"query": total_size_query})
-        res = json.loads(result_stream.content[0].text)
-        print(f"Total size columns: {res['columns']}")
-        for row in range(res["row_count"]):
-            print(res["rows"][row])
+
 
         # grouped aggregate example (uid totals)
         print("Use aggregate query tool for grouped uid totals")
