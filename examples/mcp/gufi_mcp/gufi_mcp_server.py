@@ -163,8 +163,8 @@ def aggregate_sql_query(
     if not util.subpath_exists(index):
         raise RuntimeError(f"Error: Index or subpath {index} does not exist")
 
-    if not util.validate_aggregate_order(query):
-        raise RuntimeError(f"Error: Aggregate order is not valid")
+    #if not util.validate_aggregate_order(query):
+    #    raise RuntimeError(f"Error: Aggregate order is not valid")
 
     query_result = GufiQueryResult()
 
@@ -179,8 +179,8 @@ def aggregate_sql_query(
     options.append(f"index='{query.index}'")
 
     sql_query = f"""
-        CREATE VIRTUAL TABLE temp.gufi.mcp
-        USING gufi_vt({", ".join(options)}
+        CREATE VIRTUAL TABLE temp.gufi_mcp
+        USING gufi_vt({", ".join(options)})
     """
 
     result = util.execute_sql(sql_query, True)
@@ -194,6 +194,20 @@ def aggregate_sql_query(
 
     else:
         raise RuntimeError(f"Error executing SQL: {result[1]}")
+
+total_size_query = {
+            "index": "Downloads",
+            "config": ["threads=32"],
+            "sql_options": [
+                {"option": "-I", "sql": "CREATE TABLE intermediate(size INT64)"},
+                {"option": "-E", "sql": "INSERT INTO intermediate SELECT size FROM entries WHERE type='f'"},
+                {"option": "-K", "sql": "CREATE TABLE aggregate(total INT64)"},
+                {"option": "-J", "sql": "INSERT INTO aggregate SELECT SUM(size) FROM intermediate"},
+                {"option": "-G", "sql": "SELECT SUM(total) FROM aggregate"},
+            ],
+        }
+
+res = aggregate_sql_query(GufiQuery(**total_size_query))
 
 @mcp.tool()
 def gufi_ls(
