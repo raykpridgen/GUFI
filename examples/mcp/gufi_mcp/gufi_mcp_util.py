@@ -181,7 +181,7 @@ class GufiAggregateQuery(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def check_aggreagate_specs(self):
+    def check_aggregate_specs(self):
         ''' Confirm that the aggregate_specs exist as columns of the same type in intermediate table '''
 
         # Pull from own class
