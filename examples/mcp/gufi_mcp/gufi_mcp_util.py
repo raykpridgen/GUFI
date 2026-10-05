@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Literal, Optional
 from sqlglot import parse_one, ParseError, exp
 import os
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, PrivateAttr
 from dotenv import load_dotenv
 import re
 import subprocess
@@ -61,6 +61,9 @@ class AggregateOption(BaseModel):
                 raise ValueError(f"column {col} not found in schema for {self.option}")
 
 class GufiAggregateQuery(BaseModel):
+
+    _columns_used: list = PrivateAttr(default_factory=list)
+
     index: str = Field(
         default=".",
         description=("The index to be queried. Must be present in the results of the gufi_indexes resource."
@@ -128,10 +131,10 @@ class GufiAggregateQuery(BaseModel):
                 if scatter_opt.option == "treesummary":
                     raise ValueError("This index does not have treesummary active, but the SQL references using the treesummary table.")
 
-    @model_validator(mode="after")
+    @model_validator(mode="before")
     def arrange_scatter_order(self):
 
-        if len(self.scatter_sql < 1):
+        if len(self.scatter_sql) < 1:
             raise ValueError("Scatter SQL is empty.")
         elif len(self.scatter_sql) < 2:
             return self
@@ -145,11 +148,11 @@ class GufiAggregateQuery(BaseModel):
         # Dutch national flag problem
         # T = 0 S = 1 E = 2
         while scan <= entries_bound:
-            if option_list[scan] == 0:
+            if option_list[scan] == "treesummary":
                 option_list[treesum_bound], option_list[scan] = option_list[scan], option_list[treesum_bound]
                 treesum_bound += 1
                 scan += 1
-            elif option_list[scan] == 1:
+            elif option_list[scan] == "vrsummary":
                 scan += 1
             else:  # arr[scan] == 2
                 option_list[scan], option_list[entries_bound] = option_list[entries_bound], option_list[scan]
@@ -159,24 +162,29 @@ class GufiAggregateQuery(BaseModel):
         self.scatter_sql = option_list
         return self
 
+    @model_validator(mode="before")
+    def get_starting_cols(self):
+        ''' Get the columns from scatter SQL to compare through pipeline '''
+
+        total_cols = []
+
+        for scatter_sql_item in self.scatter_sql:
+            total_cols.append(get_columns_from_sqlin(scatter_sql_item.sql))
+
+        # remove duplicates
+        self._columns_used = list(set(total_cols))
+        return self
+
+
     @model_validator(mode="after")
     def check_intermediate_specs(self):
         ''' Confirm that the intermediate_specs exist as columns of the same type in each aggregate option '''
 
-        # Pull from schemas like before
-        # If col not found, error
-        # If type wrong, simply fix the type with regex insertion
-
-        return self
-
-    @model_validator(mode="after")
-    def check_gather(self):
-        ''' Confirm that the column being selected from intermediate exists in it '''
-
-        # Pull from own class
-        # If col not found in intermediate, error
-        # Also fix any inconsistency with temp table naming, class should use its own for consistency
-        # Finally, use heuristic SQL function to check syntax
+        # Should already be set in private variable
+        for col in self.intermediate_specs.split(","):
+            # Ignore size specifiers
+            if col not in self._columns_used and col not in {"STR, INT64"}:
+                raise ValueError("Error: intermediate table specs reference column not queried in scatter SQL.")
 
         return self
 
@@ -185,7 +193,20 @@ class GufiAggregateQuery(BaseModel):
         ''' Confirm that the aggregate_specs exist as columns of the same type in intermediate table '''
 
         # Pull from own class
-        # If col not found, error
+        # col might have new name so just check size
+
+        return self
+
+    @model_validator(mode="after")
+    def check_gather(self):
+        ''' Confirm that the column being selected from intermediate exists in it '''
+
+        if not is_valid_sql_query(self.gather_sql, "sqlite"):
+            raise ValueError("Error: gather SQL has invalid syntax.")
+        # Extract column either raw or inside parenthesese from function like SUM()
+        # If col not found in intermediate, error
+        # Also fix any inconsistency with temp table naming, class should use its own for consistency
+        # Finally, use heuristic SQL function to check syntax
 
         return self
 
@@ -193,8 +214,11 @@ class GufiAggregateQuery(BaseModel):
     def check_final_sql(self):
         ''' Confirm that the final SQL is valid '''
 
+        if not is_valid_sql_query(self.final_sql, "sqlite"):
+            raise ValueError("Error: final SQL has invalid syntax.")
 
         # Pull from own class
+        # Check that col(s) pulled from aggregate exist in that table
         # If col not found in aggregate, error
         # Also check syntax with sql heuristic func
 
@@ -216,7 +240,7 @@ class GufiAggregateQuery(BaseModel):
             elif agg_opt.option == "vrpentries":
                 sql_query_string += f"E='INSERT INTO intermediate {agg_opt.sql}',"
 
-        sql_query_string += f"K='CREATE TABLE aggregate({self.aggregate_specs}',"
+        sql_query_string += f"K='CREATE TABLE aggregate({self.aggregate_spec}',"
         sql_query_string += f"J='INSERT INTO aggregate {self.gather_sql}',"
         sql_query_string += f"G='{self.final_sql}',"
         sql_query_string += f"index='{self.index}'"
