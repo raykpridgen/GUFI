@@ -1,3 +1,4 @@
+import argparse
 import sqlite3
 import sys
 from pathlib import Path
@@ -52,7 +53,7 @@ class AggregateOption(BaseModel):
         # Columns used in SQL of this option
         cols_referenced = get_columns_from_sqlin(self.sql)
 
-        cols = get_schema_hints(self.option)
+        cols = get_static_schema(self.option)
 
         for col in cols_referenced:
             try:
@@ -63,31 +64,23 @@ class AggregateOption(BaseModel):
 class GufiAggregateQuery(BaseModel):
 
     _columns_used: list = PrivateAttr(default_factory=list)
+    _intermediate_columns: list = PrivateAttr(default_factory=list)
+    _aggregate_columns: list = PrivateAttr(default_factory=list)
 
     index: str = Field(
         default=".",
         description=("The index to be queried. Must be present in the results of the gufi_indexes resource."
                      "If using treesummary as one of the scatter options, note that the index must it active for complete results. This can be confirmed through the gufi_indexes resource.")
     )
-    # I, K managed internally
 
     # T, S, E managed here
-    scatter_sql: list[AggregateOption] = Field(
+    scatter_sql: list[str] = Field(
         default_factory=list,
         min_length=1,
         description=(
-            "Each entry in this list is a query from etiher treesummary, vrsummary, or vrpentries."
             "These entries serve as the 'scatter' portion of the query, where separate threads compile their own tables of the queried data based on distributed responsibility of the index tree."
             "The queried data will be compiled into intermediate tables further down the pipeline, which will be gathered and further queried from."
         ),
-    )
-
-    # I spec
-    intermediate_specs: str = Field(
-        default="size INT64",
-        description=(
-            "This is the specifier for the comma separated data types of the intermediate tables. They should include any columns addressed in the scatter sql."
-        )
     )
 
     # J logic
@@ -97,17 +90,9 @@ class GufiAggregateQuery(BaseModel):
                      "This allows for additional SQL to be applied between tables, as seen in the default.")
     )
 
-    # K spec
-    aggregate_spec: str = Field(
-        default="total INT64",
-        description = (
-            "This is the specifier for the comma separated data types of the aggregate table. They should include any columns addressed in the aggregate SQL."
-        )
-    )
-
     # G logic
     final_sql: str = Field(
-        default="select SUM(total) from aggregate",
+        default="select total from aggregate",
         description = (
             "This is the final SQL the pipeline uses to extract the result from the aggregate SQL table."
             "It extracts columns defined in the aggregate table that have been transformed from the intermediate table."
@@ -122,14 +107,27 @@ class GufiAggregateQuery(BaseModel):
         else:
             return index
 
-    @model_validator(mode="after")
-    def check_scatter_treesum(self):
-        if has_treesummary(self.index):
-            return self
-        else:
-            for scatter_opt in self.scatter_sql:
-                if scatter_opt.option == "treesummary":
-                    raise ValueError("This index does not have treesummary active, but the SQL references using the treesummary table.")
+    @field_validator("scatter_sql")
+    @classmethod
+    def scatter_valid_sql(cls, scatter_sql: list[str]) -> list[str]:
+        for sql in scatter_sql:
+            if sql is None or not is_valid_sql_query(sql):
+                raise ValueError(f"The SQL for scatter option: {sql} syntactically is invalid.")
+        return scatter_sql
+
+    @field_validator("gather_sql")
+    @classmethod
+    def gather_valid_sql(cls, gather_sql: str) -> str:
+        if gather_sql is None or not is_valid_sql_query(gather_sql):
+            raise ValueError(f"The SQL for gather option: {gather_sql} syntactically is invalid.")
+        return gather_sql
+
+    @field_validator("final_sql")
+    @classmethod
+    def final_valid_sql(cls, final_sql: str) -> str:
+        if final_sql is None or not is_valid_sql_query(final_sql):
+            raise ValueError(f"The SQL for final option: {final_sql} syntactically is invalid.")
+        return final_sql
 
     @model_validator(mode="before")
     def arrange_scatter_order(self):
@@ -148,13 +146,13 @@ class GufiAggregateQuery(BaseModel):
         # Dutch national flag problem
         # T = 0 S = 1 E = 2
         while scan <= entries_bound:
-            if option_list[scan] == "treesummary":
+            if "treesummary" in option_list[scan]:
                 option_list[treesum_bound], option_list[scan] = option_list[scan], option_list[treesum_bound]
                 treesum_bound += 1
                 scan += 1
-            elif option_list[scan] == "vrsummary":
+            elif "summary" in option_list[scan]:
                 scan += 1
-            else:  # arr[scan] == 2
+            else:
                 option_list[scan], option_list[entries_bound] = option_list[entries_bound], option_list[scan]
                 entries_bound -= 1
 
@@ -163,18 +161,99 @@ class GufiAggregateQuery(BaseModel):
         return self
 
     @model_validator(mode="before")
-    def get_starting_cols(self):
-        ''' Get the columns from scatter SQL to compare through pipeline '''
+    def ensure_cols_tables(self):
+        ''' Ensure that all tables and columns referenced exist '''
 
-        total_cols = []
+        # All tables and columns in a dict
+        all_schema = get_static_schema()
 
+        scatter_cols = []
+        gather_cols = []
+
+        # For each scatter line
+        for sqlline in self.scatter_sql:
+
+            # Confirm table referenced exists
+            tables = get_sqlline_tables(sqlline)
+            if len(tables) > 1:
+                raise ValueError(f"SQL {sqlline} references more than one table.")
+            if len(tables) < 1:
+                raise ValueError(f"SQL {sqlline} does not reference any table.")
+            if tables[0] not in all_schema.keys():
+                raise ValueError(f"SQL {sqlline} does not reference a table found in schema.")
+
+            # Then, confirm columns in that table exist
+            cols = get_columns_from_sqlin(sqlline)
+            schema_cols = all_schema[tables[0]]["columns"].keys()
+            not_in_schema = list(set(cols) - set(schema_cols))
+            if len(not_in_schema) > 0:
+                raise ValueError(f"SQL {sqlline} references {not_in_schema} which is not in {tables[0]} schema.")
+            scatter_cols.extend(cols)
+
+        # For gather line
+        # Confirm table referenced exists
+        tables = get_sqlline_tables(self.gather_sql)
+        if len(tables) > 1:
+            raise ValueError(f"SQL {self.gather_sql} references more than one table.")
+        if len(tables) < 1:
+            raise ValueError(f"SQL {self.gather_sql} does not reference any table.")
+        if tables[0] not in all_schema.keys():
+            raise ValueError(f"SQL {self.gather_sql} does not reference a table found in schema.")
+
+        # Then, confirm columns in that table exist in scatter, no need to check entire schema
+        cols = get_columns_from_sqlin(self.gather_sql)
+        not_in_schema = list(set(cols) - set(scatter_cols))
+        if len(not_in_schema) > 0:
+            raise ValueError(f"SQL {self.gather_sql} references {not_in_schema} which is not in intermediate table.")
+
+        # Check final SQL against gather
+
+
+        all_tables = list(all_schema.keys())
+        tables_used = []
+
+        # Take out each table from each sql
         for scatter_sql_item in self.scatter_sql:
-            total_cols.append(get_columns_from_sqlin(scatter_sql_item.sql))
+            tables_used.extend(get_sqlline_tables(scatter_sql_item))
+
+        # Perform difference set op to get out every table not found in schema
+        invalid_tables = list(set(tables_used) - set(all_tables))
+        if len(invalid_tables) > 0:
+            raise ValueError(f"Table(s) {invalid_tables} used in scatter sql does not exist in the schema.")
+
+        #
+        # Confirm columns exist
+        #
+
+
+        # Scatter columns -> intermediate table
+        for scatter_sql_item in self.scatter_sql:
+            self._intermediate_columns.extend(get_columns_from_sqlin(scatter_sql_item))
+
+        # Gather columns -> aggregate table
+        self._aggregate_columns.extend(get_columns_from_sqlin(self.gather_sql))
+
+
+        # Confirm columns exist in their tables
+
+
+        # Confirm each column refrenced is used and make tables
+
 
         # remove duplicates
-        self._columns_used = list(set(total_cols))
+        self._intermediate_columns = list(set(self._intermediate_columns))
+        self._aggregate_columns = list(set(self._aggregate_columns))
+
         return self
 
+    @model_validator(mode="after")
+    def check_scatter_treesum(self):
+        """ Check that treesummary is active if any of the SQL lines in scatter reference it """
+        
+        for scatter_opt in self.scatter_sql:
+            if "treesummary" in scatter_opt and not has_treesummary(self.index):
+                raise ValueError("This index does not have treesummary active, but the SQL references using the treesummary table.")
+        return self
 
     @model_validator(mode="after")
     def check_intermediate_specs(self):
@@ -1178,10 +1257,30 @@ def table_exists(index: str, table_name: str) -> bool:
     finally:
         conn.close()
 
+
 def get_columns_from_sqlin(sqlin) -> list[str]:
-    ''' Separate out column names into a list '''
-    col_string = re.match(r'(?i)SELECT\s+(.+?)\s+FROM', sqlin, flags=re.IGNORECASE | re.DOTALL).group(1)
-    return [col.strip() for col in col_string.split(',')]
+    ''' Separate out column names into a list and clean function wrappers '''
+    # Match the SELECT block
+    match = re.match(r'(?i)SELECT\s+(.+?)\s+FROM', sqlin, flags=re.DOTALL)
+    if not match:
+        return []
+
+    col_string = match.group(1)
+
+    # 1. Split columns by commas
+    raw_cols = [col.strip() for col in col_string.split(',')]
+
+    cleaned_cols = []
+    for col in raw_cols:
+        # Extract contents if wrapped in a function like SUM(...) or MAX(...)
+        # This matches word characters followed by opening parenthesis,
+        # captures the inside, and matches the closing parenthesis.
+        cleaned = re.sub(r'\w+\((.*?)\)', r'\1', col)
+        cleaned_cols.append(cleaned.strip())
+
+    return cleaned_cols
+
+res = get_columns_from_sqlin("SELECT SUM(name) FROM sqlite_master WHERE type = 'table'")
 
 def resolve_local_index(index: str) -> str:
     ''' resolve name of a local index to the full path '''
@@ -1289,9 +1388,8 @@ def subpath_exists(path: str) -> bool:
 def load_schema_hints(name: str, schema: list[list[str]]) -> dict:
     ''' Attach static hints to dynamically loaded schema from PRAGMA '''
 
-    with open(SCHEMAFILE, "r") as f:
-        hints = json.load(f)
-    schema_hints = hints["tables"][name]["columns"]
+    hints = get_static_schema()
+    schema_hints = hints[name]["columns"]
     schema_comp = {}
 
     # For each column in the schema, attach hint to a dictionary entry
@@ -1304,11 +1402,24 @@ def load_schema_hints(name: str, schema: list[list[str]]) -> dict:
 
     return schema_comp
 
-def get_schema_hints(name: str) -> dict:
+def get_static_schema() -> dict:
     with open(SCHEMAFILE, "r") as f:
         hints = json.load(f)
-    return hints["tables"][name]["columns"]
+    return hints["tables"]
 
+def get_sqlline_columns(sql: str) -> list[str]:
+    """ retrieve columns from an sql line """
+
+    tree = parse_one(sql)
+    columns = [col.name for col in tree.find_all(exp.Column)]
+    return list(set(columns))
+
+def get_sqlline_tables(sql: str) -> list[str]:
+    """ retrieve columns from an sql line """
+
+    tree = parse_one(sql)
+    tables = [table.name for table in tree.find_all(exp.Table)]
+    return list(set(tables))
 
 def parse_tool_args(args: dict, tool_dict: dict) -> list:
     ''' Take a pydantic model and convert it into a list subprocess can run'''
