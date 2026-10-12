@@ -1,71 +1,61 @@
-import argparse
 import sqlite3
 import sys
-from pathlib import Path
-from typing import Any, Literal, Optional
-from sqlglot import parse_one, ParseError, exp
 import os
-from pydantic import BaseModel, Field, field_validator, model_validator, PrivateAttr
-from dotenv import load_dotenv
 import re
 import subprocess
 import json
+from enum import Enum
+from pathlib import Path
+from dotenv import load_dotenv
+from typing import Any, Literal, Optional
+from sqlglot import parse_one, ParseError, exp
+from pydantic import BaseModel, Field, field_validator, model_validator
+
 
 load_dotenv()
 
-SCHEMAFILE = os.getenv('SCHEMAFILE')
-REMOTEHOST = os.getenv('REMOTEHOST')
-MCPTRANSPORT = os.getenv('MCPTRANSPORT')
-MCPSRVHOST = os.getenv('MCPSRVHOST')
-MCPSRVPORT = os.getenv('MCPSRVPORT')
-GUFIVTLIB = os.getenv('GUFIVTLIB')
-GUFI_INDEX_ROOT = os.getenv('GUFI_INDEX_ROOT')
-GUFI_QUERY = os.getenv('GUFI_QUERY')
-from enum import Enum
+if not (SCHEMAFILE := os.getenv('SCHEMAFILE', 'error')): raise ValueError("SCHEMAFILE is missing")
+if not (REMOTEHOST := os.getenv('REMOTEHOST', 'error')): raise ValueError("REMOTEHOST is missing")
+if not (MCPTRANSPORT := os.getenv('MCPTRANSPORT', 'error')): raise ValueError("MCPTRANSPORT is missing")
+if not (MCPSRVHOST := os.getenv('MCPSRVHOST', 'error')): raise ValueError("MCPSRVHOST is missing")
+if not (MCPSRVPORT := os.getenv('MCPSRVPORT', 'error')): raise ValueError("MCPSRVPORT is missing")
+if not (GUFIVTLIB := os.getenv('GUFIVTLIB', 'error')): raise ValueError("GUFIVTLIB is missing")
+if not (GUFI_INDEX_ROOT := os.getenv('GUFI_INDEX_ROOT', 'error')): raise ValueError("GUFI_INDEX_ROOT is missing")
+if not (GUFI_QUERY := os.getenv('GUFI_QUERY', 'error')): raise ValueError("GUFI_QUERY is missing")
 
-class AggregateOption(BaseModel):
-    option: Literal["treesummary", "vrsummary", "vrpentries"] = Field(
-        default="vrpentries",
-        description=(
-            "One of three tables to query for compilation in an aggregate pipeline."
-            "These three tables have context for columns available in the gufi_schemas resource."
-        )
-    )
-    sql: str = Field(
-        default="select name, size from vrpentries where type = 'f'",
-        description=(
-            "The actual SQL line that will be queried for the table specified"
-            "Although table was specified in a separate attribute, the entire line of sql, INCLUDING the table should be included like the default of this model."
-            "The additional condition WHERE is encouraged, however it is advised not to use LIMIT, ORDER BY, or other modifiers since per-thread functionality of GUFI may cause unexpected output."
-        )
-    )
 
-    @field_validator("sql")
-    @classmethod
-    def sql_heuristic(cls, sql: Optional[str]) -> Optional[str]:
-        if sql is None or not is_valid_sql_query(sql):
-            raise ValueError("must have valid SQL with an aggregate option")
-        return sql
+def _escape_sqlite_double_quoted(text: str) -> str:
+    """Escape text embedded in a double-quoted SQLite string literal."""
+    return text.replace('"', '""')
 
-    @model_validator(mode="after")
-    def confirm_columns(self):
-        ''' Confirm that each column mentioned in SQL exists in the table it references '''
-        # Columns used in SQL of this option
-        cols_referenced = get_columns_from_sqlin(self.sql)
 
-        cols = get_static_schema(self.option)
+def _gufi_vt_named_arg(name: str, sql: str) -> str:
+    """Format one gufi_vt module argument (I/E/K/J/G/T/S)."""
+    return f'{name}="{_escape_sqlite_double_quoted(sql)}"'
 
-        for col in cols_referenced:
-            try:
-                cols[col]
-            except KeyError:
-                raise ValueError(f"column {col} not found in schema for {self.option}")
+
+def _ensure_sql_terminator(sql: str) -> str:
+    sql = sql.strip()
+    if sql and not sql.endswith(";"):
+        sql += ";"
+    return sql
+
+
+def _scatter_phase_sql(scatter_line: str) -> str:
+    body = scatter_line.strip()
+    if body.upper().startswith("INSERT INTO"):
+        return _ensure_sql_terminator(body)
+    return _ensure_sql_terminator(f"INSERT INTO intermediate {body}")
+
+
+def _gather_phase_sql(gather_line: str) -> str:
+    body = gather_line.strip()
+    if body.upper().startswith("INSERT INTO"):
+        return _ensure_sql_terminator(body)
+    return _ensure_sql_terminator(f"INSERT INTO aggregate {body}")
+
 
 class GufiAggregateQuery(BaseModel):
-
-    _columns_used: list = PrivateAttr(default_factory=list)
-    _intermediate_columns: list = PrivateAttr(default_factory=list)
-    _aggregate_columns: list = PrivateAttr(default_factory=list)
 
     index: str = Field(
         default=".",
@@ -79,8 +69,17 @@ class GufiAggregateQuery(BaseModel):
         min_length=1,
         description=(
             "These entries serve as the 'scatter' portion of the query, where separate threads compile their own tables of the queried data based on distributed responsibility of the index tree."
+            "The related SQL for the default, as a list entry, is: INSERT INTO intermediate SELECT size FROM entries WHERE type = 'f';"
             "The queried data will be compiled into intermediate tables further down the pipeline, which will be gathered and further queried from."
         ),
+    )
+
+    scatter_shape: str = Field(
+        default="size INT64",
+        description=("This defines the columns and the type contained in each for the intermediate table where scatter queries are placed."
+                     "The columns should follow the name TYPE format, and should be comma separated for any additional columns included."
+                     "The gather sql will select from this table."
+        )
     )
 
     # J logic
@@ -88,6 +87,15 @@ class GufiAggregateQuery(BaseModel):
         default="select SUM(size) from intermediate",
         description=("This SQL is responsible for the 'gather' portion of the query, where GUFI logic compiles data queried in the previous step from per-thread tables into a single table."
                      "This allows for additional SQL to be applied between tables, as seen in the default.")
+    )
+
+    gather_shape: str = Field(
+        default="total INT64",
+        description=(
+            "This defines the columns and the type contained in each for the aggregate table where gather queries are placed."
+            "The columns should follow the name TYPE format, and should be comma separated for any additional columns included."
+            "The final sql will select from this table."
+            )
     )
 
     # G logic
@@ -99,9 +107,14 @@ class GufiAggregateQuery(BaseModel):
         )
     )
 
+    #
+    # Field validators - confirm behavior per attribute
+    #
+
     @field_validator("index")
     @classmethod
     def index_valid(cls, index: str) -> str:
+        """ Confirm the index referenced exists in the current index root """
         if index not in get_gufi_indexes():
             raise ValueError("Invalid index, not found in root.")
         else:
@@ -110,6 +123,8 @@ class GufiAggregateQuery(BaseModel):
     @field_validator("scatter_sql")
     @classmethod
     def scatter_valid_sql(cls, scatter_sql: list[str]) -> list[str]:
+        """ Confirm that each SQL line has correct syntax """
+
         for sql in scatter_sql:
             if sql is None or not is_valid_sql_query(sql):
                 raise ValueError(f"The SQL for scatter option: {sql} syntactically is invalid.")
@@ -118,6 +133,7 @@ class GufiAggregateQuery(BaseModel):
     @field_validator("gather_sql")
     @classmethod
     def gather_valid_sql(cls, gather_sql: str) -> str:
+        """ Confirm that each SQL line has correct syntax """
         if gather_sql is None or not is_valid_sql_query(gather_sql):
             raise ValueError(f"The SQL for gather option: {gather_sql} syntactically is invalid.")
         return gather_sql
@@ -125,12 +141,18 @@ class GufiAggregateQuery(BaseModel):
     @field_validator("final_sql")
     @classmethod
     def final_valid_sql(cls, final_sql: str) -> str:
+        """ Confirm that each SQL line has correct syntax """
         if final_sql is None or not is_valid_sql_query(final_sql):
             raise ValueError(f"The SQL for final option: {final_sql} syntactically is invalid.")
         return final_sql
 
-    @model_validator(mode="before")
+    #
+    # Model validators - confirm attributes are valid in context with one another
+    #
+
+    @model_validator(mode="after")
     def arrange_scatter_order(self):
+        """ Arrange the order of the list of scatter queries to match GUFI hierarchy: T, S, E """
 
         if len(self.scatter_sql) < 1:
             raise ValueError("Scatter SQL is empty.")
@@ -160,15 +182,22 @@ class GufiAggregateQuery(BaseModel):
         self.scatter_sql = option_list
         return self
 
-    @model_validator(mode="before")
-    def ensure_cols_tables(self):
-        ''' Ensure that all tables and columns referenced exist '''
+    @model_validator(mode="after")
+    def check_scatter_treesum(self):
+        """ Check that treesummary is active if any of the SQL lines in scatter reference it """
+
+        for scatter_opt in self.scatter_sql:
+            if "treesummary" in scatter_opt and not has_treesummary(self.index):
+                raise ValueError(
+                    "This index does not have treesummary active, but the SQL references using the treesummary table.")
+        return self
+
+    @model_validator(mode="after")
+    def confirm_column_consistency(self):
+        """ Ensure that all tables and columns referenced are used correctly """
 
         # All tables and columns in a dict
         all_schema = get_static_schema()
-
-        scatter_cols = []
-        gather_cols = []
 
         # For each scatter line
         for sqlline in self.scatter_sql:
@@ -177,154 +206,72 @@ class GufiAggregateQuery(BaseModel):
             tables = get_sqlline_tables(sqlline)
             if len(tables) > 1:
                 raise ValueError(f"SQL {sqlline} references more than one table.")
-            if len(tables) < 1:
+            elif len(tables) < 1:
                 raise ValueError(f"SQL {sqlline} does not reference any table.")
-            if tables[0] not in all_schema.keys():
+            elif tables[0] not in all_schema.keys():
                 raise ValueError(f"SQL {sqlline} does not reference a table found in schema.")
 
             # Then, confirm columns in that table exist
-            cols = get_columns_from_sqlin(sqlline)
+            cols = get_sqlline_columns(sqlline)
             schema_cols = all_schema[tables[0]]["columns"].keys()
             not_in_schema = list(set(cols) - set(schema_cols))
             if len(not_in_schema) > 0:
                 raise ValueError(f"SQL {sqlline} references {not_in_schema} which is not in {tables[0]} schema.")
-            scatter_cols.extend(cols)
 
-        # For gather line
-        # Confirm table referenced exists
-        tables = get_sqlline_tables(self.gather_sql)
-        if len(tables) > 1:
-            raise ValueError(f"SQL {self.gather_sql} references more than one table.")
-        if len(tables) < 1:
-            raise ValueError(f"SQL {self.gather_sql} does not reference any table.")
-        if tables[0] not in all_schema.keys():
-            raise ValueError(f"SQL {self.gather_sql} does not reference a table found in schema.")
+        # For gather line, confirm referenced columns exist in scatters shape
+        gather_cols = get_sqlline_columns(self.gather_sql)
+        for col in gather_cols:
+            if col not in self.scatter_shape:
+                raise ValueError(
+                    f"SQL {self.gather_sql} references column {col} which was not defined in the intermediate table's shape.")
 
-        # Then, confirm columns in that table exist in scatter, no need to check entire schema
-        cols = get_columns_from_sqlin(self.gather_sql)
-        not_in_schema = list(set(cols) - set(scatter_cols))
-        if len(not_in_schema) > 0:
-            raise ValueError(f"SQL {self.gather_sql} references {not_in_schema} which is not in intermediate table.")
-
-        # Check final SQL against gather
-
-
-        all_tables = list(all_schema.keys())
-        tables_used = []
-
-        # Take out each table from each sql
-        for scatter_sql_item in self.scatter_sql:
-            tables_used.extend(get_sqlline_tables(scatter_sql_item))
-
-        # Perform difference set op to get out every table not found in schema
-        invalid_tables = list(set(tables_used) - set(all_tables))
-        if len(invalid_tables) > 0:
-            raise ValueError(f"Table(s) {invalid_tables} used in scatter sql does not exist in the schema.")
-
-        #
-        # Confirm columns exist
-        #
-
-
-        # Scatter columns -> intermediate table
-        for scatter_sql_item in self.scatter_sql:
-            self._intermediate_columns.extend(get_columns_from_sqlin(scatter_sql_item))
-
-        # Gather columns -> aggregate table
-        self._aggregate_columns.extend(get_columns_from_sqlin(self.gather_sql))
-
-
-        # Confirm columns exist in their tables
-
-
-        # Confirm each column refrenced is used and make tables
-
-
-        # remove duplicates
-        self._intermediate_columns = list(set(self._intermediate_columns))
-        self._aggregate_columns = list(set(self._aggregate_columns))
+        # For final SQL line, confirm referenced columns exist in gathers shape
+        final_cols = get_sqlline_columns(self.final_sql)
+        for col in final_cols:
+            if col not in self.gather_shape:
+                raise ValueError(
+                    f"SQL {self.final_sql} references column {col} which was not defined in the intermediate table's shape.")
 
         return self
 
-    @model_validator(mode="after")
-    def check_scatter_treesum(self):
-        """ Check that treesummary is active if any of the SQL lines in scatter reference it """
-        
-        for scatter_opt in self.scatter_sql:
-            if "treesummary" in scatter_opt and not has_treesummary(self.index):
-                raise ValueError("This index does not have treesummary active, but the SQL references using the treesummary table.")
-        return self
+    def build_query_string(self) -> str:
+        """Build GUFI_VT-compatible SQL."""
 
-    @model_validator(mode="after")
-    def check_intermediate_specs(self):
-        ''' Confirm that the intermediate_specs exist as columns of the same type in each aggregate option '''
+        index_path = _escape_sqlite_double_quoted(resolve_local_index(self.index))
+        threads = os.cpu_count() or 1
 
-        # Should already be set in private variable
-        for col in self.intermediate_specs.split(","):
-            # Ignore size specifiers
-            if col not in self._columns_used and col not in {"STR, INT64"}:
-                raise ValueError("Error: intermediate table specs reference column not queried in scatter SQL.")
+        options: list[str] = [
+            f'"{index_path}"',
+            f"threads={threads}, min_level=1, max_level=99, verbose=0",
+            _gufi_vt_named_arg(
+                "I",
+                _ensure_sql_terminator(f"CREATE TABLE intermediate({self.scatter_shape})"),
+            ),
+        ]
 
-        return self
-
-    @model_validator(mode="after")
-    def check_aggregate_specs(self):
-        ''' Confirm that the aggregate_specs exist as columns of the same type in intermediate table '''
-
-        # Pull from own class
-        # col might have new name so just check size
-
-        return self
-
-    @model_validator(mode="after")
-    def check_gather(self):
-        ''' Confirm that the column being selected from intermediate exists in it '''
-
-        if not is_valid_sql_query(self.gather_sql, "sqlite"):
-            raise ValueError("Error: gather SQL has invalid syntax.")
-        # Extract column either raw or inside parenthesese from function like SUM()
-        # If col not found in intermediate, error
-        # Also fix any inconsistency with temp table naming, class should use its own for consistency
-        # Finally, use heuristic SQL function to check syntax
-
-        return self
-
-    @model_validator(mode="after")
-    def check_final_sql(self):
-        ''' Confirm that the final SQL is valid '''
-
-        if not is_valid_sql_query(self.final_sql, "sqlite"):
-            raise ValueError("Error: final SQL has invalid syntax.")
-
-        # Pull from own class
-        # Check that col(s) pulled from aggregate exist in that table
-        # If col not found in aggregate, error
-        # Also check syntax with sql heuristic func
-
-        return self
-
-    def build_query_string(self):
-
-        sql_query_string = f'''
-        CREATE VIRTUAL TABLE temp.gufi_mcp USING gufi_vt(
-        I='CREATE TABLE intermediate({self.intermediate_specs}',
-        '''
-
-        # Build T, S, E portion
         for agg_opt in self.scatter_sql:
-            if agg_opt.option == "treesummary":
-                sql_query_string += f"T='INSERT INTO intermediate {agg_opt.sql}',"
-            elif agg_opt.option == "vrsummary":
-                sql_query_string += f"S='INSERT INTO intermediate {agg_opt.sql}',"
-            elif agg_opt.option == "vrpentries":
-                sql_query_string += f"E='INSERT INTO intermediate {agg_opt.sql}',"
+            phase_sql = _scatter_phase_sql(agg_opt)
+            if "treesummary" in agg_opt:
+                options.append(_gufi_vt_named_arg("T", phase_sql))
+            elif "summary" in agg_opt:
+                options.append(_gufi_vt_named_arg("S", phase_sql))
+            else:
+                options.append(_gufi_vt_named_arg("E", phase_sql))
 
-        sql_query_string += f"K='CREATE TABLE aggregate({self.aggregate_spec}',"
-        sql_query_string += f"J='INSERT INTO aggregate {self.gather_sql}',"
-        sql_query_string += f"G='{self.final_sql}',"
-        sql_query_string += f"index='{self.index}'"
+        options.extend([
+            _gufi_vt_named_arg(
+                "K",
+                _ensure_sql_terminator(f"CREATE TABLE aggregate({self.gather_shape})"),
+            ),
+            _gufi_vt_named_arg("J", _gather_phase_sql(self.gather_sql)),
+            _gufi_vt_named_arg("G", _ensure_sql_terminator(self.final_sql)),
+        ])
 
-        return sql_query_string
+        return (
+            "CREATE VIRTUAL TABLE temp.gufi_mcp "
+            "USING gufi_vt(" + ", ".join(options) + ")"
+        )
+
 
 # Reference:
 '''
@@ -339,30 +286,6 @@ class GufiAggregateQuery(BaseModel):
             index='Downloads'
         )
 '''
-
-
-
-class GufiSQLOption(str, Enum):
-    I = "-I"
-    T = "-T"
-    S = "-S"
-    E = "-E"
-    K = "-K"
-    J = "-J"
-    G = "-G"
-    F = "-F"
-
-# Object for GUFI options
-class GufiOption(BaseModel):
-    option: GufiSQLOption
-    sql: str
-
-# Object to handle query construction
-class GufiQuery(BaseModel):
-    index: str
-    sql_options: list[GufiOption] = Field(default_factory=list)
-    config: list[str] = Field(default_factory=list)
-    delimiter: str = "\t"
 
 # Object to handle query returns
 class GufiQueryResult(BaseModel):
@@ -411,11 +334,6 @@ class GufiToolArgsLS(BaseModel):
     no_group: bool = Field(
         default=False,
         description="If true, exclude group names. Use during long output executions",
-    )
-
-    ignore_backups: bool = Field(
-        default=False,
-        description="If true, exclude implied entries ending with ~",
     )
 
     human_readable: bool = Field(
@@ -501,63 +419,6 @@ args_ls_dict = {
     "time_style": "--time-style"
 }
 
-class GufiStatsStatistic(str, Enum):
-    DEPTH = "depth"
-    FILESIZE = "filesize"
-    FILECOUNT = "filecount"
-    LINKCOUNT = "linkcount"
-    DIRCOUNT = "dircount"
-    LEAF_DIRS = "leaf-dirs"
-    LEAF_DEPTH = "leaf-depth"
-    LEAF_FILES = "leaf-files"
-    LEAF_LINKS = "leaf-links"
-    TOTAL_FILESIZE = "total-filesize"
-    TOTAL_FILECOUNT = "total-filecount"
-    TOTAL_LINKCOUNT = "total-linkcount"
-    TOTAL_DIRCOUNT = "total-dircount"
-    TOTAL_LEAF_FILES = "total-leaf-files"
-    TOTAL_LEAF_LINKS = "total-leaf-links"
-    FILES_PER_LEVEL = "files-per-level"
-    LINKS_PER_LEVEL = "links-per-level"
-    DIRS_PER_LEVEL = "dirs-per-level"
-    EXTENSIONS = "extensions"
-    EXTENSIONS_HIST = "extensions-hist"
-    FILESIZE_LOG2_BINS = "filesize-log2-bins"
-    FILESIZE_LOG1024_BINS = "filesize-log1024-bins"
-    FILESIZE_LOG2_BINS_HIST = "filesize-log2-bins-hist"
-    FILESIZE_LOG1024_BINS_HIST = "filesize-log1024-bins-hist"
-    DIRFILECOUNT_LOG2_BINS = "dirfilecount-log2-bins"
-    DIRFILECOUNT_LOG1024_BINS = "dirfilecount-log1024-bins"
-    DIRFILECOUNT_LOG2_BINS_HIST = "dirfilecount-log2-bins-hist"
-    DIRFILECOUNT_LOG1024_BINS_HIST = "dirfilecount-log1024-bins-hist"
-    FILE_AGE_ATIME = "file-age-atime"
-    FILE_AGE_MTIME = "file-age-mtime"
-    FILE_AGE_CTIME = "file-age-ctime"
-    DIR_AGE_ATIME = "dir-age-atime"
-    DIR_AGE_MTIME = "dir-age-mtime"
-    DIR_AGE_CTIME = "dir-age-ctime"
-    FILE_AGE_ATIME_HIST = "file-age-atime-hist"
-    FILE_AGE_MTIME_HIST = "file-age-mtime-hist"
-    FILE_AGE_CTIME_HIST = "file-age-ctime-hist"
-    DIR_AGE_ATIME_HIST = "dir-age-atime-hist"
-    DIR_AGE_MTIME_HIST = "dir-age-mtime-hist"
-    DIR_AGE_CTIME_HIST = "dir-age-ctime-hist"
-    UNIQUE_FILE_UID_COUNT = "unique-file-uid-count"
-    UNIQUE_FILE_GID_COUNT = "unique-file-gid-count"
-    UNIQUE_LINK_UID_COUNT = "unique-link-uid-count"
-    UNIQUE_LINK_GID_COUNT = "unique-link-gid-count"
-    UNIQUE_DIR_UID_COUNT = "unique-dir-uid-count"
-    UNIQUE_DIR_GID_COUNT = "unique-dir-gid-count"
-    AVERAGE_LEAF_FILES = "average-leaf-files"
-    AVERAGE_LEAF_LINKS = "average-leaf-links"
-    AVERAGE_LEAF_SIZE = "average-leaf-size"
-    MEDIAN_LEAF_FILES = "median-leaf-files"
-    MEDIAN_LEAF_LINKS = "median-leaf-links"
-    MEDIAN_LEAF_SIZE = "median-leaf-size"
-    DUPLICATE_NAMES = "duplicate-names"
-    UID_SIZE = "uid-size"
-    GID_SIZE = "gid-size"
-
 
 class GufiToolArgsDU(BaseModel):
     """GUFI equivalent of du: Summarize disk usage."""
@@ -630,7 +491,6 @@ class GufiToolArgsDU(BaseModel):
             raise ValueError("paths must contain at least one non-empty path")
         return cleaned
 
-
 args_du_dict = {
     "apparent_size": "--apparent-size",
     "block_size": "--block-size",
@@ -685,13 +545,69 @@ class GufiToolArgsStat(BaseModel):
             raise ValueError("files must contain at least one non-empty path")
         return cleaned
 
-
 args_stat_dict = {
     "format": "-c",
     "terse": "-t",
     "verbose": "-V",
 }
 
+
+class GufiStatsStatistic(str, Enum):
+    DEPTH = "depth"
+    FILESIZE = "filesize"
+    FILECOUNT = "filecount"
+    LINKCOUNT = "linkcount"
+    DIRCOUNT = "dircount"
+    LEAF_DIRS = "leaf-dirs"
+    LEAF_DEPTH = "leaf-depth"
+    LEAF_FILES = "leaf-files"
+    LEAF_LINKS = "leaf-links"
+    TOTAL_FILESIZE = "total-filesize"
+    TOTAL_FILECOUNT = "total-filecount"
+    TOTAL_LINKCOUNT = "total-linkcount"
+    TOTAL_DIRCOUNT = "total-dircount"
+    TOTAL_LEAF_FILES = "total-leaf-files"
+    TOTAL_LEAF_LINKS = "total-leaf-links"
+    FILES_PER_LEVEL = "files-per-level"
+    LINKS_PER_LEVEL = "links-per-level"
+    DIRS_PER_LEVEL = "dirs-per-level"
+    EXTENSIONS = "extensions"
+    EXTENSIONS_HIST = "extensions-hist"
+    FILESIZE_LOG2_BINS = "filesize-log2-bins"
+    FILESIZE_LOG1024_BINS = "filesize-log1024-bins"
+    FILESIZE_LOG2_BINS_HIST = "filesize-log2-bins-hist"
+    FILESIZE_LOG1024_BINS_HIST = "filesize-log1024-bins-hist"
+    DIRFILECOUNT_LOG2_BINS = "dirfilecount-log2-bins"
+    DIRFILECOUNT_LOG1024_BINS = "dirfilecount-log1024-bins"
+    DIRFILECOUNT_LOG2_BINS_HIST = "dirfilecount-log2-bins-hist"
+    DIRFILECOUNT_LOG1024_BINS_HIST = "dirfilecount-log1024-bins-hist"
+    FILE_AGE_ATIME = "file-age-atime"
+    FILE_AGE_MTIME = "file-age-mtime"
+    FILE_AGE_CTIME = "file-age-ctime"
+    DIR_AGE_ATIME = "dir-age-atime"
+    DIR_AGE_MTIME = "dir-age-mtime"
+    DIR_AGE_CTIME = "dir-age-ctime"
+    FILE_AGE_ATIME_HIST = "file-age-atime-hist"
+    FILE_AGE_MTIME_HIST = "file-age-mtime-hist"
+    FILE_AGE_CTIME_HIST = "file-age-ctime-hist"
+    DIR_AGE_ATIME_HIST = "dir-age-atime-hist"
+    DIR_AGE_MTIME_HIST = "dir-age-mtime-hist"
+    DIR_AGE_CTIME_HIST = "dir-age-ctime-hist"
+    UNIQUE_FILE_UID_COUNT = "unique-file-uid-count"
+    UNIQUE_FILE_GID_COUNT = "unique-file-gid-count"
+    UNIQUE_LINK_UID_COUNT = "unique-link-uid-count"
+    UNIQUE_LINK_GID_COUNT = "unique-link-gid-count"
+    UNIQUE_DIR_UID_COUNT = "unique-dir-uid-count"
+    UNIQUE_DIR_GID_COUNT = "unique-dir-gid-count"
+    AVERAGE_LEAF_FILES = "average-leaf-files"
+    AVERAGE_LEAF_LINKS = "average-leaf-links"
+    AVERAGE_LEAF_SIZE = "average-leaf-size"
+    MEDIAN_LEAF_FILES = "median-leaf-files"
+    MEDIAN_LEAF_LINKS = "median-leaf-links"
+    MEDIAN_LEAF_SIZE = "median-leaf-size"
+    DUPLICATE_NAMES = "duplicate-names"
+    UID_SIZE = "uid-size"
+    GID_SIZE = "gid-size"
 
 class GufiToolArgsStats(BaseModel):
     """GUFI equivalent of gufi_stats: Index-level filesystem statistics."""
@@ -771,7 +687,6 @@ class GufiToolArgsStats(BaseModel):
         if self.recursive and self.cumulative:
             raise ValueError("recursive and cumulative cannot both be true (-r and -c are mutually exclusive)")
         return self
-
 
 args_stats_dict = {
     "recursive": "-r",
@@ -855,7 +770,6 @@ class GufiToolArgsGetfattr(BaseModel):
         if self.name and self.dump:
             raise ValueError("Specify either name or dump, not both (-n and -d together are ambiguous)")
         return self
-
 
 args_getfattr_dict = {
     "name": "-n",
@@ -1183,7 +1097,6 @@ class GufiToolArgsFind(BaseModel):
             raise ValueError("false and true cannot both be true")
         return self
 
-
 args_find_dict = {
     "maxdepth": "-maxdepth",
     "mindepth": "-mindepth",
@@ -1257,31 +1170,6 @@ def table_exists(index: str, table_name: str) -> bool:
     finally:
         conn.close()
 
-
-def get_columns_from_sqlin(sqlin) -> list[str]:
-    ''' Separate out column names into a list and clean function wrappers '''
-    # Match the SELECT block
-    match = re.match(r'(?i)SELECT\s+(.+?)\s+FROM', sqlin, flags=re.DOTALL)
-    if not match:
-        return []
-
-    col_string = match.group(1)
-
-    # 1. Split columns by commas
-    raw_cols = [col.strip() for col in col_string.split(',')]
-
-    cleaned_cols = []
-    for col in raw_cols:
-        # Extract contents if wrapped in a function like SUM(...) or MAX(...)
-        # This matches word characters followed by opening parenthesis,
-        # captures the inside, and matches the closing parenthesis.
-        cleaned = re.sub(r'\w+\((.*?)\)', r'\1', col)
-        cleaned_cols.append(cleaned.strip())
-
-    return cleaned_cols
-
-res = get_columns_from_sqlin("SELECT SUM(name) FROM sqlite_master WHERE type = 'table'")
-
 def resolve_local_index(index: str) -> str:
     ''' resolve name of a local index to the full path '''
 
@@ -1312,7 +1200,7 @@ def get_gufi_indexes() -> list[str]:
 
     return indexes
 
-def execute_sql(sqlline: str, gufi_vt: bool, plain_index: str = None) -> list[Any]:
+def execute_sql(sqlline: str, gufi_vt: bool, agg: bool, plain_index: str = ".") -> list[Any]:
     ''' Wrapper to execute SQL queries '''
 
     # GUFI_VT uses memory and operates through the function
@@ -1321,7 +1209,7 @@ def execute_sql(sqlline: str, gufi_vt: bool, plain_index: str = None) -> list[An
     # Pulling schema needs a path to an index
     else:
         # Specific path / table to connect to
-        if plain_index:
+        if plain_index != ".":
             index = f"{plain_index}" + "/db.db"
         else:
             index = f"{GUFI_INDEX_ROOT}" + "/db.db"
@@ -1343,7 +1231,8 @@ def execute_sql(sqlline: str, gufi_vt: bool, plain_index: str = None) -> list[An
 
         # Call GUFI_VT
         cursor.execute(sqlline)
-
+        if agg:
+            cursor = conn.execute("SELECT * FROM temp.gufi_mcp")
         return cursor.fetchall()
 
     except sqlite3.Error as e:
@@ -1378,13 +1267,6 @@ def subpath_exists(path: str) -> bool:
     else:
         return False
 
-    raw = str(index).strip().rstrip("/")
-    if os.path.isabs(raw):
-        return os.path.isdir(raw)
-
-    if raw in get_gufi_indexes():
-        return True
-
 def load_schema_hints(name: str, schema: list[list[str]]) -> dict:
     ''' Attach static hints to dynamically loaded schema from PRAGMA '''
 
@@ -1411,7 +1293,14 @@ def get_sqlline_columns(sql: str) -> list[str]:
     """ retrieve columns from an sql line """
 
     tree = parse_one(sql)
-    columns = [col.name for col in tree.find_all(exp.Column)]
+
+    # Catch and exclude a column named as an alias
+    aliases = {alias.alias for alias in tree.find_all(exp.Alias)}
+
+    columns = [
+        col.name for col in tree.find_all(exp.Column)
+        if col.name not in aliases
+    ]
     return list(set(columns))
 
 def get_sqlline_tables(sql: str) -> list[str]:
@@ -1447,3 +1336,21 @@ def parse_tool_args(args: dict, tool_dict: dict) -> list:
         except KeyError:
             continue
     return cmd
+
+sql_stuff = """{
+    "index": "Downloads",
+    "scatter_sql": [
+        "SELECT size FROM entries WHERE type='f'"
+    ],
+    "scatter_shape": "size INT64",
+    "gather_sql": "SELECT SUM(size) FROM intermediate",
+    "gather_shape": "total INT64",
+    "final_sql": "SELECT SUM(total) FROM aggregate"
+}"""
+
+
+
+agg_input = GufiAggregateQuery.model_validate_json(sql_stuff)
+str_agg = agg_input.build_query_string()
+res = execute_sql(str_agg, True, True)
+print(res)

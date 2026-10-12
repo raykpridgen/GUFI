@@ -66,7 +66,7 @@ from typing import Any, Annotated, Literal
 from pydantic import Field
 import os
 from dotenv import load_dotenv
-from gufi_mcp_util import GufiQueryResult, GufiToolResult, GufiQuery
+from gufi_mcp_util import GufiQueryResult, GufiToolResult, GufiAggregateQuery
 from gufi_mcp_util import GufiToolArgsLS, args_ls_dict
 from gufi_mcp_util import GufiToolArgsDU, args_du_dict
 from gufi_mcp_util import GufiToolArgsFind, args_find_dict
@@ -156,33 +156,15 @@ def sql_file_index(
 
 @mcp.tool()
 def aggregate_sql_query(
-        query: Annotated[GufiQuery, Field(description="Constructed object for the aggregate SQL query.")],
+        query: Annotated[GufiAggregateQuery, Field(description="Constructed object for the aggregate SQL query.")],
 ) -> GufiQueryResult:
 
     index = query.index
     if not util.subpath_exists(index):
         raise RuntimeError(f"Error: Index or subpath {index} does not exist")
 
-    #if not util.validate_aggregate_order(query):
-    #    raise RuntimeError(f"Error: Aggregate order is not valid")
-
     query_result = GufiQueryResult()
-
-    # CREATE VIRTUAL TABLE temp.gufi
-    # USING gufi_vt(
-    options = []
-    for item in query.sql_options:
-        option = item.option.lstrip("-")
-        sql = item.sql.replace("'", "''")
-        options.append(f"{option}='{sql}'")
-
-    options.append(f"index='{query.index}'")
-
-    sql_query = f"""
-        CREATE VIRTUAL TABLE temp.gufi_mcp
-        USING gufi_vt({", ".join(options)})
-    """
-
+    sql_query = query.build_query_string()
     result = util.execute_sql(sql_query, True)
 
     if result[0] != "sql error:":
@@ -194,20 +176,6 @@ def aggregate_sql_query(
 
     else:
         raise RuntimeError(f"Error executing SQL: {result[1]}")
-
-total_size_query = {
-            "index": "Downloads",
-            "config": ["threads=32"],
-            "sql_options": [
-                {"option": "-I", "sql": "CREATE TABLE intermediate(size INT64)"},
-                {"option": "-E", "sql": "INSERT INTO intermediate SELECT size FROM entries WHERE type='f'"},
-                {"option": "-K", "sql": "CREATE TABLE aggregate(total INT64)"},
-                {"option": "-J", "sql": "INSERT INTO aggregate SELECT SUM(size) FROM intermediate"},
-                {"option": "-G", "sql": "SELECT SUM(total) FROM aggregate"},
-            ],
-        }
-
-res = aggregate_sql_query(GufiQuery(**total_size_query))
 
 @mcp.tool()
 def gufi_ls(
