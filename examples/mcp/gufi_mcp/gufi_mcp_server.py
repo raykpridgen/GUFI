@@ -59,339 +59,164 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
-from mcp.server import MCPServer
-import sqlite3
-import subprocess
-from typing import Any, Annotated, Literal
-from pydantic import Field
 import os
+import shutil
+from typing import Annotated, Any
+
 from dotenv import load_dotenv
-from gufi_mcp_util import GufiQueryResult, GufiToolResult, GufiAggregateQuery
+from mcp.server import MCPServer
+from mcp.server.mcpserver.exceptions import ResourceError
+from pydantic import Field
+
+import gufi_mcp_util as util
+from gufi_mcp_util import GufiAggregateQuery, GufiQueryResult, GufiToolResult
 from gufi_mcp_util import GufiToolArgsLS, args_ls_dict
 from gufi_mcp_util import GufiToolArgsDU, args_du_dict
 from gufi_mcp_util import GufiToolArgsFind, args_find_dict
 from gufi_mcp_util import GufiToolArgsStat, args_stat_dict
-from gufi_mcp_util import GufiToolArgsStats, args_stats_dict, GufiStatsStatistic
+from gufi_mcp_util import GufiToolArgsStats, args_stats_dict
 from gufi_mcp_util import GufiToolArgsGetfattr, args_getfattr_dict
-import gufi_mcp_util as util
-import re
 
 load_dotenv()
 
-SCHEMAFILE = os.getenv('SCHEMAFILE')
-REMOTEHOST = os.getenv('REMOTEHOST')
-MCPTRANSPORT = os.getenv('MCPTRANSPORT')
-MCPSRVHOST = os.getenv('MCPSRVHOST')
-MCPSRVPORT = os.getenv('MCPSRVPORT')
-GUFIVTLIB = os.getenv('GUFIVTLIB')
-GUFI_INDEX_ROOT = os.getenv('GUFI_INDEX_ROOT')
-GUFI_QUERY = os.getenv('GUFI_QUERY')
-THREADS=os.cpu_count()
+MCPTRANSPORT = os.getenv("MCPTRANSPORT", "stdio").strip()
+MCPSRVHOST = os.getenv("MCPSRVHOST", "127.0.0.1").strip()
+MCPSRVPORT = int(os.getenv("MCPSRVPORT", "8000"))
+
+DELIM = "\t"
 
 mcp = MCPServer(name="gufi-mcp")
 
+
 @mcp.tool()
 def gufi_version() -> str:
-    """gufi_query -- version"""
-    result = subprocess.run(["gufi_query", "--version"], capture_output=True, text=True)
-    return str(result.stdout)
+    """Version of the gufi_query binary the server uses."""
+    return util.run_gufi_text(["gufi_query", "--version"])
+
 
 @mcp.tool()
 def gufi_location() -> str:
-    """gufi_query location"""
-    result = subprocess.run(["which", "gufi_query"], capture_output=True, text=True)
-    return str(result.stdout)
+    """Absolute path of the gufi_query binary the server uses."""
+    location = shutil.which("gufi_query")
+    if location is None:
+        raise util.GufiError("gufi_query was not found on PATH")
+    return location
+
 
 @mcp.tool()
 def sql_file_index(
-        sqlin: Annotated[str, Field(description="Full SQL query to be submitted to GUFI.")],
-        index: Annotated[str, Field(description="Index / subpath to query. This will be resolved internally so the name obtained from the gufi_indexes resource should be used.")],
-        remote: Annotated[bool, Field(description="Boolean for if this is a remote connection. Leave untouched unless user specifies otherwise. Config will be handled before invokation if remote is needed.")] = False
+        sqlin: Annotated[str, Field(description=(
+            "A single SELECT statement over exactly one GUFI table: entries, pentries, vrpentries, "
+            "summary, vrsummary, or treesummary (a gufi_vt_ prefix is optional). "
+            "Example: SELECT name, size FROM vrpentries WHERE type = 'f' ORDER BY size DESC LIMIT 10"
+        ))],
+        index: Annotated[str, Field(description="Index name exactly as listed by the gufi://indexes resource.")],
+        remote: Annotated[bool, Field(description=(
+            "Query the index on the configured remote host over ssh. Leave false unless the user asks for a remote query; "
+            "index is then a path on the remote host."
+        ))] = False,
 ) -> GufiQueryResult:
-    """
-        sql query on local file information index
-    """
-    query_result = GufiQueryResult()
+    """Run a SELECT over one GUFI table across the whole index; WHERE, GROUP BY, ORDER BY and LIMIT apply index-wide."""
+    sql, params = util.build_gufi_vt_select(sqlin, index, remote)
+    return util.run_gufi_vt_select(sql, params)
 
-    sqlin = sqlin.lower()
-
-    if not util.is_valid_sql_query(sqlin):
-        return [[f"SQL error: {sqlin} is invalid SQL syntax."]]
-
-    # Split sqlin and wherein for GUFI_VT
-    parts = re.split(r"(?=\bwhere\b)", sqlin, maxsplit=1, flags=re.IGNORECASE)
-    sql_select = parts[0].strip()
-    wherein = parts[1].strip()
-
-    # Check that table queried is prefixed with gufi_vt_
-    prefix_match = re.search(r"from\s+(\w+)", sql_select)
-    if prefix_match:
-        table = prefix_match.group(1)
-        # Replace string with vt prefix if not matched
-        if not table.startswith("gufi_vt_"):
-            sql_select = sql_select.replace(table, f"gufi_vt_{table}", 1)
-
-    # Build SQL line
-    if remote:
-        searchpath = util.resolve_remote_index(index)
-        sqlline = '%s(\'%s\',%s,0,99,NULL,0,\'ssh\',\'%s\') %s' % (sql_select, searchpath, THREADS, REMOTEHOST, wherein)
-    else:
-        searchpath = util.resolve_local_index(index)
-        if not searchpath:
-            raise RuntimeError(f"Error: Index {index} not found")
-        sqlline = '%s(\'%s\',%s,1,99,NULL,1) %s' % (sql_select, searchpath, THREADS, wherein)
-
-    # Execute Query using GUFI_VT
-    result = util.execute_sql(sqlline, True)
-
-    if result[0] != "sql error:":
-        # Format result into serialized object
-        query_result.rows = [list(res_row) for res_row in result]
-        query_result.columns = util.get_columns_from_sqlin(sqlin)
-        query_result.row_count = len(query_result.rows)
-        return query_result.model_dump()
-
-    else:
-        raise RuntimeError(f"Error executing SQL: {result[1]}")
 
 @mcp.tool()
 def aggregate_sql_query(
-        query: Annotated[GufiAggregateQuery, Field(description="Constructed object for the aggregate SQL query.")],
+        query: Annotated[GufiAggregateQuery, Field(description="The aggregate pipeline to run.")],
 ) -> GufiQueryResult:
+    """Run a GUFI scatter/gather aggregate pipeline over an index and return the rows of final_sql."""
+    return util.run_aggregate(query)
 
-    index = query.index
-    if not util.subpath_exists(index):
-        raise RuntimeError(f"Error: Index or subpath {index} does not exist")
-
-    query_result = GufiQueryResult()
-    sql_query = query.build_query_string()
-    result = util.execute_sql(sql_query, True)
-
-    if result[0] != "sql error:":
-        # Format result into serialized object
-        query_result.rows = [list(res_row) for res_row in result]
-        query_result.columns = [""]
-        query_result.row_count = len(query_result.rows)
-        return query_result
-
-    else:
-        raise RuntimeError(f"Error executing SQL: {result[1]}")
 
 @mcp.tool()
 def gufi_ls(
-        args: Annotated[GufiToolArgsLS, Field(description="Pydantic structure expected to be submitted to the tool.")] = None,
+        args: Annotated[GufiToolArgsLS, Field(default_factory=GufiToolArgsLS, description="Options for gufi_ls.")],
 ) -> GufiToolResult:
-    ''' Execute user-facing tool: gufi equivalent of ls '''
+    """GUFI equivalent of ls: list the contents of an indexed directory."""
+    cmd = util.build_tool_command("gufi_ls", args, args_ls_dict, trailing=[f"--delim={DELIM}", args.path])
+    return util.run_gufi_tool(cmd, DELIM)
 
-    tool_result = GufiQueryResult()
-
-    # parse args from struct into
-    cmd = util.parse_tool_args(args, args_ls_dict)
-    cmd.insert(0, "gufi_ls")
-
-    # Add delimiter explicitly for parsing
-    cmd.append("--delim")
-    cmd.append("\t")
-
-    # Append positional argument path
-    cmd.append(args.path)
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    # Pack object and return
-    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
-    tool_result.row_count = len(tool_result.rows)
-
-    return tool_result.model_dump()
 
 @mcp.tool()
 def gufi_du(
-        args: Annotated[GufiToolArgsDU, Field(description="Pydantic structure expected to be submitted to the tool.")] = None,
+        args: Annotated[GufiToolArgsDU, Field(default_factory=GufiToolArgsDU, description="Options for gufi_du.")],
 ) -> GufiToolResult:
-    ''' Execute user-facing tool: gufi equivalent of ls '''
+    """GUFI equivalent of du: summarize disk usage of indexed directories. Requires treesummary data."""
+    cmd = util.build_tool_command("gufi_du", args, args_du_dict, trailing=args.paths)
+    result = util.run_gufi_tool(cmd, DELIM)
+    # gufi_du exits 0 and prints a size of 0 when treesummary data is missing.
+    if "have treesummary data?" in result.stderr:
+        raise util.GufiError(
+            f"One of {args.paths} has no treesummary data, so gufi_du cannot report its size. "
+            "Use aggregate_sql_query instead."
+        )
+    return result
 
-    tool_result = GufiQueryResult()
-
-    cmd = util.parse_tool_args(args, args_du_dict)
-    cmd.insert(0, "gufi_du")
-
-    # Append positional argument path
-    for path in args.paths:
-        cmd.append(path)
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    if result.stderr:
-        # treesummary existence error at subpath
-        if "have treesummary data?" in result.stderr:
-            return [[f"Treesummary error: One of the paths in {args.paths} does not have a treesummary table, cannot use gufi_du."]]
-
-    # Pack object and return
-    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
-    tool_result.row_count = len(tool_result.rows)
-    return tool_result.model_dump()
 
 @mcp.tool()
 def gufi_find(
-        args: Annotated[GufiToolArgsFind, Field(description="Pydantic structure expected to be submitted to the tool.")] = None
+        args: Annotated[GufiToolArgsFind, Field(default_factory=GufiToolArgsFind, description="Options for gufi_find.")],
 ) -> GufiToolResult:
-    ''' Execute user-facing tool: gufi equivalent of find '''
+    """GUFI equivalent of find: search indexed directory trees."""
+    # gufi_find reads starting paths before any expression flags.
+    cmd = util.build_tool_command("gufi_find", args, args_find_dict, leading=args.paths, trailing=[f"--delim={DELIM}"])
+    return util.run_gufi_tool(cmd, DELIM)
 
-    tool_result = GufiQueryResult()
-
-    cmd = util.parse_tool_args(args, args_find_dict)
-    cmd.insert(0, "gufi_find")
-
-    cmd.append("--delim")
-    cmd.append("\t")
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    # Pack object and return
-    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
-    tool_result.row_count = len(tool_result.rows)
-    return tool_result.model_dump()
 
 @mcp.tool()
 def gufi_stat(
-        args: Annotated[GufiToolArgsStat, Field(description="Pydantic structure expected to be submitted to the tool.")] = None
+        args: Annotated[GufiToolArgsStat, Field(default_factory=GufiToolArgsStat, description="Options for gufi_stat.")],
 ) -> GufiToolResult:
-    ''' Execute user-facing tool: gufi equivalent of ls '''
+    """GUFI equivalent of stat: display the status of indexed files or directories."""
+    cmd = util.build_tool_command("gufi_stat", args, args_stat_dict, trailing=args.files)
+    return util.run_gufi_tool(cmd, DELIM)
 
-    tool_result = GufiQueryResult()
-
-    cmd = util.parse_tool_args(args, args_stat_dict)
-    cmd.insert(0, "gufi_stat")
-
-    for file in args.files:
-        cmd.append(file)
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    if result.stderr:
-        # treesummary existence error at subpath
-        if "No such file or directory" in result.stderr:
-            return [[f"File error: gufi_stat was not able to find the file {file}."]]
-
-    # Pack object and return
-    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
-    tool_result.row_count = len(tool_result.rows)
-    return tool_result.model_dump()
 
 @mcp.tool()
 def gufi_stats(
-        args: Annotated[GufiToolArgsStats, Field(description="Pydantic structure expected to be submitted to the tool.")] = None
+        args: Annotated[GufiToolArgsStats, Field(default_factory=GufiToolArgsStats, description="Options for gufi_stats.")],
 ) -> GufiToolResult:
-    ''' Execute user-facing tool: gufi equivalent of ls '''
+    """Compute an index-level filesystem statistic with gufi_stats."""
+    cmd = util.build_tool_command(
+        "gufi_stats", args, args_stats_dict,
+        trailing=[f"--delim={DELIM}", args.statistic.value, args.path],
+    )
+    return util.run_gufi_tool(cmd, DELIM)
 
-    tool_result = GufiQueryResult()
-
-    cmd = util.parse_tool_args(args, args_stats_dict)
-    cmd.insert(0, "gufi_stats")
-
-    cmd.append(GufiStatsStatistic[args.statistic])
-    cmd.append(args.path)
-    cmd.append("--delim")
-    cmd.append("\t")
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    if result.stderr:
-        # treesummary existence error at subpath
-        return {"error": result.stderr.strip()}
-
-    # Pack object and return
-    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
-    tool_result.row_count = len(tool_result.rows)
-    return tool_result.model_dump()
 
 @mcp.tool()
 def gufi_get_fattr(
-        args: Annotated[GufiToolArgsGetfattr, Field(description="Pydantic structure expected to be submitted to the tool.")] = None
+        args: Annotated[GufiToolArgsGetfattr, Field(default_factory=GufiToolArgsGetfattr, description="Options for gufi_getfattr.")],
 ) -> GufiToolResult:
-    ''' Execute user-facing tool: gufi equivalent of ls '''
-
-    tool_result = GufiQueryResult()
-
-    cmd = util.parse_tool_args(args, args_getfattr_dict)
-    cmd.insert(0, "gufi_getfattr")
-
-    # Append positional argument path
-    for path in args.paths:
-        cmd.append(path)
-    cmd.append("--delim")
-    cmd.append("\t")
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    if result.stderr:
-        # treesummary existence error at subpath
-        return {"error": result.stderr.strip()}
-
-    # Pack object and return
-    tool_result.rows = [res_row.split("\t") for res_row in result.stdout.strip().split("\n")]
-    tool_result.row_count = len(tool_result.rows)
-    return tool_result.model_dump()
+    """GUFI equivalent of getfattr: read extended attributes of indexed paths."""
+    cmd = util.build_tool_command("gufi_getfattr", args, args_getfattr_dict, trailing=[f"--delim={DELIM}", *args.paths])
+    return util.run_gufi_tool(cmd, DELIM)
 
 
-# resource that returns indexes available
 @mcp.resource("gufi://indexes")
-def gufi_indexes() -> list[list[Any]]:
-    ''' Access list of available gufi indexes, as well as a boolean for if treesummary is active in this index '''
+def gufi_indexes() -> list[dict[str, Any]]:
+    """Available GUFI indexes and whether each has treesummary data."""
+    try:
+        return [{"index": index, "treesummary": util.has_treesummary(index)} for index in util.get_gufi_indexes()]
+    except util.GufiError as e:
+        raise ResourceError(str(e)) from e
 
-    output = []
-    indexes = util.get_gufi_indexes()
-    for index in indexes:
-        output.append([index, util.has_treesummary(index)])
-
-    return output
 
 @mcp.resource("gufi://schemas/{schema}")
-def gufi_schemas(
-        schema: Annotated[str, Field(description="After running this resource with no input, all tables will be available. Inputting a table to this variable will reflect schema information for that table.")] = "all"
-) -> list[list[str]]:
-    """ Return schemas of each gufi index table """
+def gufi_schemas(schema: str) -> dict[str, Any]:
+    """Use 'all' for every table and view name with its type, or a table/view name for its columns, types, and hints."""
+    try:
+        if schema == "all":
+            return util.list_schema_objects()
+        return util.describe_schema_object(schema)
+    except util.GufiError as e:
+        raise ResourceError(str(e)) from e
 
-    # Get all tables for GUFI
-    if schema == "all":
-        sqlline = f'SELECT name, type FROM sqlite_master WHERE sql IS NOT NULL ORDER BY type DESC'
-        result = util.execute_sql(sqlline, False)
-        if result[0] != "sql error:":
-            rows = [list(res_row) for res_row in result]
-            rowsd = {row[0]: row[1] for row in rows}
-            return rowsd
-
-        else:
-            raise RuntimeError(f"Error executing SQL: {result[1]}")
-    # Get schema of a specific table
-    else:
-        sqlline = f"PRAGMA table_info(\"{schema}\")"
-        result = util.execute_sql(sqlline, False)
-        if result[0] != "sql error:":
-            rows = [[res_row[1], res_row[2]] for res_row in result]
-        else:
-            raise RuntimeError(f"Error executing SQL: {result[1]}")
-
-        # Attach hints and convert to dict
-        schema_with_hints = util.load_schema_hints(schema, rows)
-        return schema_with_hints
 
 @mcp.resource("gufi://session-brief")
 def gufi_session_briefing() -> str:
-
-    # What is GUFI
-    # How writing sql to it works
-    # Importance and nuance of treesummary being available
-    # Tools available
-    # How to use tools
-    # When to use a user tool vs sql query tool vs aggregate query tool
-    # A user tool (ls, du, etc) is used for high level searches and quick analysis. Some need treesummary
-    # An sql query is one level deeper, providing basic one line queries
-    # An aggregate query is used when the agent cannot get a quick answer from the tool above. An example might be a sum of several joined columns.
-    # A detailed explanation of the pipeline through I, TSE, J, K, G, F will need to be explained
-    # It should also be explained that an agent does not need to use all tools to complete a user request, and simpler actions are preferred. 
-
-
+    """How to use this server's tools and resources."""
     return """
 You are working with a GUFI MCP server. GUFI is a parallel file system
 indexer: it scans a file tree into SQLite databases so file metadata can be
@@ -400,7 +225,7 @@ searched quickly without walking the live file system for every question.
 Prefer the simplest tool that can answer the user. You do not need to use every
 tool in a session. Start with high-level GUFI tools for quick inspection, move
 to SQL when the user needs a more specific query, and use aggregate SQL only
-when a simple tool or one-line SQL query cannot answer the request cleanly.
+when a simple tool or one-statement SQL query cannot answer the request cleanly.
 
 Available context:
 - Read gufi://indexes to list known indexes and whether each has treesummary.
@@ -412,104 +237,93 @@ Available context:
 Query surfaces: prefer views over base tables
 - vrpentries: best default for file rows that need directory context. Includes
   file columns plus summary path context (sname, dname). Prefer this over entries.
-- pentries: file metadata with parent inode fields. No path column; use path()
-  when you need a filesystem path in SQL.
+- pentries: file metadata with parent inode fields. No path column.
 - vrsummary / vsummary* views: directory-level rolled-up metadata.
 - summary / treesummary: directory rollup tables when available.
-- entries: low-level base table. Avoid for routine agent queries, especially
-  when paths are required. entries has no path column.
+- entries: low-level base table. Avoid for routine agent queries. It has no
+  path column.
 
 Before writing SQL, inspect gufi://schemas/vrpentries or gufi://schemas/pentries
-instead of guessing column names from entries.
+instead of guessing column names. Column names are checked before a query runs.
+Use single quotes for string literals ('f'); double quotes are rejected in
+aggregate SQL.
 
 Tool guidance:
-- gufi_ls, gufi_du, gufi_find, gufi_stat, and gufi_stats are user-facing GUFI
-  command wrappers. Use these for high-level searches, quick metadata checks,
-  and common filesystem-style questions. Some commands need treesummary. Pass
-  --help in options to see usage; help text may appear in stderr.
-- sql_file_index runs a direct SQL SELECT against gufi_vt. It returns
-  shard-local rows: ORDER BY, LIMIT, GROUP BY, and aggregate functions are
-  applied per GUFI subtree, not across the full index. Use it for filtered row
-  scans without global ordering, or when per-shard results are enough. If the
-  result includes warning, treat ORDER BY/LIMIT/GROUP BY as non-global.
-- aggregate_sql_query creates a temporary gufi_vt virtual table and runs GUFI's
-  aggregate pipeline for index-wide merge, totals, grouping, and global ORDER BY.
-  Use it whenever the answer must be correct across the entire index. Pass the
-  index name from gufi://indexes (for example personal_data), not a filesystem
-  path unless you intentionally query an absolute index path.
+- gufi_ls, gufi_du, gufi_find, gufi_stat, gufi_stats, and gufi_get_fattr wrap
+  the GUFI command-line tools. Pass options in the args object; paths are
+  relative to the GUFI index root and start with the index name (for example
+  "Downloads" or "Downloads/subdir"). gufi_du needs treesummary. Results include
+  stderr; non-empty stderr may mean results are incomplete.
+- sql_file_index runs one SELECT over one table (entries, pentries, vrpentries,
+  summary, vrsummary, or treesummary) for a whole index. WHERE, GROUP BY,
+  ORDER BY, LIMIT and aggregate functions apply across the entire index.
+  Subqueries, joins, and WITH are not supported.
+- aggregate_sql_query runs GUFI's parallel scatter/gather pipeline. Use it for
+  index-wide totals or grouping over large indexes, or when treesummary and
+  summary data should be combined with file rows.
+- Results larger than the row limit come back with truncated = true. Add
+  filters or a LIMIT rather than retrying the same query.
 
 Treesummary nuance:
 treesummary exists only when an index has been rolled up. It stores precomputed
 subtree summary data and can make directory-level totals very fast. Read
-gufi://indexes first. If treesummary is false for an index, use gufi_du and
-gufi_stats carefully and prefer SQL over summary/treesummary tables or an
-aggregate pipeline.
+gufi://indexes first. If treesummary is false for an index, do not use gufi_du
+or treesummary tables; use SQL over summary or entries tables instead.
 
-Aggregate SQL pipeline:
-- I initializes per-thread intermediate tables, usually with CREATE TABLE
-  intermediate(...).
-- T, S, and E are the per-tree, per-summary, and per-entry SQL phases. These
-  usually INSERT rows into intermediate during aggregation. Use only the phases
-  needed for the question.
-- K initializes the final aggregate table, usually with CREATE TABLE
-  aggregate(...).
-- J merges each intermediate table into the aggregate table.
-- G selects the final result rows from aggregate. Put global ORDER BY and LIMIT
-  here. The MCP tool returns these rows as typed SQLite values.
-- F is optional cleanup only. Do not use -F for final sorted output.
+aggregate_sql_query fields (the query object):
+- index: index name from gufi://indexes.
+- scatter_shape: columns of the per-thread intermediate table, as
+  "name TYPE, name TYPE" (TYPE: INT64, INTEGER, INT, BIGINT, REAL, FLOAT,
+  DOUBLE, NUMERIC, TEXT, BLOB).
+- scatter_sql: one to three SELECT statements, each reading exactly one table.
+  The table decides when it runs: treesummary/vtsummary* once per tree,
+  summary/vsummary*/vrsummary* once per directory, entries/pentries/vrpentries
+  over each directory's files. At most one statement per kind. Each must
+  return exactly the scatter_shape columns, in order. Rows are inserted into
+  intermediate for you; do not write INSERT.
+- gather_shape: columns of the aggregate table, same format.
+- gather_sql: SELECT from intermediate returning exactly the gather_shape
+  columns. Merges each thread's intermediate rows into aggregate.
+- final_sql: SELECT from aggregate producing the answer. Put global ORDER BY
+  and LIMIT here.
 
 Critical rules:
-- Do not put ORDER BY, LIMIT, or OFFSET in -E, -S, or -T.
-- Do not use -F instead of -G for index-wide sorted or top-N answers.
+- Do not put ORDER BY, LIMIT, or OFFSET in scatter_sql; it is rejected.
+- Gather and final SQL can only read the columns their shape defines.
 - Prefer vrpentries over entries for file/path questions.
-- Do not SELECT path FROM entries; that column does not exist.
 
 Common task patterns:
 
 Name-filtered file listing:
-- Goal: find a small set of regular files matching a name pattern with path and
-  size.
-- Start with gufi_find when appropriate, or sql_file_index against vrpentries.
-- Filter type = 'f'. Keep output bounded.
+- Start with gufi_find, or sql_file_index against vrpentries.
+- Filter type = 'f'. Keep output bounded with LIMIT.
 
 Directory or index summary:
-- Goal: determine whether summary or treesummary exists and report directory-level
-  totals or file counts.
 - Read gufi://indexes first, then choose gufi_du, gufi_stats, summary-family
   views, or SQL depending on what the index supports.
 
-Index-wide total bytes of regular files:
-- Use aggregate_sql_query with -I, -E, -K, -J, -G.
-- -E inserts raw file sizes from vrpentries or pentries where type = 'f'.
-- -J reduces per-thread intermediate rows; -G returns the final total.
-
-Index-wide grouped totals (for example by uid):
-- Use aggregate_sql_query when grouping must be correct across the entire index.
-- Insert raw rows in -E, merge or partial-aggregate in -J, finish grouping,
-  ordering, and LIMIT in -G.
-
-Example aggregate recipes:
+Example aggregate queries:
 
 Total byte size of regular files:
-- -I CREATE TABLE intermediate(size INT64)
-- -E INSERT INTO intermediate SELECT size FROM vrpentries WHERE type = 'f'
-- -K CREATE TABLE aggregate(total INT64)
-- -J INSERT INTO aggregate SELECT SUM(size) FROM intermediate
-- -G SELECT SUM(total) FROM aggregate
+  {"index": "<name>",
+   "scatter_shape": "size INT64",
+   "scatter_sql": ["SELECT size FROM vrpentries WHERE type = 'f'"],
+   "gather_shape": "total INT64",
+   "gather_sql": "SELECT SUM(size) FROM intermediate",
+   "final_sql": "SELECT SUM(total) AS total FROM aggregate"}
 
 Top UIDs by total regular-file bytes:
-- -I CREATE TABLE intermediate(uid INT64, total_bytes INT64)
-- -E INSERT INTO intermediate SELECT uid, size FROM vrpentries WHERE type = 'f'
-- -K CREATE TABLE aggregate(uid INT64, total_bytes INT64)
-- -J INSERT INTO aggregate SELECT uid, SUM(total_bytes) FROM intermediate GROUP BY uid
-- -G SELECT uid, total_bytes FROM aggregate ORDER BY total_bytes DESC LIMIT 10
-
-For aggregate_sql_query, pass SQL phases as sql_options with options like -I,
--E, -K, -J, and -G. Pass gufi_vt configuration such as threads=32 in config.
-The delimiter option from gufi_query is not needed because gufi_vt returns typed
-rows directly through SQLite.
+  {"index": "<name>",
+   "scatter_shape": "uid INT64, size INT64",
+   "scatter_sql": ["SELECT uid, size FROM vrpentries WHERE type = 'f'"],
+   "gather_shape": "uid INT64, total_bytes INT64",
+   "gather_sql": "SELECT uid, SUM(size) FROM intermediate GROUP BY uid",
+   "final_sql": "SELECT uid, SUM(total_bytes) AS total_bytes FROM aggregate GROUP BY uid ORDER BY total_bytes DESC LIMIT 10"}
 """
 
+
 if __name__ == "__main__":
-    # Run the server with HTTP transport
-    mcp.run(transport=MCPTRANSPORT, host=MCPSRVHOST, port=MCPSRVPORT)
+    if MCPTRANSPORT == "stdio":
+        mcp.run(transport="stdio")
+    else:
+        mcp.run(transport=MCPTRANSPORT, host=MCPSRVHOST, port=MCPSRVPORT)
