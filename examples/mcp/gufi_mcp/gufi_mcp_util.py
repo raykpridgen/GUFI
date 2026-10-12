@@ -1,404 +1,850 @@
-import sqlite3
-import sys
+"""Validation models and execution helpers shared by the GUFI MCP server.
+
+Every function that can fail for a reason the agent should see raises
+``GufiError``. It subclasses MCP's ``ToolError``, so when it escapes a tool the
+agent receives the message instead of a generic "Error executing tool".
+"""
+
+import json
+import logging
 import os
 import re
+import signal
+import sqlite3
 import subprocess
-import json
+import threading
+from contextlib import contextmanager
 from enum import Enum
+from functools import lru_cache
 from pathlib import Path
-from dotenv import load_dotenv
-from typing import Any, Literal, Optional
-from sqlglot import parse_one, ParseError, exp
-from pydantic import BaseModel, Field, field_validator, model_validator
+from typing import Annotated, Any, Iterator, Literal, Optional
 
+import sqlglot
+from dotenv import load_dotenv
+from mcp.server.mcpserver.exceptions import ToolError
+from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Field, PrivateAttr, field_validator, model_validator
+from sqlglot import exp
+from sqlglot.errors import SqlglotError
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-if not (SCHEMAFILE := os.getenv('SCHEMAFILE', 'error')): raise ValueError("SCHEMAFILE is missing")
-if not (REMOTEHOST := os.getenv('REMOTEHOST', 'error')): raise ValueError("REMOTEHOST is missing")
-if not (MCPTRANSPORT := os.getenv('MCPTRANSPORT', 'error')): raise ValueError("MCPTRANSPORT is missing")
-if not (MCPSRVHOST := os.getenv('MCPSRVHOST', 'error')): raise ValueError("MCPSRVHOST is missing")
-if not (MCPSRVPORT := os.getenv('MCPSRVPORT', 'error')): raise ValueError("MCPSRVPORT is missing")
-if not (GUFIVTLIB := os.getenv('GUFIVTLIB', 'error')): raise ValueError("GUFIVTLIB is missing")
-if not (GUFI_INDEX_ROOT := os.getenv('GUFI_INDEX_ROOT', 'error')): raise ValueError("GUFI_INDEX_ROOT is missing")
-if not (GUFI_QUERY := os.getenv('GUFI_QUERY', 'error')): raise ValueError("GUFI_QUERY is missing")
+
+class GufiError(ToolError):
+    """An anticipated failure whose message is safe to return to the agent."""
 
 
-def _escape_sqlite_double_quoted(text: str) -> str:
-    """Escape text embedded in a double-quoted SQLite string literal."""
-    return text.replace('"', '""')
+def _require_env(name: str) -> str:
+    value = os.getenv(name, "").strip()
+    if not value:
+        raise RuntimeError(f"Required environment variable {name} is not set")
+    return value
 
 
-def _gufi_vt_named_arg(name: str, sql: str) -> str:
-    """Format one gufi_vt module argument (I/E/K/J/G/T/S)."""
-    return f'{name}="{_escape_sqlite_double_quoted(sql)}"'
+def _resolve_relative_to_module(path: str) -> Path:
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        candidate = Path(__file__).resolve().parent / candidate
+    return candidate.resolve()
 
 
-def _ensure_sql_terminator(sql: str) -> str:
-    sql = sql.strip()
-    if sql and not sql.endswith(";"):
-        sql += ";"
-    return sql
+SCHEMAFILE = _resolve_relative_to_module(_require_env("SCHEMAFILE"))
+GUFIVTLIB = _require_env("GUFIVTLIB")
+GUFI_INDEX_ROOT = Path(_require_env("GUFI_INDEX_ROOT")).resolve()
+REMOTEHOST = os.getenv("REMOTEHOST", "").strip() or None
+THREADS = os.cpu_count() or 1
+TOOL_TIMEOUT = int(os.getenv("GUFI_MCP_TOOL_TIMEOUT", "300"))
+MAX_ROWS = int(os.getenv("GUFI_MCP_MAX_ROWS", "5000"))
+
+SQL_DIALECT = "sqlite"
+
+# Tables each aggregate scatter phase may read from. gufi_query runs T against
+# treesummary, S against each directory's summary, and E against its entries.
+TREE_TABLES = frozenset({"treesummary", "vtsummarydir", "vtsummaryuser", "vtsummarygroup"})
+SUMMARY_TABLES = frozenset({"summary", "summarylong", "vsummarydir", "vsummaryuser",
+                            "vsummarygroup", "vrsummary", "vrsummarylong"})
+ENTRIES_TABLES = frozenset({"entries", "pentries", "pentries_rollup", "vrpentries"})
+PHASE_TABLES = {"T": TREE_TABLES, "S": SUMMARY_TABLES, "E": ENTRIES_TABLES}
+
+# Table name accepted in sql_file_index -> gufi_vt_<name>(...) function that serves it.
+# gufi_vt_entries intermittently never finishes, so entries is read through
+# pentries, whose columns are a superset of entries.
+GUFI_VT_TABLES = {
+    "treesummary": "treesummary",
+    "summary": "summary",
+    "entries": "pentries",
+    "pentries": "pentries",
+    "vrsummary": "vrsummary",
+    "vrpentries": "vrpentries",
+}
+
+INTERMEDIATE_TABLE = "intermediate"
+AGGREGATE_TABLE = "aggregate"
+AGGREGATE_VTAB = "temp.gufi_mcp"
 
 
-def _scatter_phase_sql(scatter_line: str) -> str:
-    body = scatter_line.strip()
-    if body.upper().startswith("INSERT INTO"):
-        return _ensure_sql_terminator(body)
-    return _ensure_sql_terminator(f"INSERT INTO intermediate {body}")
+#
+# Results
+#
+
+class GufiQueryResult(BaseModel):
+    """Rows returned by a SQL tool."""
+
+    columns: list[str] = Field(description="Column names, in row order.")
+    rows: list[list[Any]] = Field(description="Result rows. Each row has one value per column.")
+    row_count: int = Field(description="Number of rows returned (after truncation).")
+    truncated: bool = Field(default=False, description="True if more rows than the row limit were available and the rest were dropped.")
+
+    @model_validator(mode="after")
+    def rows_match_columns(self) -> "GufiQueryResult":
+        if self.row_count != len(self.rows):
+            raise ValueError("row_count does not match the number of rows")
+        width = len(self.columns)
+        if any(len(row) != width for row in self.rows):
+            raise ValueError("every row must have one value per column")
+        return self
 
 
-def _gather_phase_sql(gather_line: str) -> str:
-    body = gather_line.strip()
-    if body.upper().startswith("INSERT INTO"):
-        return _ensure_sql_terminator(body)
-    return _ensure_sql_terminator(f"INSERT INTO aggregate {body}")
+class GufiToolResult(BaseModel):
+    """Output of a GUFI command-line tool, split into rows on the tool's delimiter."""
 
+    command: list[str] = Field(description="The argv that was executed.")
+    rows: list[list[str]] = Field(description="Non-empty output lines, split into columns.")
+    row_count: int = Field(description="Number of rows returned (after truncation).")
+    truncated: bool = Field(default=False, description="True if output had more lines than the row limit.")
+    stderr: str = Field(default="", description="Warnings the tool printed to stderr. Non-empty output here may mean results are incomplete.")
+
+    @model_validator(mode="after")
+    def row_count_matches(self) -> "GufiToolResult":
+        if self.row_count != len(self.rows):
+            raise ValueError("row_count does not match the number of rows")
+        return self
+
+
+#
+# Index and schema helpers
+#
+
+def get_gufi_indexes() -> list[str]:
+    """Names of the indexes directly under GUFI_INDEX_ROOT (directories containing db.db)."""
+    if not GUFI_INDEX_ROOT.is_dir():
+        raise GufiError(f"GUFI index root {GUFI_INDEX_ROOT} does not exist or is not a directory")
+    return sorted(entry.name for entry in GUFI_INDEX_ROOT.iterdir()
+                  if entry.is_dir() and (entry / "db.db").is_file())
+
+
+def resolve_local_index(index: str) -> Path:
+    """Resolve an index name from gufi://indexes to its absolute path."""
+    indexes = get_gufi_indexes()
+    if index not in indexes:
+        raise GufiError(f"Unknown index {index!r}. Available indexes: {', '.join(indexes) or 'none'}")
+    path = GUFI_INDEX_ROOT / index
+    # gufi_vt strips every leading/trailing quote from its arguments and does not
+    # unescape doubled quotes, so a path containing quotes cannot be passed safely.
+    if any(ch in str(path) for ch in "'\"\0"):
+        raise GufiError(f"Index path {path} contains quote characters, which gufi_vt cannot accept")
+    return path
+
+
+_REMOTE_INDEX_RE = re.compile(r"^/?[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*/?$")
+
+
+def resolve_remote_index(index: str) -> str:
+    """Validate a path on the remote host. Remote indexes cannot be listed locally."""
+    if REMOTEHOST is None:
+        raise GufiError("Remote queries are not configured (REMOTEHOST is not set)")
+    if not _REMOTE_INDEX_RE.fullmatch(index) or ".." in index.split("/"):
+        raise GufiError(f"Remote index path {index!r} must be a plain path of letters, digits, '.', '_', '-' and '/'")
+    return index
+
+
+def _connect_readonly(db_path: Path) -> sqlite3.Connection:
+    if not db_path.is_file():
+        raise GufiError(f"Database {db_path} does not exist")
+    try:
+        return sqlite3.connect(f"{db_path.resolve().as_uri()}?mode=ro", uri=True)
+    except sqlite3.Error as e:
+        raise GufiError(f"Could not open {db_path} read-only: {e}") from e
+
+
+def has_treesummary(index: str) -> bool:
+    """True if the top-level database of the index has a treesummary table."""
+    db_path = resolve_local_index(index) / "db.db"
+    result = run_db_sql(db_path, "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'treesummary'")
+    return result.row_count > 0
+
+
+def schema_db_path() -> Path:
+    """Database used to describe the GUFI schema: the root db.db, else the first index."""
+    root_db = GUFI_INDEX_ROOT / "db.db"
+    if root_db.is_file():
+        return root_db
+    indexes = get_gufi_indexes()
+    if not indexes:
+        raise GufiError(f"No GUFI indexes found under {GUFI_INDEX_ROOT}")
+    return GUFI_INDEX_ROOT / indexes[0] / "db.db"
+
+
+def list_schema_objects() -> dict[str, str]:
+    """Map of table/view name to type ('table' or 'view') in the GUFI schema."""
+    result = run_db_sql(
+        schema_db_path(),
+        "SELECT name, type FROM sqlite_master WHERE sql IS NOT NULL AND type IN ('table', 'view') "
+        "ORDER BY type DESC, name",
+    )
+    return {row[0]: row[1] for row in result.rows}
+
+
+def describe_schema_object(name: str) -> dict[str, dict[str, str]]:
+    """Columns of one table or view, with types and hints from the schema file."""
+    objects = list_schema_objects()
+    if name not in objects:
+        raise GufiError(f"Unknown table or view {name!r}. Read gufi://schemas/all for valid names")
+    result = run_db_sql(schema_db_path(), "SELECT name, type FROM pragma_table_info(?)", (name,))
+    return load_schema_hints(name, result.rows)
+
+
+@lru_cache(maxsize=1)
+def get_static_schema() -> dict[str, dict[str, Any]]:
+    """Table definitions and column hints from SCHEMAFILE, keyed by lowercase table name."""
+    try:
+        with open(SCHEMAFILE, "r") as f:
+            tables = json.load(f)["tables"]
+    except (OSError, ValueError, KeyError) as e:
+        raise GufiError(f"Could not load schema file {SCHEMAFILE}: {e}") from e
+    return {
+        name.lower(): {"columns": {col.lower(): info for col, info in table.get("columns", {}).items()}}
+        for name, table in tables.items()
+    }
+
+
+def schema_columns(table: str) -> set[str]:
+    schema = get_static_schema()
+    if table not in schema:
+        raise GufiError(f"Table {table!r} is not described in the schema file")
+    return set(schema[table]["columns"])
+
+
+def load_schema_hints(name: str, schema: list[list[Any]]) -> dict[str, dict[str, str]]:
+    """Attach static hints to (column, type) rows from PRAGMA table_info."""
+    hints = get_static_schema().get(name.lower(), {}).get("columns", {})
+    described = {}
+    for column, col_type in schema:
+        hint = hints.get(column.lower(), {})
+        described[column] = {
+            "type": col_type or hint.get("type", ""),
+            "hint": hint.get("hint", ""),
+        }
+    return described
+
+
+#
+# SQL validation
+#
+
+def parse_select(sql: str, context: str) -> exp.Select:
+    """Parse sql as exactly one plain SELECT statement, or raise GufiError."""
+    if not isinstance(sql, str) or not sql.strip():
+        raise GufiError(f"{context}: SQL is empty")
+    if "\0" in sql:
+        raise GufiError(f"{context}: SQL contains a NUL character")
+    try:
+        statements = [s for s in sqlglot.parse(sql, read=SQL_DIALECT) if s is not None]
+    except SqlglotError as e:
+        raise GufiError(f"{context}: SQL could not be parsed: {e}") from e
+    if len(statements) != 1:
+        raise GufiError(f"{context}: expected exactly one SQL statement, found {len(statements)}")
+    tree = statements[0]
+    if not isinstance(tree, exp.Select):
+        raise GufiError(f"{context}: only a single SELECT statement is allowed (got {tree.key.upper()})")
+    if tree.find(exp.With):
+        raise GufiError(f"{context}: WITH clauses are not supported")
+    if tree.find(exp.Placeholder):
+        raise GufiError(f"{context}: bind parameters (?) are not supported")
+    return tree
+
+
+def select_tables(tree: exp.Select, context: str) -> list[str]:
+    """Lowercase names of every table referenced anywhere in the statement."""
+    names = []
+    for table in tree.find_all(exp.Table):
+        if table.args.get("db") or table.args.get("catalog"):
+            raise GufiError(f"{context}: schema-qualified table {table.sql(dialect=SQL_DIALECT)} is not allowed")
+        if not table.name:
+            raise GufiError(f"{context}: table-valued functions are not allowed in FROM")
+        names.append(table.name.lower())
+    return sorted(set(names))
+
+
+def select_columns(tree: exp.Select) -> set[str]:
+    """Lowercase column names the statement reads.
+
+    Outside the SELECT list (e.g. ORDER BY, HAVING) a name may refer to an alias
+    instead of a column, so alias names are only excluded there.
+    """
+    aliases = {alias.alias.lower() for alias in tree.find_all(exp.Alias)}
+    projected = {id(col) for select in tree.selects for col in select.find_all(exp.Column)}
+    return {
+        col.name.lower() for col in tree.find_all(exp.Column)
+        if id(col) in projected or col.name.lower() not in aliases
+    }
+
+
+def _single_table(tree: exp.Select, context: str) -> str:
+    tables = select_tables(tree, context)
+    if len(tables) != 1:
+        found = ", ".join(tables) or "none"
+        raise GufiError(f"{context}: SQL must read from exactly one table (found: {found})")
+    return tables[0]
+
+
+def _check_columns(tree: exp.Select, allowed: set[str], table: str, context: str) -> None:
+    unknown = sorted(select_columns(tree) - allowed)
+    if unknown:
+        raise GufiError(f"{context}: column(s) {', '.join(unknown)} do not exist in {table}")
+
+
+def _check_projection_width(tree: exp.Select, expected: int, target: str, context: str) -> None:
+    if tree.is_star:
+        raise GufiError(f"{context}: SELECT * is not allowed here; list the {expected} column(s) of {target} explicitly")
+    if len(tree.selects) != expected:
+        raise GufiError(f"{context}: SELECT returns {len(tree.selects)} column(s) but {target} has {expected}")
+
+
+_SHAPE_COLUMN_RE = re.compile(
+    r"([A-Za-z_][A-Za-z0-9_]*)\s+(INT64|INTEGER|INT|BIGINT|REAL|FLOAT|DOUBLE|NUMERIC|TEXT|BLOB)",
+    re.IGNORECASE,
+)
+
+
+def parse_shape(shape: str, context: str) -> dict[str, str]:
+    """Parse 'name TYPE, name TYPE' into an ordered {name: TYPE} map."""
+    columns: dict[str, str] = {}
+    for part in shape.split(","):
+        match = _SHAPE_COLUMN_RE.fullmatch(part.strip())
+        if not match:
+            raise GufiError(
+                f"{context}: {part.strip()!r} is not a 'name TYPE' column definition "
+                "(TYPE is one of INT64, INTEGER, INT, BIGINT, REAL, FLOAT, DOUBLE, NUMERIC, TEXT, BLOB)"
+            )
+        name, col_type = match.group(1).lower(), match.group(2).upper()
+        if name in columns:
+            raise GufiError(f"{context}: column {name!r} is defined more than once")
+        columns[name] = col_type
+    return columns
+
+
+@contextmanager
+def _as_value_error() -> Iterator[None]:
+    """Re-raise GufiError as ValueError so pydantic reports it as a validation error."""
+    try:
+        yield
+    except GufiError as e:
+        raise ValueError(str(e)) from e
+
+
+def _phase_for_table(table: str) -> str:
+    for phase, tables in PHASE_TABLES.items():
+        if table in tables:
+            return phase
+    allowed = sorted(TREE_TABLES | SUMMARY_TABLES | ENTRIES_TABLES)
+    raise GufiError(f"Table {table!r} cannot be used in scatter_sql. Allowed tables: {', '.join(allowed)}")
+
+
+#
+# Aggregate query model
+#
 
 class GufiAggregateQuery(BaseModel):
+    """An index-wide GUFI aggregate pipeline (gufi_query -I, -T/-S/-E, -K, -J, -G)."""
+
+    model_config = ConfigDict(extra="forbid", validate_default=True)
 
     index: str = Field(
-        default=".",
-        description=("The index to be queried. Must be present in the results of the gufi_indexes resource."
-                     "If using treesummary as one of the scatter options, note that the index must it active for complete results. This can be confirmed through the gufi_indexes resource.")
+        description=(
+            "Name of the index to query, exactly as listed by the gufi://indexes resource. "
+            "Scatter SQL that reads treesummary tables requires an index with treesummary."
+        ),
     )
 
-    # T, S, E managed here
     scatter_sql: list[str] = Field(
-        default_factory=list,
         min_length=1,
+        max_length=3,
         description=(
-            "These entries serve as the 'scatter' portion of the query, where separate threads compile their own tables of the queried data based on distributed responsibility of the index tree."
-            "The related SQL for the default, as a list entry, is: INSERT INTO intermediate SELECT size FROM entries WHERE type = 'f';"
-            "The queried data will be compiled into intermediate tables further down the pipeline, which will be gathered and further queried from."
+            "One to three SELECT statements run per directory in parallel; each result row is inserted into "
+            "the intermediate table. Each statement reads exactly one table, which decides its phase: "
+            "treesummary/vtsummary* (tree), summary/vsummary*/vrsummary* (directory summary), or "
+            "entries/pentries/vrpentries (files). At most one statement per phase. "
+            "Each must return exactly the columns of scatter_shape, in order, and must not use ORDER BY, LIMIT, or OFFSET. "
+            "Example: SELECT size FROM vrpentries WHERE type = 'f'"
         ),
     )
 
     scatter_shape: str = Field(
         default="size INT64",
-        description=("This defines the columns and the type contained in each for the intermediate table where scatter queries are placed."
-                     "The columns should follow the name TYPE format, and should be comma separated for any additional columns included."
-                     "The gather sql will select from this table."
-        )
+        description=(
+            "Columns of the intermediate table that scatter_sql rows are inserted into, as comma-separated 'name TYPE' "
+            "pairs (TYPE: INT64, INTEGER, INT, BIGINT, REAL, FLOAT, DOUBLE, NUMERIC, TEXT, BLOB)."
+        ),
     )
 
-    # J logic
     gather_sql: str = Field(
-        default="select SUM(size) from intermediate",
-        description=("This SQL is responsible for the 'gather' portion of the query, where GUFI logic compiles data queried in the previous step from per-thread tables into a single table."
-                     "This allows for additional SQL to be applied between tables, as seen in the default.")
+        default="SELECT SUM(size) FROM intermediate",
+        description=(
+            "SELECT run against each thread's intermediate table; its rows are inserted into the aggregate table. "
+            "Must read only from intermediate and return exactly the columns of gather_shape, in order."
+        ),
     )
 
     gather_shape: str = Field(
         default="total INT64",
-        description=(
-            "This defines the columns and the type contained in each for the aggregate table where gather queries are placed."
-            "The columns should follow the name TYPE format, and should be comma separated for any additional columns included."
-            "The final sql will select from this table."
-            )
+        description="Columns of the aggregate table, as comma-separated 'name TYPE' pairs.",
     )
 
-    # G logic
     final_sql: str = Field(
-        default="select total from aggregate",
-        description = (
-            "This is the final SQL the pipeline uses to extract the result from the aggregate SQL table."
-            "It extracts columns defined in the aggregate table that have been transformed from the intermediate table."
-        )
+        default="SELECT SUM(total) AS total FROM aggregate",
+        description=(
+            "SELECT run once against the aggregate table to produce the result. Must read only from aggregate. "
+            "Put global ORDER BY and LIMIT here."
+        ),
     )
 
-    #
-    # Field validators - confirm behavior per attribute
-    #
+    _phases: dict[str, str] = PrivateAttr(default_factory=dict)
 
     @field_validator("index")
     @classmethod
-    def index_valid(cls, index: str) -> str:
-        """ Confirm the index referenced exists in the current index root """
-        if index not in get_gufi_indexes():
-            raise ValueError("Invalid index, not found in root.")
-        else:
-            return index
+    def index_exists(cls, index: str) -> str:
+        with _as_value_error():
+            resolve_local_index(index)
+        return index
+
+    @field_validator("scatter_shape", "gather_shape")
+    @classmethod
+    def shape_valid(cls, shape: str, info) -> str:
+        with _as_value_error():
+            columns = parse_shape(shape, info.field_name)
+        return ", ".join(f"{name} {col_type}" for name, col_type in columns.items())
 
     @field_validator("scatter_sql")
     @classmethod
-    def scatter_valid_sql(cls, scatter_sql: list[str]) -> list[str]:
-        """ Confirm that each SQL line has correct syntax """
+    def scatter_statements_valid(cls, statements: list[str]) -> list[str]:
+        cleaned = []
+        with _as_value_error():
+            for i, sql in enumerate(statements):
+                context = f"scatter_sql[{i}]"
+                sql = _strip_terminators(sql)
+                tree = parse_select(sql, context)
+                _reject_double_quotes(sql, context)
+                for clause in ("order", "limit", "offset"):
+                    if tree.args.get(clause):
+                        raise GufiError(
+                            f"{context}: {clause.upper()} is applied per directory, not index-wide; "
+                            "move it to final_sql"
+                        )
+                cleaned.append(sql)
+        return cleaned
 
-        for sql in scatter_sql:
-            if sql is None or not is_valid_sql_query(sql):
-                raise ValueError(f"The SQL for scatter option: {sql} syntactically is invalid.")
-        return scatter_sql
-
-    @field_validator("gather_sql")
+    @field_validator("gather_sql", "final_sql")
     @classmethod
-    def gather_valid_sql(cls, gather_sql: str) -> str:
-        """ Confirm that each SQL line has correct syntax """
-        if gather_sql is None or not is_valid_sql_query(gather_sql):
-            raise ValueError(f"The SQL for gather option: {gather_sql} syntactically is invalid.")
-        return gather_sql
-
-    @field_validator("final_sql")
-    @classmethod
-    def final_valid_sql(cls, final_sql: str) -> str:
-        """ Confirm that each SQL line has correct syntax """
-        if final_sql is None or not is_valid_sql_query(final_sql):
-            raise ValueError(f"The SQL for final option: {final_sql} syntactically is invalid.")
-        return final_sql
-
-    #
-    # Model validators - confirm attributes are valid in context with one another
-    #
+    def statement_valid(cls, sql: str, info) -> str:
+        sql = _strip_terminators(sql)
+        with _as_value_error():
+            parse_select(sql, info.field_name)
+            _reject_double_quotes(sql, info.field_name)
+        return sql
 
     @model_validator(mode="after")
-    def arrange_scatter_order(self):
-        """ Arrange the order of the list of scatter queries to match GUFI hierarchy: T, S, E """
+    def pipeline_consistent(self) -> "GufiAggregateQuery":
+        """Check that every stage reads tables and columns that the previous stage provides."""
+        with _as_value_error():
+            intermediate = parse_shape(self.scatter_shape, "scatter_shape")
+            aggregate = parse_shape(self.gather_shape, "gather_shape")
 
-        if len(self.scatter_sql) < 1:
-            raise ValueError("Scatter SQL is empty.")
-        elif len(self.scatter_sql) < 2:
-            return self
+            phases: dict[str, str] = {}
+            for i, sql in enumerate(self.scatter_sql):
+                context = f"scatter_sql[{i}]"
+                tree = parse_select(sql, context)
+                table = _single_table(tree, context)
+                phase = _phase_for_table(table)
+                if phase in phases:
+                    raise GufiError(
+                        f"{context}: more than one scatter statement reads a {phase}-phase table; "
+                        "combine them into one statement"
+                    )
+                _check_columns(tree, schema_columns(table), table, context)
+                _check_projection_width(tree, len(intermediate), "scatter_shape", context)
+                if phase == "T" and not has_treesummary(self.index):
+                    raise GufiError(f"{context}: index {self.index!r} has no treesummary table; use summary or entries tables")
+                phases[phase] = sql
 
-        treesum_bound = 0
-        scan = 0
-        entries_bound = len(self.scatter_sql) - 1
+            gather = parse_select(self.gather_sql, "gather_sql")
+            if select_tables(gather, "gather_sql") != [INTERMEDIATE_TABLE]:
+                raise GufiError("gather_sql must read only from the intermediate table")
+            _check_columns(gather, set(intermediate), "intermediate (scatter_shape)", "gather_sql")
+            _check_projection_width(gather, len(aggregate), "gather_shape", "gather_sql")
 
-        option_list = self.scatter_sql
+            final = parse_select(self.final_sql, "final_sql")
+            if select_tables(final, "final_sql") != [AGGREGATE_TABLE]:
+                raise GufiError("final_sql must read only from the aggregate table")
+            _check_columns(final, set(aggregate), "aggregate (gather_shape)", "final_sql")
 
-        # Dutch national flag problem
-        # T = 0 S = 1 E = 2
-        while scan <= entries_bound:
-            if "treesummary" in option_list[scan]:
-                option_list[treesum_bound], option_list[scan] = option_list[scan], option_list[treesum_bound]
-                treesum_bound += 1
-                scan += 1
-            elif "summary" in option_list[scan]:
-                scan += 1
-            else:
-                option_list[scan], option_list[entries_bound] = option_list[entries_bound], option_list[scan]
-                entries_bound -= 1
-
-        # Should be 3-tiered sorted
-        self.scatter_sql = option_list
-        return self
-
-    @model_validator(mode="after")
-    def check_scatter_treesum(self):
-        """ Check that treesummary is active if any of the SQL lines in scatter reference it """
-
-        for scatter_opt in self.scatter_sql:
-            if "treesummary" in scatter_opt and not has_treesummary(self.index):
-                raise ValueError(
-                    "This index does not have treesummary active, but the SQL references using the treesummary table.")
-        return self
-
-    @model_validator(mode="after")
-    def confirm_column_consistency(self):
-        """ Ensure that all tables and columns referenced are used correctly """
-
-        # All tables and columns in a dict
-        all_schema = get_static_schema()
-
-        # For each scatter line
-        for sqlline in self.scatter_sql:
-
-            # Confirm table referenced exists
-            tables = get_sqlline_tables(sqlline)
-            if len(tables) > 1:
-                raise ValueError(f"SQL {sqlline} references more than one table.")
-            elif len(tables) < 1:
-                raise ValueError(f"SQL {sqlline} does not reference any table.")
-            elif tables[0] not in all_schema.keys():
-                raise ValueError(f"SQL {sqlline} does not reference a table found in schema.")
-
-            # Then, confirm columns in that table exist
-            cols = get_sqlline_columns(sqlline)
-            schema_cols = all_schema[tables[0]]["columns"].keys()
-            not_in_schema = list(set(cols) - set(schema_cols))
-            if len(not_in_schema) > 0:
-                raise ValueError(f"SQL {sqlline} references {not_in_schema} which is not in {tables[0]} schema.")
-
-        # For gather line, confirm referenced columns exist in scatters shape
-        gather_cols = get_sqlline_columns(self.gather_sql)
-        for col in gather_cols:
-            if col not in self.scatter_shape:
-                raise ValueError(
-                    f"SQL {self.gather_sql} references column {col} which was not defined in the intermediate table's shape.")
-
-        # For final SQL line, confirm referenced columns exist in gathers shape
-        final_cols = get_sqlline_columns(self.final_sql)
-        for col in final_cols:
-            if col not in self.gather_shape:
-                raise ValueError(
-                    f"SQL {self.final_sql} references column {col} which was not defined in the intermediate table's shape.")
-
+        self._phases = phases
         return self
 
     def build_query_string(self) -> str:
-        """Build GUFI_VT-compatible SQL."""
+        """CREATE VIRTUAL TABLE statement that runs this pipeline through gufi_vt.
 
-        index_path = _escape_sqlite_double_quoted(resolve_local_index(self.index))
-        threads = os.cpu_count() or 1
-
-        options: list[str] = [
-            f'"{index_path}"',
-            f"threads={threads}, min_level=1, max_level=99, verbose=0",
-            _gufi_vt_named_arg(
-                "I",
-                _ensure_sql_terminator(f"CREATE TABLE intermediate({self.scatter_shape})"),
-            ),
+        The virtual table yields the aggregate table's rows; final_sql is applied
+        on top of it by final_query_string(). gufi_vt only knows the types of plain
+        columns, so running final_sql inside gufi_vt would return computed values
+        such as SUM(...) as text.
+        """
+        aggregate_columns = ", ".join(parse_shape(self.gather_shape, "gather_shape"))
+        options = [
+            f'index="{resolve_local_index(self.index)}"',
+            f"threads={THREADS}",
+            _gufi_vt_arg("I", f"CREATE TABLE {INTERMEDIATE_TABLE}({self.scatter_shape})"),
         ]
-
-        for agg_opt in self.scatter_sql:
-            phase_sql = _scatter_phase_sql(agg_opt)
-            if "treesummary" in agg_opt:
-                options.append(_gufi_vt_named_arg("T", phase_sql))
-            elif "summary" in agg_opt:
-                options.append(_gufi_vt_named_arg("S", phase_sql))
-            else:
-                options.append(_gufi_vt_named_arg("E", phase_sql))
-
+        for phase in ("T", "S", "E"):
+            if phase in self._phases:
+                options.append(_gufi_vt_arg(phase, f"INSERT INTO {INTERMEDIATE_TABLE} {self._phases[phase]}"))
         options.extend([
-            _gufi_vt_named_arg(
-                "K",
-                _ensure_sql_terminator(f"CREATE TABLE aggregate({self.gather_shape})"),
-            ),
-            _gufi_vt_named_arg("J", _gather_phase_sql(self.gather_sql)),
-            _gufi_vt_named_arg("G", _ensure_sql_terminator(self.final_sql)),
+            _gufi_vt_arg("K", f"CREATE TABLE {AGGREGATE_TABLE}({self.gather_shape})"),
+            _gufi_vt_arg("J", f"INSERT INTO {AGGREGATE_TABLE} {self.gather_sql}"),
+            _gufi_vt_arg("G", f"SELECT {aggregate_columns} FROM {AGGREGATE_TABLE}"),
         ])
+        return f"CREATE VIRTUAL TABLE {AGGREGATE_VTAB} USING gufi_vt({', '.join(options)})"
 
-        return (
-            "CREATE VIRTUAL TABLE temp.gufi_mcp "
-            "USING gufi_vt(" + ", ".join(options) + ")"
-        )
+    def final_query_string(self) -> str:
+        """final_sql run over the virtual table's rows, materialized as the aggregate table.
+
+        Materializing first also avoids the gufi_vt hang when final_sql stops reading early.
+        """
+        return f"WITH {AGGREGATE_TABLE} AS MATERIALIZED (SELECT * FROM {AGGREGATE_VTAB}) {self.final_sql}"
 
 
-# Reference:
-'''
+def _strip_terminators(sql: str) -> str:
+    return sql.strip().rstrip(";").strip() if isinstance(sql, str) else sql
 
-        CREATE VIRTUAL TABLE temp.gufi_mcp
-        USING gufi_vt(
-            I='CREATE TABLE intermediate(size INT64)', 
-            E='INSERT INTO intermediate SELECT size FROM entries WHERE type="f"', 
-            K='CREATE TABLE aggregate(total INT64)', 
-            J='INSERT INTO aggregate SELECT SUM(size) FROM intermediate', 
-            G='SELECT SUM(total) FROM aggregate', 
-            index='Downloads'
-        )
-'''
 
-# Object to handle query returns
-class GufiQueryResult(BaseModel):
-    columns: list[str] = Field(default_factory=list)
-    rows: list[list[Any]] = Field(default_factory=list)
-    row_count: int = 0
+def _reject_double_quotes(sql: str, context: str) -> None:
+    # gufi_vt module arguments are wrapped in double quotes and cannot contain them.
+    if '"' in sql:
+        raise GufiError(f"{context}: double quotes are not allowed; use single quotes for string literals")
 
-# Object for tool results
-class GufiToolResult(BaseModel):
-    rows: list[list[Any]] = Field(default_factory=list)
-    row_count: int = 0
+
+def _gufi_vt_arg(key: str, sql: str) -> str:
+    # The trailing ';' keeps gufi_vt from stripping a closing single quote off the SQL.
+    return f'{key}="{sql};"'
+
+
+#
+# SQL execution
+#
+
+def _connect_gufi_vt() -> sqlite3.Connection:
+    conn = sqlite3.connect(":memory:")
+    try:
+        conn.enable_load_extension(True)
+        conn.load_extension(GUFIVTLIB)
+    except (sqlite3.Error, AttributeError) as e:
+        conn.close()
+        raise GufiError(f"Could not load the gufi_vt extension from {GUFIVTLIB}: {e}") from e
+    finally:
+        try:
+            conn.enable_load_extension(False)
+        except (sqlite3.Error, AttributeError):
+            pass
+    return conn
+
+
+def _fetch(conn: sqlite3.Connection, sql: str, params: tuple = (), drain: bool = False) -> GufiQueryResult:
+    """Execute sql and return at most MAX_ROWS rows.
+
+    drain reads every row before truncating; gufi_vt cursors must be drained
+    because closing one early leaves gufi_query blocked on a full pipe.
+    """
+    logger.debug("Executing SQL: %s params=%r", sql, params)
+    try:
+        cursor = conn.execute(sql, params)
+        columns = [desc[0] for desc in cursor.description or []]
+        fetched = cursor.fetchall() if drain else cursor.fetchmany(MAX_ROWS + 1)
+        rows = [list(row) for row in fetched]
+    except sqlite3.Error as e:
+        raise GufiError(f"SQLite error: {e}") from e
+    truncated = len(rows) > MAX_ROWS
+    rows = rows[:MAX_ROWS]
+    return GufiQueryResult(columns=columns, rows=rows, row_count=len(rows), truncated=truncated)
+
+
+def run_db_sql(db_path: Path, sql: str, params: tuple = ()) -> GufiQueryResult:
+    """Run one statement against a single database file, opened read-only."""
+    conn = _connect_readonly(db_path)
+    try:
+        return _fetch(conn, sql, params)
+    finally:
+        conn.close()
+
+
+def build_gufi_vt_select(sql: str, index: str, remote: bool = False) -> tuple[str, tuple]:
+    """Rewrite a SELECT over one GUFI table to read from the matching gufi_vt_* function.
+
+    Returns the rewritten SQL and the parameters to bind for its index arguments.
+    """
+    context = "sql_file_index"
+    placeholder = "__gufi_mcp_source__"
+    if placeholder in sql:
+        raise GufiError(f"{context}: SQL must not contain {placeholder}")
+
+    tree = parse_select(_strip_terminators(sql), context)
+    table_name = _single_table(tree, context)
+    sources = list(tree.find_all(exp.Table))
+    if len(sources) != 1:
+        raise GufiError(f"{context}: the table may only be referenced once (no subqueries or self-joins); "
+                        "use aggregate_sql_query for multi-step queries")
+    table = table_name.removeprefix("gufi_vt_")
+    if table not in GUFI_VT_TABLES:
+        raise GufiError(f"{context}: table {table_name!r} is not queryable. Use one of: {', '.join(sorted(GUFI_VT_TABLES))}")
+    _check_columns(tree, schema_columns(table), table, context)
+
+    if tree.is_star:
+        source_columns = "*"
+    else:
+        # Columns are already checked against the schema; any column works when none are referenced.
+        source_columns = ", ".join(f'"{col}"' for col in sorted(select_columns(tree)) or ["name"])
+
+    source = sources[0]
+    alias = source.alias or table
+    replacement = exp.to_table(placeholder)
+    replacement.set("alias", exp.TableAlias(this=exp.to_identifier(alias)))
+    source.replace(replacement)
+
+    # gufi_vt_* positional arguments: index, threads, min_level, max_level, path_list, verbose[, remote_cmd, remote_args]
+    if remote:
+        args, params = "?, ?, NULL, NULL, NULL, 0, 'ssh', ?", (resolve_remote_index(index), THREADS, REMOTEHOST)
+    else:
+        args, params = "?, ?, NULL, NULL, NULL, 0", (str(resolve_local_index(index)), THREADS)
+
+    # gufi_vt hangs if SQLite stops reading before gufi_query finishes writing (e.g. a
+    # bare LIMIT), so the source is always read in full into a materialized CTE first.
+    rewritten = (
+        f"WITH {placeholder} AS MATERIALIZED (SELECT {source_columns} FROM gufi_vt_{GUFI_VT_TABLES[table]}({args})) "
+        + tree.sql(dialect=SQL_DIALECT)
+    )
+    return rewritten, params
+
+
+_GUFI_VT_LOCK = threading.Lock()
+
+
+def _gufi_query_children() -> list[int]:
+    """PIDs of gufi_query processes started directly by this process (by gufi_vt)."""
+    pids = []
+    for stat in Path("/proc").glob("[0-9]*/stat"):
+        try:
+            comm_and_rest = stat.read_text()
+        except OSError:
+            continue
+        comm = comm_and_rest[comm_and_rest.find("(") + 1:comm_and_rest.rfind(")")]
+        fields = comm_and_rest[comm_and_rest.rfind(")") + 2:].split()
+        if comm == "gufi_query" and fields and int(fields[1]) == os.getpid():
+            pids.append(int(stat.parent.name))
+    return pids
+
+
+@contextmanager
+def _gufi_vt_watchdog() -> Iterator[None]:
+    """Run one gufi_vt query at a time and kill its gufi_query if it exceeds TOOL_TIMEOUT.
+
+    gufi_vt can block forever waiting on gufi_query. Killing the child unblocks it,
+    but whatever rows were read are incomplete, so a timeout is always an error.
+    Serializing queries ensures only the timed-out query's child is killed.
+    """
+    timed_out = threading.Event()
+
+    def kill_children() -> None:
+        timed_out.set()
+        for pid in _gufi_query_children():
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except OSError:
+                pass
+
+    timeout_error = GufiError(f"gufi_vt query did not finish within {TOOL_TIMEOUT} seconds and was stopped")
+    with _GUFI_VT_LOCK:
+        timer = threading.Timer(TOOL_TIMEOUT, kill_children)
+        timer.daemon = True
+        timer.start()
+        try:
+            yield
+        except GufiError:
+            if timed_out.is_set():
+                raise timeout_error from None
+            raise
+        finally:
+            timer.cancel()
+        if timed_out.is_set():
+            raise timeout_error
+
+
+def run_gufi_vt_select(sql: str, params: tuple) -> GufiQueryResult:
+    with _gufi_vt_watchdog():
+        conn = _connect_gufi_vt()
+        try:
+            return _fetch(conn, sql, params, drain=True)
+        finally:
+            conn.close()
+
+
+def run_aggregate(query: GufiAggregateQuery) -> GufiQueryResult:
+    create = query.build_query_string()
+    with _gufi_vt_watchdog():
+        conn = _connect_gufi_vt()
+        try:
+            logger.debug("Creating aggregate table: %s", create)
+            try:
+                conn.execute(create)
+            except sqlite3.Error as e:
+                raise GufiError(f"gufi_vt rejected the aggregate pipeline: {e}") from e
+            return _fetch(conn, query.final_query_string(), drain=True)
+        finally:
+            conn.close()
+
+
+#
+# Command-line tools
+#
+
+def _check_cli_path(value: str) -> str:
+    value = value.strip()
+    if not value:
+        raise ValueError("path must not be empty")
+    if value.startswith("-"):
+        raise ValueError(f"path {value!r} must not start with '-'")
+    if any(ch in value for ch in "\0\n\r"):
+        raise ValueError("path must not contain NUL or newline characters")
+    return value
+
+
+CliPath = Annotated[str, AfterValidator(_check_cli_path)]
+"""A path relative to the GUFI index root (or absolute within it), safe to pass as an argv element."""
+
+_FIND_NUMBER_RE = re.compile(r"[+-]?\d+")
+_FIND_SIZE_RE = re.compile(r"[+-]?\d+[bcwkMG]?")
+
+
+def _check_find_number(value: Any) -> str:
+    value = str(value).strip()
+    if not _FIND_NUMBER_RE.fullmatch(value):
+        raise ValueError("must be an integer, optionally prefixed with + (more than) or - (less than)")
+    return value
+
+
+def _check_find_size(value: str) -> str:
+    value = value.strip()
+    if not _FIND_SIZE_RE.fullmatch(value):
+        raise ValueError("must be an integer with optional +/- prefix and unit suffix b, c, w, k, M, or G (e.g. +10M)")
+    return value
+
+
+FindNumber = Annotated[str, BeforeValidator(_check_find_number)]
+FindSize = Annotated[str, AfterValidator(_check_find_size)]
+
+
+def _cli_value(value: Any) -> str:
+    return str(value.value if isinstance(value, Enum) else value)
+
+
+def build_tool_command(binary: str, args: BaseModel, flags: dict[str, str],
+                       leading: list[str] = (), trailing: list[str] = ()) -> list[str]:
+    """Turn a validated tool model into argv.
+
+    Booleans become bare flags, None and False are omitted, lists repeat the flag,
+    and other values are passed as '--flag=value' so values beginning with '-'
+    are not mistaken for options.
+    """
+    cmd = [binary, *leading]
+    for field, flag in flags.items():
+        value = getattr(args, field)
+        if value is None or value is False:
+            continue
+        if value is True:
+            cmd.append(flag)
+            continue
+        if len(flag) <= 2:
+            raise GufiError(f"{binary}: valued option {field} must map to a long flag")
+        items = value if isinstance(value, list) else [value]
+        cmd.extend(f"{flag}={_cli_value(item)}" for item in items)
+    cmd.extend(trailing)
+    return cmd
+
+
+def run_gufi_tool(cmd: list[str], delim: Optional[str] = "\t") -> GufiToolResult:
+    """Run a GUFI command-line tool and split its stdout into rows."""
+    logger.debug("Running %s", cmd)
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=TOOL_TIMEOUT, check=False)
+    except FileNotFoundError as e:
+        raise GufiError(f"{cmd[0]} was not found on PATH") from e
+    except subprocess.TimeoutExpired as e:
+        raise GufiError(f"{cmd[0]} timed out after {TOOL_TIMEOUT} seconds") from e
+
+    stderr = proc.stderr.strip()
+    if proc.returncode != 0:
+        raise GufiError(f"{cmd[0]} exited with status {proc.returncode}: {stderr or 'no error output'}")
+
+    lines = [line for line in proc.stdout.splitlines() if line.strip()]
+    truncated = len(lines) > MAX_ROWS
+    lines = lines[:MAX_ROWS]
+    rows = [line.split(delim) if delim else [line] for line in lines]
+    return GufiToolResult(command=cmd, rows=rows, row_count=len(rows), truncated=truncated, stderr=stderr)
+
+
+def run_gufi_text(cmd: list[str]) -> str:
+    """Run a GUFI command and return its stdout as text."""
+    return "\n".join(row[0] for row in run_gufi_tool(cmd, delim=None).rows)
+
+
+#
+# Tool argument models
+#
 
 class GufiToolArgsLS(BaseModel):
     """GUFI equivalent of ls: List directory contents."""
 
-    path: str = Field(
+    model_config = ConfigDict(extra="forbid")
+
+    path: CliPath = Field(
         default=".",
-        description=(
-            "Directory to list. Absolute path preferred (starts with /). "
-            "Relative paths are resolved from the current working directory. "
-            "Example: '/home/user/project' or 'src'."
-        ),
-        min_length=1,
+        description="Directory to list, relative to the GUFI index root (e.g. 'Downloads' or 'Downloads/sub').",
     )
 
-    all: bool = Field(
-        default=False,
-        description="If true, include files/directories starting with '.' (like ls -a)",
-    )
-
-    almost_all: bool = Field(
-        default=False,
-        description="If true, include files/directories starting with '.' (like ls -a), without implied '.' and '..'",
-    )
-
-    ignore_backups: bool = Field(
-        default=False,
-        description="If true, exclude implied entries ending with ~",
-    )
-
-    full_time: bool = Field(
-        default=False,
-        description="If true, list entries with full time, similar to 'ls -l --time-style=full-iso'",
-    )
-
-    no_group: bool = Field(
-        default=False,
-        description="If true, exclude group names. Use during long output executions",
-    )
-
-    human_readable: bool = Field(
-        default=False,
-        description="If true, print sizes with common suffixes like k, m, g etc",
-    )
-
-    inode: bool = Field(
-        default=False,
-        description="If true, print index number of each file",
-    )
-
-    list_format: bool = Field(
-        default=False,
-        description="If true, print entries in list format, like 'ls -l'",
-    )
-
-    numeric_uid_gid: bool = Field(
-        default=False,
-        description="If true, print in list format with numeric UID and GID for entries",
-    )
-
-    reverse: bool = Field(
-        default=False,
-        description="If true, reverse order when sorting output",
-    )
-
-    recursive: bool = Field(
-        default=False,
-        description="If true, list subdirectories recursively",
-    )
-
-    size: bool = Field(
-        default=False,
-        description="If true, print allocated size of each file in blocks",
-    )
-
-    sort_size: bool = Field(
-        default=False,
-        description="If true, sort by file size descending before output",
-    )
-
-    sort_time: bool = Field(
-        default=False,
-        description="If true, sort by newest modification time before output",
-    )
+    all: bool = Field(default=False, description="If true, include entries starting with '.' (ls -a).")
+    almost_all: bool = Field(default=False, description="If true, include entries starting with '.' except '.' and '..' (ls -A).")
+    ignore_backups: bool = Field(default=False, description="If true, exclude entries ending with ~.")
+    full_time: bool = Field(default=False, description="If true, list entries with full time, like 'ls -l --time-style=full-iso'.")
+    no_group: bool = Field(default=False, description="If true, do not print group names in long listings.")
+    human_readable: bool = Field(default=False, description="If true, print sizes with suffixes like K, M, G.")
+    inode: bool = Field(default=False, description="If true, print the inode number of each file.")
+    list_format: bool = Field(default=False, description="If true, use long listing format (ls -l).")
+    numeric_uid_gid: bool = Field(default=False, description="If true, long listing with numeric UID and GID.")
+    reverse: bool = Field(default=False, description="If true, reverse the sort order.")
+    recursive: bool = Field(default=False, description="If true, list subdirectories recursively.")
+    size: bool = Field(default=False, description="If true, print the allocated size of each file in blocks.")
+    sort_size: bool = Field(default=False, description="If true, sort by file size, largest first.")
+    sort_time: bool = Field(default=False, description="If true, sort by modification time, newest first.")
 
     block_size: Optional[int] = Field(
-        default=4096,
-        ge=1,
-        le=1048576,
-        description=(
-            "Only affects output when listing options with -l"
-            "Scales by input integer when listing options"
-        ),
+        default=None, ge=1, le=1048576,
+        description="With list_format, scale sizes by this many bytes when printing.",
     )
 
-    time_style: Literal["full-iso", "iso", "locale", "long-iso"] = Field(
-        default="iso",
-        description="Specify how to format time/date when using list_format",
+    time_style: Optional[Literal["full-iso", "iso", "locale", "long-iso"]] = Field(
+        default=None,
+        description="Time/date format used with list_format.",
     )
 
-    model_config = {
-        "extra": "forbid",
-    }
 
 args_ls_dict = {
     "all": "-a",
@@ -416,139 +862,73 @@ args_ls_dict = {
     "sort_size": "-S",
     "sort_time": "-t",
     "block_size": "--block-size",
-    "time_style": "--time-style"
+    "time_style": "--time-style",
 }
 
 
 class GufiToolArgsDU(BaseModel):
     """GUFI equivalent of du: Summarize disk usage."""
 
-    paths: list[str] = Field(
+    model_config = ConfigDict(extra="forbid")
+
+    paths: list[CliPath] = Field(
         default_factory=lambda: ["."],
         min_length=1,
         description=(
-            "One or more paths to summarize. Absolute paths preferred (start with /). "
-            "Directories should have treesummary data for meaningful results."
+            "One or more paths to summarize, relative to the GUFI index root. "
+            "Directories need treesummary data for meaningful results."
         ),
     )
 
     apparent_size: bool = Field(
         default=False,
-        description=(
-            "If true, print apparent sizes rather than disk usage (may be larger than "
-            "disk usage for sparse or fragmented files)."
-        ),
+        description="If true, print apparent sizes rather than disk usage (may differ for sparse or fragmented files).",
     )
+    block_size: Optional[int] = Field(default=None, ge=1, le=1048576, description="Scale reported sizes by this block size.")
+    total: bool = Field(default=False, description="If true, produce a grand total across all paths.")
+    human_readable: bool = Field(default=False, description="If true, print sizes in human-readable form (e.g. 1K, 234M, 2G).")
+    inodes: bool = Field(default=False, description="If true, report inode usage instead of block usage.")
+    separate_dirs: bool = Field(default=False, description="If true, do not include the size of subdirectories.")
+    summarize: bool = Field(default=False, description="If true, display only a total for each path.")
+    verbose: bool = Field(default=False, description="If true, report the gufi_query being executed in stderr.")
 
-    block_size: Optional[int] = Field(
-        default=None,
-        ge=1,
-        le=1048576,
-        description="Scale reported sizes by this block size before printing (-B/--block-size).",
-    )
-
-    total: bool = Field(
-        default=False,
-        description="If true, produce a grand total across all paths (-c/--total).",
-    )
-
-    human_readable: bool = Field(
-        default=False,
-        description="If true, print sizes in human-readable form (e.g. 1K, 234M, 2G).",
-    )
-
-    inodes: bool = Field(
-        default=False,
-        description="If true, report inode usage instead of block usage.",
-    )
-
-    separate_dirs: bool = Field(
-        default=False,
-        description=(
-            "If true, for directories do not include the size of subdirectories (-S/--separate-dirs)."
-        ),
-    )
-
-    summarize: bool = Field(
-        default=False,
-        description="If true, display only a total for each path (-s/--summarize).",
-    )
-
-    verbose: bool = Field(
-        default=False,
-        description="If true, show the gufi_query being executed (-V).",
-    )
-
-    model_config = {
-        "extra": "forbid",
-    }
-
-    @field_validator("paths")
-    @classmethod
-    def paths_non_empty(cls, value: list[str]) -> list[str]:
-        cleaned = [p.strip() for p in value if p.strip()]
-        if not cleaned:
-            raise ValueError("paths must contain at least one non-empty path")
-        return cleaned
 
 args_du_dict = {
     "apparent_size": "--apparent-size",
     "block_size": "--block-size",
-    "total": "-c",
-    "human_readable": "-h",
+    "total": "--total",
+    "human_readable": "--human-readable",
     "inodes": "--inodes",
-    "separate_dirs": "-S",
-    "summarize": "-s",
-    "verbose": "-V",
+    "separate_dirs": "--separate-dirs",
+    "summarize": "--summarize",
+    "verbose": "--verbose",
 }
 
 
 class GufiToolArgsStat(BaseModel):
     """GUFI equivalent of stat: Display file status."""
 
-    files: list[str] = Field(
+    model_config = ConfigDict(extra="forbid")
+
+    files: list[CliPath] = Field(
         default_factory=lambda: ["."],
         min_length=1,
-        description=(
-            "Files or directories to stat. Absolute paths preferred. "
-            "Multiple entries are passed as separate positional arguments."
-        ),
+        description="Files or directories to stat, relative to the GUFI index root.",
     )
 
     format: Optional[str] = Field(
         default=None,
-        description=(
-            "Optional printf-style format string (-c/--format). "
-            "When set, output follows this format instead of the default."
-        ),
+        min_length=1,
+        description="Optional printf-style format string; output follows this format instead of the default.",
     )
+    terse: bool = Field(default=False, description="If true, print information in terse form.")
+    verbose: bool = Field(default=False, description="If true, report the command being run in stderr.")
 
-    terse: bool = Field(
-        default=False,
-        description="If true, print information in terse form (-t/--terse).",
-    )
-
-    verbose: bool = Field(
-        default=False,
-        description="If true, show the actual command being run (-V).",
-    )
-
-    model_config = {
-        "extra": "forbid",
-    }
-
-    @field_validator("files")
-    @classmethod
-    def files_non_empty(cls, value: list[str]) -> list[str]:
-        cleaned = [f.strip() for f in value if f.strip()]
-        if not cleaned:
-            raise ValueError("files must contain at least one non-empty path")
-        return cleaned
 
 args_stat_dict = {
-    "format": "-c",
-    "terse": "-t",
-    "verbose": "-V",
+    "format": "--format",
+    "terse": "--terse",
+    "verbose": "--verbose",
 }
 
 
@@ -609,493 +989,183 @@ class GufiStatsStatistic(str, Enum):
     UID_SIZE = "uid-size"
     GID_SIZE = "gid-size"
 
+
 class GufiToolArgsStats(BaseModel):
     """GUFI equivalent of gufi_stats: Index-level filesystem statistics."""
 
+    model_config = ConfigDict(extra="forbid")
+
     statistic: GufiStatsStatistic = Field(
         default=GufiStatsStatistic.TOTAL_FILECOUNT,
-        description="Which statistic to compute (positional argument to gufi_stats).",
+        description="Which statistic to compute.",
     )
 
-    path: str = Field(
+    path: CliPath = Field(
         default=".",
-        min_length=1,
-        description=(
-            "Path to obtain the statistic from. Resolved internally against the GUFI index."
-        ),
+        description="Path to compute the statistic for, relative to the GUFI index root.",
     )
 
     recursive: bool = Field(
         default=False,
-        description=(
-            "If true, run recursively for statistics that support it (-r). "
-            "Mutually exclusive with cumulative."
-        ),
+        description="If true, run recursively for statistics that support it. Mutually exclusive with cumulative.",
     )
-
     cumulative: bool = Field(
         default=False,
-        description=(
-            "If true, return cumulative values for statistics that support it (-c). "
-            "Mutually exclusive with recursive."
-        ),
+        description="If true, return cumulative values for statistics that support it. Mutually exclusive with recursive.",
     )
-
-    order: Optional[str] = Field(
+    order: Optional[Literal["ASC", "DESC", "least", "most"]] = Field(
         default=None,
-        description="Sort output when the chosen statistic supports ordering (--order).",
+        description="Sort order, for statistics that produce ordered output.",
     )
-
-    num_results: Optional[int] = Field(
-        default=None,
-        ge=1,
-        description="Return only the first n results when applicable (--num-results).",
-    )
-
-    uid: Optional[str] = Field(
-        default=None,
-        description="Restrict results to this user name or numeric UID (--uid/--user).",
-    )
-
-    reftime: Optional[str] = Field(
-        default=None,
-        description="Reference time used when comparing timestamps (--reftime).",
-    )
-
-    delim: str = Field(
-        default="\t",
-        min_length=1,
-        description="Delimiter separating output columns (--delim).",
-    )
-
-    skip_file: Optional[str] = Field(
-        default=None,
-        description="Basenames of directories to skip, listed one per line in this file (--skip-file).",
-    )
-
-    verbose: bool = Field(
-        default=False,
-        description="If true, show the gufi_query being executed (-V).",
-    )
-
-    model_config = {
-        "extra": "forbid",
-    }
+    num_results: Optional[int] = Field(default=None, ge=1, description="Return only the first n results when applicable.")
+    uid: Optional[str] = Field(default=None, min_length=1, description="Restrict results to this user name or numeric UID.")
+    reftime: Optional[str] = Field(default=None, min_length=1, description="Reference time used when comparing timestamps.")
+    verbose: bool = Field(default=False, description="If true, report the gufi_query being executed in stderr.")
 
     @model_validator(mode="after")
     def recursive_and_cumulative_exclusive(self) -> "GufiToolArgsStats":
         if self.recursive and self.cumulative:
-            raise ValueError("recursive and cumulative cannot both be true (-r and -c are mutually exclusive)")
+            raise ValueError("recursive and cumulative cannot both be true")
         return self
 
+
 args_stats_dict = {
-    "recursive": "-r",
-    "cumulative": "-c",
+    "recursive": "--recursive",
+    "cumulative": "--cumulative",
     "order": "--order",
     "num_results": "--num-results",
     "uid": "--uid",
     "reftime": "--reftime",
-    "skip_file": "--skip-file",
-    "verbose": "-V",
+    "verbose": "--verbose",
 }
 
 
 class GufiToolArgsGetfattr(BaseModel):
     """GUFI equivalent of getfattr: Read extended attributes from indexed paths."""
 
-    paths: list[str] = Field(
+    model_config = ConfigDict(extra="forbid")
+
+    paths: list[CliPath] = Field(
         default_factory=lambda: ["."],
         min_length=1,
-        description="Paths to read extended attributes from (one or more positional arguments).",
+        description="Paths to read extended attributes from, relative to the GUFI index root.",
     )
 
-    name: Optional[str] = Field(
-        default=None,
-        description="Dump the value of this named extended attribute only (-n/--name).",
-    )
-
-    dump: bool = Field(
-        default=False,
-        description="If true, dump all extended attributes on each path (-d/--dump).",
-    )
-
+    name: Optional[str] = Field(default=None, min_length=1, description="Dump the value of this named extended attribute only.")
+    dump: bool = Field(default=False, description="If true, dump all extended attributes on each path.")
     match: str = Field(
         default=r"^user\.",
-        description=(
-            "Regular expression limiting which attribute names are included (-m/--match). "
-            "Default is '^user\\.' (user namespace). Use '-' to include all attributes."
-        ),
-    )
-
-    only_values: bool = Field(
-        default=False,
-        description="If true, dump raw extended attribute value(s) without encoding (--only-values).",
-    )
-
-    recursive: bool = Field(
-        default=False,
-        description="If true, list attributes recursively for all files and directories (-R).",
-    )
-
-    delim: str = Field(
-        default="\t",
         min_length=1,
-        description="Delimiter separating output columns (--delim).",
+        description="Regular expression limiting which attribute names are included. Use '-' to include all attributes.",
     )
-
-    skip_file: Optional[str] = Field(
-        default=None,
-        description="Basenames of directories to skip, listed one per line in this file (--skip-file).",
-    )
-
-    verbose: bool = Field(
-        default=False,
-        description="If true, show the gufi_query being executed (-V).",
-    )
-
-    model_config = {
-        "extra": "forbid",
-    }
-
-    @field_validator("paths")
-    @classmethod
-    def paths_non_empty(cls, value: list[str]) -> list[str]:
-        cleaned = [p.strip() for p in value if p.strip()]
-        if not cleaned:
-            raise ValueError("paths must contain at least one non-empty path")
-        return cleaned
+    only_values: bool = Field(default=False, description="If true, dump raw extended attribute values without encoding.")
+    recursive: bool = Field(default=False, description="If true, list attributes recursively for all files and directories.")
+    verbose: bool = Field(default=False, description="If true, report the gufi_query being executed in stderr.")
 
     @model_validator(mode="after")
     def name_or_dump_not_both(self) -> "GufiToolArgsGetfattr":
         if self.name and self.dump:
-            raise ValueError("Specify either name or dump, not both (-n and -d together are ambiguous)")
+            raise ValueError("specify either name or dump, not both")
         return self
 
+
 args_getfattr_dict = {
-    "name": "-n",
-    "dump": "-d",
-    "match": "-m",
+    "name": "--name",
+    "dump": "--dump",
+    "match": "--match",
     "only_values": "--only-values",
-    "recursive": "-R",
-    "skip_file": "--skip-file",
-    "verbose": "-V",
+    "recursive": "--recursive",
+    "verbose": "--verbose",
 }
 
 
 class GufiToolArgsFind(BaseModel):
     """GUFI equivalent of find: Search indexed directory trees."""
 
-    paths: list[str] = Field(
+    model_config = ConfigDict(extra="forbid")
+
+    paths: list[CliPath] = Field(
         default_factory=lambda: ["."],
         min_length=1,
-        description="Starting paths for the search (trailing positional arguments to gufi_find).",
+        description="Starting paths for the search, relative to the GUFI index root.",
     )
 
-    maxdepth: Optional[int] = Field(
-        default=None,
-        ge=0,
-        description="Descend at most this many directory levels below each starting path (-maxdepth).",
-    )
+    maxdepth: Optional[int] = Field(default=None, ge=0, description="Descend at most this many directory levels below each starting path.")
+    mindepth: Optional[int] = Field(default=None, ge=0, description="Do not apply tests or actions above this depth.")
 
-    mindepth: Optional[int] = Field(
-        default=None,
-        ge=0,
-        description="Do not apply tests or actions above this depth (-mindepth).",
-    )
+    amin: Optional[FindNumber] = Field(default=None, description="Last accessed n minutes ago; +n for more than, -n for less than.")
+    atime: Optional[FindNumber] = Field(default=None, description="Last accessed n*24 hours ago; +n for more than, -n for less than.")
+    cmin: Optional[FindNumber] = Field(default=None, description="Status last changed n minutes ago; +n / -n for more / less than.")
+    ctime: Optional[FindNumber] = Field(default=None, description="Status last changed n*24 hours ago; +n / -n for more / less than.")
+    mmin: Optional[FindNumber] = Field(default=None, description="Data last modified n minutes ago; +n / -n for more / less than.")
+    mtime: Optional[FindNumber] = Field(default=None, description="Data last modified n*24 hours ago; +n / -n for more / less than.")
 
-    amin: Optional[int] = Field(
-        default=None,
-        description="File was last accessed n minutes ago (-amin).",
-    )
+    anewer: Optional[CliPath] = Field(default=None, description="Accessed more recently than this reference path was modified.")
+    cnewer: Optional[CliPath] = Field(default=None, description="Status changed more recently than this reference path was modified.")
+    newer: Optional[CliPath] = Field(default=None, description="Modified more recently than this reference path.")
+    samefile: Optional[CliPath] = Field(default=None, description="Refers to the same inode as this path.")
 
-    anewer: Optional[str] = Field(
-        default=None,
-        description="File was accessed more recently than this reference file was modified (-anewer).",
-    )
+    empty: bool = Field(default=False, description="If true, match empty regular files or directories.")
+    executable: bool = Field(default=False, description="If true, match executable files and searchable directories.")
+    readable: bool = Field(default=False, description="If true, match readable files.")
+    writable: bool = Field(default=False, description="If true, match writable files.")
+    false: bool = Field(default=False, description="If true, never match.")
+    true: bool = Field(default=False, description="If true, always match.")
 
-    atime: Optional[int] = Field(
-        default=None,
-        description="File was last accessed n*24 hours ago (-atime).",
-    )
+    gid: Optional[int] = Field(default=None, ge=0, description="Numeric group ID must equal n.")
+    group: Optional[str] = Field(default=None, min_length=1, description="Owned by this group name (numeric GID allowed).")
+    uid: Optional[int] = Field(default=None, ge=0, description="Numeric user ID must equal n.")
+    user: Optional[str] = Field(default=None, min_length=1, description="Owned by this user name (numeric UID allowed).")
+    inum: Optional[int] = Field(default=None, ge=0, description="Inode number; prefer samefile when comparing paths.")
+    links: Optional[int] = Field(default=None, ge=0, description="Has exactly n hard links.")
 
-    cmin: Optional[int] = Field(
-        default=None,
-        description="File status was last changed n minutes ago (-cmin).",
-    )
+    name: Optional[str] = Field(default=None, min_length=1, description="Base name matches this shell pattern.")
+    iname: Optional[str] = Field(default=None, min_length=1, description="Base name matches this case-insensitive regex.")
+    path_pattern: Optional[str] = Field(default=None, min_length=1, description="Full path matches this shell pattern.")
+    regex: Optional[str] = Field(default=None, min_length=1, description="Full path matches this regular expression.")
+    iregex: Optional[str] = Field(default=None, min_length=1, description="Full path matches this case-insensitive regular expression.")
+    lname: Optional[str] = Field(default=None, min_length=1, description="Symbolic link contents match this shell pattern.")
 
-    cnewer: Optional[str] = Field(
-        default=None,
-        description="File status was changed more recently than this reference file was modified (-cnewer).",
-    )
-
-    ctime: Optional[int] = Field(
-        default=None,
-        description="File status was last changed n*24 hours ago (-ctime).",
-    )
-
-    empty: bool = Field(
-        default=False,
-        description="If true, match empty regular files or directories (-empty).",
-    )
-
-    executable: bool = Field(
-        default=False,
-        description="If true, match executable files and searchable directories (-executable).",
-    )
-
-    false: bool = Field(
-        default=False,
-        description="If true, never match (-false).",
-    )
-
-    gid: Optional[int] = Field(
-        default=None,
-        ge=0,
-        description="File numeric group ID must equal n (-gid).",
-    )
-
-    group: Optional[str] = Field(
-        default=None,
-        description="File belongs to group gname; numeric GID allowed (-group).",
-    )
-
-    iname: Optional[str] = Field(
-        default=None,
-        description="Base name matches pattern; case insensitive regex (-iname).",
-    )
-
-    inum: Optional[int] = Field(
-        default=None,
-        ge=0,
-        description="File inode number (-inum). Prefer -samefile when comparing paths.",
-    )
-
-    iregex: Optional[str] = Field(
-        default=None,
-        description="Full path matches regex; case insensitive (-iregex).",
-    )
-
-    links: Optional[int] = Field(
-        default=None,
-        ge=0,
-        description="File has exactly n hard links (-links).",
-    )
-
-    lname: Optional[str] = Field(
-        default=None,
-        description="Symbolic link contents match shell pattern (-lname).",
-    )
-
-    mmin: Optional[int] = Field(
-        default=None,
-        description="File data was modified n minutes ago (-mmin).",
-    )
-
-    mtime: Optional[int] = Field(
-        default=None,
-        description="File data was modified n*24 hours ago (-mtime).",
-    )
-
-    name: Optional[str] = Field(
-        default=None,
-        description="Base name matches shell pattern (-name).",
-    )
-
-    newer: Optional[str] = Field(
-        default=None,
-        description="File was modified more recently than reference file (-newer).",
-    )
-
-    path_pattern: Optional[str] = Field(
-        default=None,
-        description="Full path matches shell pattern (-path).",
-    )
-
-    perm: Optional[str] = Field(
-        default=None,
-        description="Permission bits as octal mode, optionally prefixed with - or / (-perm).",
-    )
-
-    readable: bool = Field(
-        default=False,
-        description="If true, match readable files (-readable).",
-    )
-
-    regex: Optional[str] = Field(
-        default=None,
-        description="Full path matches regular expression (-regex).",
-    )
-
-    samefile: Optional[str] = Field(
-        default=None,
-        description="File refers to the same inode as this path (-samefile).",
-    )
-
-    size: Optional[str] = Field(
-        default=None,
-        description=(
-            "File size predicate (-size). For less-than searches use a leading sign "
-            "(e.g. '-2k' as size='-2k' or '-size=-2k' style values per gufi_find docs)."
-        ),
-    )
-
-    true: bool = Field(
-        default=False,
-        description="If true, always match (-true).",
-    )
-
+    perm: Optional[str] = Field(default=None, description="Permission bits as octal mode, optionally prefixed with - or /.")
+    size: Optional[FindSize] = Field(default=None, description="Size predicate, e.g. '+10M' (more than 10 MiB) or '-2k' (less than 2 KiB).")
     file_type: Optional[list[Literal["b", "c", "d", "p", "f", "l", "s"]]] = Field(
         default=None,
-        description=(
-            "Restrict to file type(s): b block, c char, d directory, p fifo, "
-            "f regular, l symlink, s socket (-type). Repeat flag for each type."
-        ),
-    )
-
-    uid: Optional[int] = Field(
-        default=None,
-        ge=0,
-        description="File numeric user ID must equal n (-uid).",
-    )
-
-    user: Optional[str] = Field(
-        default=None,
-        description="File is owned by user uname; numeric UID allowed (-user).",
-    )
-
-    writable: bool = Field(
-        default=False,
-        description="If true, match writable files (-writable).",
-    )
-
-    fprint: Optional[str] = Field(
-        default=None,
-        description="Write matching paths to this file (-fprint). Mutually exclusive with other actions.",
-    )
-
-    ls: bool = Field(
-        default=False,
-        description="List each match in ls -dils format (-ls). Mutually exclusive with other actions.",
-    )
-
-    print: bool = Field(
-        default=False,
-        description=(
-            "Print full path of each match followed by newline (-print). "
-            "When no other action is set, gufi_find behaves as if -print were given."
-        ),
-    )
-
-    print0: bool = Field(
-        default=False,
-        description="Print full path of each match followed by NUL (-print0). Mutually exclusive with other actions.",
-    )
-
-    printf: Optional[str] = Field(
-        default=None,
-        description="Print each match using GNU find printf format (-printf). Mutually exclusive with other actions.",
-    )
-
-    num_results: Optional[int] = Field(
-        default=None,
-        ge=1,
-        description="Return only the first n matches (--num-results).",
-    )
-
-    smallest: bool = Field(
-        default=False,
-        description="Sort output by size ascending (--smallest). Mutually exclusive with largest.",
-    )
-
-    largest: bool = Field(
-        default=False,
-        description="Sort output by size descending (--largest). Mutually exclusive with smallest.",
-    )
-
-    compress: bool = Field(
-        default=False,
-        description="If true, reduce memory use via zlib compression when available (--compress).",
-    )
-
-    delim: str = Field(
-        default="\t",
         min_length=1,
-        description="Delimiter separating output columns (--delim).",
+        description="Restrict to file type(s): b block, c char, d directory, p fifo, f regular, l symlink, s socket.",
     )
 
-    skip_file: Optional[str] = Field(
-        default=None,
-        description="Basenames of directories to skip, listed one per line in this file (--skip-file).",
-    )
+    ls: bool = Field(default=False, description="List each match in ls -dils format. Mutually exclusive with print and printf.")
+    print: bool = Field(default=False, description="Print the full path of each match (the default action). Mutually exclusive with ls and printf.")
+    printf: Optional[str] = Field(default=None, min_length=1, description="Print each match using a GNU find printf format. Mutually exclusive with ls and print.")
 
-    verbose: bool = Field(
-        default=False,
-        description="If true, show the gufi_query being executed (-V).",
-    )
-
-    model_config = {
-        "extra": "forbid",
-    }
-
-    @field_validator("paths")
-    @classmethod
-    def paths_non_empty(cls, value: list[str]) -> list[str]:
-        cleaned = [p.strip() for p in value if p.strip()]
-        if not cleaned:
-            raise ValueError("paths must contain at least one non-empty path")
-        return cleaned
+    num_results: Optional[int] = Field(default=None, ge=1, description="Return only the first n matches.")
+    smallest: bool = Field(default=False, description="Sort output by size ascending. Mutually exclusive with largest.")
+    largest: bool = Field(default=False, description="Sort output by size descending. Mutually exclusive with smallest.")
+    compress: bool = Field(default=False, description="If true, reduce memory use via zlib compression when available.")
+    verbose: bool = Field(default=False, description="If true, report the gufi_query being executed in stderr.")
 
     @field_validator("perm")
     @classmethod
     def perm_looks_like_mode(cls, value: Optional[str]) -> Optional[str]:
         if value is None:
             return value
-        mode = value.lstrip("-/")
-        if not re.fullmatch(r"[0-7]{3,4}", mode):
-            raise ValueError("perm must be octal digits, optionally prefixed with - or /")
+        if not re.fullmatch(r"[-/]?[0-7]{3,4}", value):
+            raise ValueError("perm must be 3 or 4 octal digits, optionally prefixed with - or /")
         return value
 
     @model_validator(mode="after")
-    def depth_order_sane(self) -> "GufiToolArgsFind":
-        if (
-            self.maxdepth is not None
-            and self.mindepth is not None
-            and self.mindepth > self.maxdepth
-        ):
+    def options_consistent(self) -> "GufiToolArgsFind":
+        if self.maxdepth is not None and self.mindepth is not None and self.mindepth > self.maxdepth:
             raise ValueError("mindepth cannot be greater than maxdepth")
-        return self
-
-    @model_validator(mode="after")
-    def sort_direction_exclusive(self) -> "GufiToolArgsFind":
         if self.smallest and self.largest:
             raise ValueError("smallest and largest cannot both be true")
-        return self
-
-    @model_validator(mode="after")
-    def single_find_action(self) -> "GufiToolArgsFind":
-        actions: list[str] = []
-        if self.fprint is not None:
-            actions.append("fprint")
-        if self.ls:
-            actions.append("ls")
-        if self.print:
-            actions.append("print")
-        if self.print0:
-            actions.append("print0")
-        if self.printf is not None:
-            actions.append("printf")
-        if len(actions) > 1:
-            raise ValueError(
-                f"choose one find action only; multiple set: {', '.join(actions)} "
-                "(fprint, ls, print, print0, printf)"
-            )
-        return self
-
-    @model_validator(mode="after")
-    def false_and_true_exclusive(self) -> "GufiToolArgsFind":
         if self.false and self.true:
             raise ValueError("false and true cannot both be true")
+        actions = [name for name in ("ls", "print", "printf") if getattr(self, name)]
+        if len(actions) > 1:
+            raise ValueError(f"choose one action only; multiple set: {', '.join(actions)}")
         return self
+
 
 args_find_dict = {
     "maxdepth": "-maxdepth",
@@ -1131,226 +1201,12 @@ args_find_dict = {
     "uid": "-uid",
     "user": "-user",
     "writable": "-writable",
-    "fprint": "-fprint",
     "ls": "-ls",
     "print": "-print",
-    "print0": "-print0",
     "printf": "-printf",
     "num_results": "--num-results",
     "smallest": "--smallest",
     "largest": "--largest",
     "compress": "--compress",
-    "skip_file": "--skip-file",
     "verbose": "-V",
 }
-
-def is_valid_sql_query(sql_query: str, dialect: str = "sqlite") -> bool:
-    try:
-        parse_one(sql_query, read=dialect)
-        return True
-    except ParseError as e:
-        print(f"SQL Grammar Error: {str(e)}", file=sys.stderr)
-        return False
-
-def table_exists(index: str, table_name: str) -> bool:
-    ''' Confirm existence of a table based on an index and table name '''
-
-    conn = sqlite3.connect(f'{GUFI_INDEX_ROOT}{index}/db.db')
-    try:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT 1
-            FROM sqlite_master
-            WHERE type = 'table'
-            AND name = ?
-        """, (table_name,))
-
-        return cursor.fetchone() is not None
-
-    finally:
-        conn.close()
-
-def resolve_local_index(index: str) -> str:
-    ''' resolve name of a local index to the full path '''
-
-    if index not in get_gufi_indexes():
-        raise RuntimeError("Error: Index provided not found at index root.")
-
-    return f'{GUFI_INDEX_ROOT}{index}'
-
-def resolve_remote_index(index: str) -> str:
-    ''' resolve name of a remote index to the full path '''
-
-    # SELECT * FROM paths WHERE path ~ '^/[^/]+/?$';
-
-    return f'{index}'
-
-def get_gufi_indexes() -> list[str]:
-    index_root = Path(GUFI_INDEX_ROOT).resolve()
-    if not index_root.exists():
-        raise RuntimeError("Error: GUFI index root does not exist.")
-    indexes = []
-
-    # Confirm path is a directory with other dirs inside
-    if index_root.is_dir():
-        for entry in index_root.iterdir():
-            if not entry.is_dir():
-                continue
-            indexes.append(entry.name)
-
-    return indexes
-
-def execute_sql(sqlline: str, gufi_vt: bool, agg: bool, plain_index: str = ".") -> list[Any]:
-    ''' Wrapper to execute SQL queries '''
-
-    # GUFI_VT uses memory and operates through the function
-    if gufi_vt:
-        conn = sqlite3.connect(':memory:')
-    # Pulling schema needs a path to an index
-    else:
-        # Specific path / table to connect to
-        if plain_index != ".":
-            index = f"{plain_index}" + "/db.db"
-        else:
-            index = f"{GUFI_INDEX_ROOT}" + "/db.db"
-        conn = sqlite3.connect(index)
-
-    # Handle SQLITE3 errors
-    try:
-        # Using gufi_vt extension
-        if gufi_vt:
-            conn.enable_load_extension(True)
-            cursor = conn.cursor()
-            conn.load_extension(GUFIVTLIB)
-            conn.enable_load_extension(False)
-        # Plain SQL query
-        else:
-            cursor = conn.cursor()
-
-        print(sqlline, file=sys.stderr)
-
-        # Call GUFI_VT
-        cursor.execute(sqlline)
-        if agg:
-            cursor = conn.execute("SELECT * FROM temp.gufi_mcp")
-        return cursor.fetchall()
-
-    except sqlite3.Error as e:
-        print(f"An SQLite error occurred: {e}",file=sys.stderr)
-        conn.close()
-        return [f"sql error:", f"{str(e)}"]
-
-    finally:
-        conn.close()
-
-def has_treesummary(index: str) -> bool:
-
-    if index == GUFI_INDEX_ROOT:
-        response = execute_sql("SELECT name, type FROM sqlite_master WHERE sql IS NOT NULL", False)
-
-    elif index not in get_gufi_indexes():
-        raise RuntimeError("Error: Index provided not found at index root.")
-
-    else:
-        response = execute_sql("SELECT name FROM sqlite_master WHERE sql IS NOT NULL AND name == 'treesummary'", False, resolve_local_index(index))
-
-    if len(response) == 0:
-        return False
-    else:
-        return True
-
-def subpath_exists(path: str) -> bool:
-    ''' Confirm a subpath exists within gufi index root '''
-    result = subprocess.run(["gufi_ls", f"{path}"], capture_output=True, text=True)
-    if result.stdout:
-        return True
-    else:
-        return False
-
-def load_schema_hints(name: str, schema: list[list[str]]) -> dict:
-    ''' Attach static hints to dynamically loaded schema from PRAGMA '''
-
-    hints = get_static_schema()
-    schema_hints = hints[name]["columns"]
-    schema_comp = {}
-
-    # For each column in the schema, attach hint to a dictionary entry
-    for col in schema:
-        # Fill type from file if blank
-        if col[1] == '':
-            schema_comp[col[0]] = {"type": schema_hints[col[0]]["type"], "hint": schema_hints[col[0]]["hint"]}
-        else:
-            schema_comp[col[0]] = {"type": col[1], "hint": schema_hints[col[0]]["hint"]}
-
-    return schema_comp
-
-def get_static_schema() -> dict:
-    with open(SCHEMAFILE, "r") as f:
-        hints = json.load(f)
-    return hints["tables"]
-
-def get_sqlline_columns(sql: str) -> list[str]:
-    """ retrieve columns from an sql line """
-
-    tree = parse_one(sql)
-
-    # Catch and exclude a column named as an alias
-    aliases = {alias.alias for alias in tree.find_all(exp.Alias)}
-
-    columns = [
-        col.name for col in tree.find_all(exp.Column)
-        if col.name not in aliases
-    ]
-    return list(set(columns))
-
-def get_sqlline_tables(sql: str) -> list[str]:
-    """ retrieve columns from an sql line """
-
-    tree = parse_one(sql)
-    tables = [table.name for table in tree.find_all(exp.Table)]
-    return list(set(tables))
-
-def parse_tool_args(args: dict, tool_dict: dict) -> list:
-    ''' Take a pydantic model and convert it into a list subprocess can run'''
-
-    cmd = []
-
-    # parse args from struct into cli command for subprocess
-    agent_options = args.__dict__
-
-    # For each option the agent submitted
-    for option in agent_options:
-        try:
-            # Try to obtain the match from the CLI dict
-            cli_option = tool_dict[option]
-            # If the type is not a bool and the value is not none
-            if type(agent_options[option]) is not bool and agent_options[option]:
-                # Add the option and it's value
-                cmd.append(cli_option)
-                cmd.append(f"{agent_options[option]}")
-            # If it is a bool, only append the option
-            else:
-                if agent_options[option]:
-                    cmd.append(cli_option)
-        # Simply skip key errors in case it is a positional argument
-        except KeyError:
-            continue
-    return cmd
-
-sql_stuff = """{
-    "index": "Downloads",
-    "scatter_sql": [
-        "SELECT size FROM entries WHERE type='f'"
-    ],
-    "scatter_shape": "size INT64",
-    "gather_sql": "SELECT SUM(size) FROM intermediate",
-    "gather_shape": "total INT64",
-    "final_sql": "SELECT SUM(total) FROM aggregate"
-}"""
-
-
-
-agg_input = GufiAggregateQuery.model_validate_json(sql_stuff)
-str_agg = agg_input.build_query_string()
-res = execute_sql(str_agg, True, True)
-print(res)
