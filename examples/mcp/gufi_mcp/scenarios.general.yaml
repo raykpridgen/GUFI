@@ -1,0 +1,372 @@
+# General-usage scenarios (eval_design.md Part 4). The agent sees every tool and resource.
+# There is no pass/fail in v1: traces, metrics, and the final message are recorded.
+# Same keys as scenarios.single.yaml; ground_truth is always null.
+#
+# Prompts are written the way a user would ask: no GUFI function, column, or type names, no
+# formulas, and no timestamps (the system prompt gives the current time). Each scenario asks a
+# distinct question; notes name the nearest neighbour and how this one differs.
+
+- id: largest_directories
+  prompt: "Which directories in {index} hold the most data directly inside them?"
+  tags: [size, directories, starter]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Bytes of the files directly in each directory. Nearest: directories_with_many_files (a file count), tree_overview (whole subtrees)."
+
+- id: big_file_owners
+  prompt: "Who owns the files over 1 GB in {index}, and where are those files?"
+  tags: [size, uid, starter]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Owners and paths of the few very large files. Nearest: count_over_1gib (only a count), large_old_files (adds an age filter, lower size cut)."
+
+- id: least_recently_accessed
+  prompt: "Which files in {index} haven't been accessed in the longest time?"
+  tags: [time, atime, starter]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Oldest by atime. Nearest: oldest_k (mtime), recent_activity (recent atime)."
+
+- id: usage_by_user
+  prompt: "Which users own the most data in {index}? Give me the top 5."
+  tags: [size, uid]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Bytes per uid. Nearest: file_count_by_owner (file count per uid), stale_data_by_owner (only data older than 90 days)."
+
+- id: files_per_group
+  prompt: "How many files does each group own in {index}?"
+  tags: [gid]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "File count per gid. Nearest: storage_by_group (bytes per gid), files_by_group (per-user breakdown inside one group)."
+
+- id: recent_activity
+  prompt: "Which files in {index} have been read in the past {parameters.days} days but not changed in that time? Give me a count and a few examples."
+  tags: [time, atime]
+  enabled: true
+  index: eval_master
+  parameters: {days: 7}
+  ground_truth: null
+  notes: "atime vs mtime over a window. Nearest: recently_modified_files (mtime, 30 days), accessed_after_modification (no window)."
+
+- id: find_by_name
+  prompt: "Find the HDF5 files in {index} with 'sim' in their names, and show where they are and how big they are."
+  tags: [name]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Name pattern plus a file type the agent must map to .h5 (15 matches). Nearest: duplicate_names (also name-based, but aggregated)."
+
+- id: tree_overview
+  prompt: "Give me an overview of {index}: how much space each group directory under groups/ uses, and how many directories and files each one contains."
+  tags: [treesummary, stats]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Subtree totals; gufi_du, gufi_stats, or treesummary SQL. Nearest: largest_directories (single directories, not subtrees)."
+
+# Mirrored single-query prompts: same id, prompt, and parameters as scenarios.single.yaml,
+# so the agent gets the same questions with the full tool catalog. test_gufi_eval.py checks they match.
+
+- id: total_file_size
+  prompt: "How many bytes do all the files in {index} take up?"
+  tags: [size, total, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical. Nearest: count_and_size (adds the count)."
+
+- id: total_dir_size
+  prompt: "How much space do the directories themselves take up in {index}, not counting the files inside them?"
+  tags: [size, total, directories, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical."
+
+- id: ext_histogram
+  prompt: "How many files of each extension are there in {index}?"
+  tags: [name, histogram, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical. Nearest: ext_winner (only the top one), storage_by_file_type (bytes, not counts)."
+
+- id: size_histogram
+  prompt: "Give me a breakdown of the files in {index} by size."
+  tags: [size, histogram, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical."
+
+- id: age_histogram
+  prompt: "Give me a breakdown of the files in {index} by how long ago they were last modified."
+  tags: [time, histogram, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical."
+
+- id: top10_size_global
+  prompt: "What are the 10 biggest files in {index}? Show their full paths and sizes."
+  tags: [size, top-k, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical. Nearest: top10_size_per_uid (per user)."
+
+- id: top10_size_per_uid
+  prompt: "For each user in {index}, what are their 10 biggest files? Show the user ID, the full path, and the size."
+  tags: [size, top-k, uid, window, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical."
+
+- id: ext_winner
+  prompt: "What is the most common file extension in {index}, and how many files have it?"
+  tags: [name, top-k, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical."
+
+- id: count_over_1gib
+  prompt: "How many files in {index} are bigger than 1 GiB?"
+  tags: [size, threshold, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {threshold: 1073741824}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical. Nearest: big_file_owners (who and where)."
+
+- id: oldest_k
+  prompt: "Which {parameters.k} files in {index} have gone the longest without being modified? Show their full paths and when they were last modified."
+  tags: [time, top-k, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {k: 5}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical. Nearest: least_recently_accessed (atime)."
+
+- id: not_modified_n_days
+  prompt: "How many files in {index} haven't been modified in the last {parameters.days} days?"
+  tags: [time, threshold, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {days: 60}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical. Nearest: stale_files (share of bytes, one year)."
+
+- id: count_and_size
+  prompt: "How many files are in {index}, and how much space do they use altogether?"
+  tags: [size, total, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical."
+
+# Ownership, permissions, names, and hierarchy.
+
+- id: files_by_owner
+  prompt: "List the files owned by user 3007 in {index}."
+  tags: [ownership, uid, starter]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Filter by a uid that exists (770 files). Nearest: file_count_by_owner (counts for every user)."
+
+- id: files_by_group
+  prompt: "Which users have files in group 2003 in {index}, and how many files does each of them have there?"
+  tags: [ownership, gid, uid, starter]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Per-user breakdown inside one gid. Nearest: files_per_group (one total per gid)."
+
+- id: empty_files
+  prompt: "How many empty files are in {index}, and who owns them?"
+  tags: [size, uid]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Zero-byte files (503) by owner. Nearest: size_histogram (all size bands)."
+
+- id: recently_modified_files
+  prompt: "Which files in {index} were changed in the past month?"
+  tags: [time, mtime]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "mtime within about 30 days (261 files). Nearest: recent_activity (atime, 7 days, unmodified)."
+
+- id: stale_files
+  prompt: "What share of the total space in {index} is in files nobody has modified in over a year?"
+  tags: [time, size, ratio]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "A ratio of bytes. Nearest: not_modified_n_days (a file count, 60 days), stale_data_by_owner (per user, 90 days)."
+
+- id: accessed_after_modification
+  prompt: "How many files in {index} have been read since they were last changed?"
+  tags: [time, atime, mtime]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Compares two timestamps of the same file (atime > mtime; all 9989 on eval_master). Nearest: recent_activity (windowed)."
+
+- id: modified_before_2024
+  prompt: "Which files in {index} were last modified before 2024? Give me a count and a few examples."
+  tags: [time, mtime]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Absolute calendar cutoff rather than a relative window (734 files). Replaces a creation-time question: GUFI has no birth time and ctime is the build time."
+
+- id: executable_files
+  prompt: "Which files in {index} are executable?"
+  tags: [permissions]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Any execute bit on regular files (1005, all 0755). Nearest: files_with_restricted_permissions (other-access bits)."
+
+- id: setgid_directories
+  prompt: "Which directories in {index} have the setgid bit set?"
+  tags: [permissions, directories]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Directory mode bits (10 group and shared directories, 02770). Replaces world-writable files, which eval_master has none of."
+
+- id: files_with_restricted_permissions
+  prompt: "Which files in {index} can't be read by other users at all?"
+  tags: [permissions, security]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "No 'other' access bits (0640 and 0600). Nearest: executable_files."
+
+- id: symlinks
+  prompt: "List the symbolic links in {index} and what they point to."
+  tags: [file_type]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "300 symlinks with targets (some dangling)."
+
+- id: directories_with_many_files
+  prompt: "Which directories in {index} have more than 100 files directly in them? Sort them by how many files they have."
+  tags: [directories, aggregation]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Per-directory file counts (9 directories). Nearest: largest_directories (bytes)."
+
+- id: file_count_by_owner
+  prompt: "Which 10 users have the most files in {index}?"
+  tags: [uid, aggregation]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "File count per uid. Nearest: usage_by_user (bytes per uid), files_per_group (count per gid)."
+
+- id: storage_by_group
+  prompt: "Which groups use the most storage in {index}?"
+  tags: [gid, size, aggregation]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Bytes per gid (5 groups). Nearest: files_per_group (count per gid), tree_overview (group directories, not gid)."
+
+- id: duplicate_names
+  prompt: "Which file names show up more than once in {index}, and how many times does each one appear?"
+  tags: [name, aggregation]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "GROUP BY name HAVING (545 names). Same name in different directories is expected."
+
+- id: deep_file_paths
+  prompt: "Which files in {index} are buried at least 5 directories deep?"
+  tags: [paths, hierarchy]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Depth has to come from the path: summary.depth is 0 on this index. Whether the index root counts as depth 0 is up to the agent; check it says."
+
+- id: large_old_files
+  prompt: "Which files in {index} are over 500 MB and haven't been modified in more than a year? Biggest first."
+  tags: [size, time, sorting]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Size and age filters combined (4 files). Nearest: big_file_owners (size only)."
+
+- id: stale_data_by_owner
+  prompt: "For each user in {index}, how much of their data hasn't been modified in over 90 days?"
+  tags: [uid, size, time, aggregation]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Bytes per uid after an age filter. Nearest: usage_by_user (no age filter), stale_files (one global share)."
+
+- id: storage_by_file_type
+  prompt: "Which file types take up the most space in {index}?"
+  tags: [name, size, aggregation]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Bytes per extension. Nearest: ext_histogram (counts per extension)."
+
+- id: shared_dir_contributors
+  prompt: "Who has put files in grp03's shared directory in {index}, and how much has each of them put there?"
+  tags: [paths, uid, size]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Path-scoped per-uid bytes (groups/grp03/shared). Replaces a group-write permission question; no file on eval_master is group-writable."

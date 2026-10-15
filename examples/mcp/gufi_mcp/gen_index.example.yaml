@@ -1,0 +1,43 @@
+# Example config for gen_index.py. Every key is optional; these are the defaults.
+# Run: uv run python gen_index.py --config gen_index.example.yaml
+
+index_name: eval_master
+# export_root: /path/to/indexes      # default: GUFI_INDEX_ROOT from .env
+# seed: 12345                        # default: a new random seed, recorded in the manifest
+# fixed_now: 2026-10-01              # default: today 00:00 UTC
+
+groups: 5                            # or a list of names, e.g. [physics, chem]
+users: 15                            # or a list of names; spread round-robin over groups
+
+files_per_user_min: 200
+files_per_user_max: 800
+dirs_per_user_min: 5
+dirs_per_user_max: 25
+dir_depth_min: 1
+dir_depth_max: 5
+
+# Files are really allocated, so the tree uses real disk while it is indexed (inside the
+# container, removed afterwards). Sizes accept ints or strings like 4096, 512MiB, 10g.
+disk_limit: 10GiB                    # hard cap; if the sampled sizes exceed it they are all scaled down to fit
+file_size_min: 1                     # regular files: log-uniform between min and max
+file_size_max: 4MiB
+empty_file_fraction: 0.05
+large_files: 6                       # files drawn from the large range instead (the heavy tail)
+large_file_size_min: 512MiB
+large_file_size_max: 2GiB
+
+extension_vocab: {txt: 10, log: 10, csv: 8, dat: 8, py: 8, json: 6, h5: 5, png: 5, c: 4, gz: 4}
+no_extension_fraction: 0.05
+hidden_fraction: 0.03
+
+symlink_fraction: 0.03
+dangling_symlink_fraction: 0.25
+
+mtime_range_days: [0, 1095]          # days before fixed_now
+atime_range_days: [0, 365]           # days before fixed_now, never earlier than mtime
+
+container_image: python:3.13-slim
+# gufi_prefix: /path/to/gufi         # default: install containing gufi_dir2index on PATH, else GUFI_QUERY
+# threads: 8                         # default: CPU count
+treesummary: true
+index_ownership: host                # host: readable by you; preserve: keep synthetic owners (non-root testing)
