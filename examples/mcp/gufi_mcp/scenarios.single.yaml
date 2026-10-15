@@ -1,0 +1,176 @@
+# Single-query scenarios (eval_design.md Part 3). The agent only sees aggregate_sql_query
+# plus resources; its last successful aggregate result is compared to ground_truth's rows.
+#
+# ground_truth is a GufiAggregateQuery without "index" (the scenario's index is used).
+# Prompts and ground-truth strings may use {fixed_now}, {fixed_now_iso}, {fixed_now_date},
+# {index}, and {parameters.NAME}; values come from the index manifest and parameters.
+# Rows are compared after sorting unless final_sql has a top-level ORDER BY. Column names
+# are ignored, and a permutation of the same columns is accepted.
+
+- id: total_file_size
+  prompt: "How many bytes do all the files in {index} take up?"
+  tags: [size, total]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth:
+    scatter_shape: "size INT64"
+    scatter_sql: ["SELECT size FROM vrpentries WHERE type = 'f'"]
+    gather_shape: "total INT64"
+    gather_sql: "SELECT SUM(size) FROM intermediate"
+    final_sql: "SELECT SUM(total) AS total FROM aggregate"
+  notes: "eval_plan example 1."
+
+- id: total_dir_size
+  prompt: "How much space do the directories themselves take up in {index}, not counting the files inside them?"
+  tags: [size, total, directories]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth:
+    scatter_shape: "size INT64"
+    scatter_sql: ["SELECT size FROM summary WHERE isroot = 1"]
+    gather_shape: "total INT64"
+    gather_sql: "SELECT SUM(size) FROM intermediate"
+    final_sql: "SELECT SUM(total) AS total FROM aggregate"
+  notes: "eval_plan example 2. Directories live in summary, not entries; isroot = 1 avoids counting rolled-up rows."
+
+- id: ext_histogram
+  prompt: "How many files of each extension are there in {index}?"
+  tags: [name, histogram]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth:
+    scatter_shape: "ext TEXT"
+    scatter_sql: ["SELECT ext(name) FROM vrpentries WHERE type = 'f'"]
+    gather_shape: "ext TEXT, count INT64"
+    gather_sql: "SELECT ext, COUNT(*) FROM intermediate GROUP BY ext"
+    final_sql: "SELECT ext, SUM(count) AS count FROM aggregate GROUP BY ext"
+  notes: "eval_plan example 3, restricted to regular files. GUFI ext() treats a hidden name without a dot-suffix (.metrics) as its own extension."
+
+- id: size_histogram
+  prompt: "Give me a breakdown of the files in {index} by size."
+  tags: [size, histogram]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth:
+    scatter_shape: "cat TEXT"
+    scatter_sql: ["SELECT bytecat(size) FROM vrpentries WHERE type = 'f'"]
+    gather_shape: "cat TEXT, count INT64"
+    gather_sql: "SELECT cat, COUNT(*) FROM intermediate GROUP BY cat"
+    final_sql: "SELECT cat, SUM(count) AS count FROM aggregate GROUP BY cat"
+  notes: "eval_plan example 4. Natural wording: ground truth uses GUFI's bytecat categories, which the prompt does not name, so other bucketings fail."
+
+- id: age_histogram
+  prompt: "Give me a breakdown of the files in {index} by how long ago they were last modified."
+  tags: [time, histogram]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth:
+    scatter_shape: "cat TEXT"
+    scatter_sql: ["SELECT agecat(mtime) FROM vrpentries WHERE type = 'f'"]
+    gather_shape: "cat TEXT, count INT64"
+    gather_sql: "SELECT cat, COUNT(*) FROM intermediate GROUP BY cat"
+    final_sql: "SELECT cat, SUM(count) AS count FROM aggregate GROUP BY cat"
+  notes: "eval_plan example 5. Natural wording: ground truth uses GUFI's agecat categories, which the prompt does not name. agecat is relative to the wall clock, so ground truth and agent must run close together (they do within a trial)."
+
+- id: top10_size_global
+  prompt: "What are the 10 biggest files in {index}? Show their full paths and sizes."
+  tags: [size, top-k]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth:
+    scatter_shape: "path TEXT, size INT64"
+    scatter_sql: ["SELECT path, size FROM vrpentries WHERE type = 'f'"]
+    gather_shape: "path TEXT, size INT64"
+    gather_sql: "SELECT path, size FROM intermediate"
+    final_sql: "SELECT path, size FROM aggregate ORDER BY size DESC LIMIT 10"
+  notes: "eval_plan example 6. Full path is the vrpentries path column (index name first, as gufi_find prints it)."
+
+- id: top10_size_per_uid
+  prompt: "For each user in {index}, what are their 10 biggest files? Show the user ID, the full path, and the size."
+  tags: [size, top-k, uid, window]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth:
+    scatter_shape: "uid INT64, path TEXT, size INT64"
+    scatter_sql: ["SELECT uid, path, size FROM vrpentries WHERE type = 'f'"]
+    gather_shape: "uid INT64, path TEXT, size INT64"
+    gather_sql: "SELECT uid, path, size FROM intermediate"
+    final_sql: "SELECT uid, path, size FROM (SELECT uid, path, size, ROW_NUMBER() OVER (PARTITION BY uid ORDER BY size DESC) AS rn FROM aggregate) WHERE rn <= 10"
+  notes: "eval_plan example 7. No outer ORDER BY, so rows are compared as a set."
+
+- id: ext_winner
+  prompt: "What is the most common file extension in {index}, and how many files have it?"
+  tags: [name, top-k]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth:
+    scatter_shape: "ext TEXT"
+    scatter_sql: ["SELECT ext(name) FROM vrpentries WHERE type = 'f'"]
+    gather_shape: "ext TEXT, count INT64"
+    gather_sql: "SELECT ext, COUNT(*) FROM intermediate GROUP BY ext"
+    final_sql: "SELECT ext, SUM(count) AS count FROM aggregate GROUP BY ext ORDER BY count DESC LIMIT 1"
+  notes: "From eval/eval_plan.md templates."
+
+- id: count_over_1gib
+  prompt: "How many files in {index} are bigger than 1 GiB?"
+  tags: [size, threshold]
+  enabled: true
+  index: eval_master
+  parameters: {threshold: 1073741824}
+  ground_truth:
+    scatter_shape: "size INT64"
+    scatter_sql: ["SELECT size FROM vrpentries WHERE type = 'f' AND size > {parameters.threshold}"]
+    gather_shape: "n INT64"
+    gather_sql: "SELECT COUNT(*) FROM intermediate"
+    final_sql: "SELECT SUM(n) AS n FROM aggregate"
+  notes: "Threshold size template."
+
+- id: oldest_k
+  prompt: "Which {parameters.k} files in {index} have gone the longest without being modified? Show their full paths and when they were last modified."
+  tags: [time, top-k]
+  enabled: true
+  index: eval_master
+  parameters: {k: 5}
+  ground_truth:
+    scatter_shape: "path TEXT, mtime INT64"
+    scatter_sql: ["SELECT path, mtime FROM vrpentries WHERE type = 'f'"]
+    gather_shape: "path TEXT, mtime INT64"
+    gather_sql: "SELECT path, mtime FROM intermediate"
+    final_sql: "SELECT path, mtime FROM aggregate ORDER BY mtime ASC LIMIT {parameters.k}"
+  notes: "K-oldest template, by mtime rather than ctime: ctime is the index build time for every entry. Natural wording: an answer with dates instead of epoch seconds fails the row compare."
+
+- id: not_modified_n_days
+  prompt: "How many files in {index} haven't been modified in the last {parameters.days} days?"
+  tags: [time, threshold]
+  enabled: true
+  index: eval_master
+  parameters: {days: 60}
+  ground_truth:
+    scatter_shape: "mtime INT64"
+    scatter_sql: ["SELECT mtime FROM vrpentries WHERE type = 'f' AND mtime < {fixed_now} - {parameters.days} * 86400"]
+    gather_shape: "n INT64"
+    gather_sql: "SELECT COUNT(*) FROM intermediate"
+    final_sql: "SELECT SUM(n) AS n FROM aggregate"
+  notes: "Uses the manifest fixed_now (midnight UTC of the reference date), not the wall clock."
+
+- id: count_and_size
+  prompt: "How many files are in {index}, and how much space do they use altogether?"
+  tags: [size, total]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth:
+    scatter_shape: "size INT64"
+    scatter_sql: ["SELECT size FROM vrpentries WHERE type = 'f'"]
+    gather_shape: "n INT64, total INT64"
+    gather_sql: "SELECT COUNT(*), SUM(size) FROM intermediate"
+    final_sql: "SELECT SUM(n) AS n, SUM(total) AS total FROM aggregate"
+  notes: "Canonical ground truth is one query with two columns (eval_design.md framework notes)."

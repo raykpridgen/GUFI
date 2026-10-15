@@ -59,6 +59,7 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+import logging
 import os
 import shutil
 from typing import Annotated, Any
@@ -85,7 +86,105 @@ MCPSRVPORT = int(os.getenv("MCPSRVPORT", "8000"))
 
 DELIM = "\t"
 
-mcp = MCPServer(name="gufi-mcp")
+PRIMER = f"""\
+GUFI is a parallel file system indexer: it scans a file
+tree into per-directory SQLite databases so metadata questions (sizes, owners,
+times, names) are answered from the index instead of walking the file system.
+
+Before the first query
+- Read gufi://indexes for index names and whether each has treesummary data.
+- Read gufi://schemas/all for table and view names, then gufi://schemas/<table>
+  for its columns. Column names are checked before any query runs; do not guess.
+
+Tables and views (prefix and letter meanings)
+- entries: files and links of one directory. pentries adds the parent inode.
+- vrpentries: v = view, r = rollup-aware, p = with parent. File rows plus their
+  directory's metadata and paths. Prefer it for file questions.
+- summary / vrsummary: one row per directory (the directory's own metadata plus
+  totals such as totfiles, totsize). Prefer vrsummary. Directories are not in entries.
+- treesummary: precomputed totals for a whole subtree. Only present when the
+  index has treesummary (see gufi://indexes).
+- type is 'f' regular file, 'l' symlink, 'd' directory. Times (atime, mtime,
+  ctime) are Unix epoch seconds; size is bytes.
+
+Paths
+- Paths start with the index name, then the path inside the index, e.g.
+  myindex/dir/file.txt. Every tool uses this form: the gufi_* tools print it and
+  take it as path arguments, and the path columns hold it.
+- vrpentries has path (the file's full path) and dirpath (its directory's);
+  vrsummary has path (the directory's). name is only the base name.
+- Path columns are ordinary TEXT columns: select, filter (path LIKE
+  'myindex/dir/%'), or group by them, in sql_file_index or in scatter_sql.
+  To use one in gather_sql or final_sql, carry it through scatter_shape and
+  gather_shape like any other column.
+- Other functions include ext(name) (text after the last '.'), bytecat(size) and
+  agecat(time) (GUFI size and age categories).
+
+Choosing a tool
+- gufi_ls, gufi_find, gufi_du, gufi_stat, gufi_stats, gufi_get_fattr wrap GUFI's
+  command-line tools; paths start with an index name (e.g. "myindex/sub").
+- sql_file_index runs one SELECT over one table across the whole index.
+- aggregate_sql_query runs GUFI's parallel scatter/gather pipeline.
+
+How aggregate_sql_query works (scatter/gather)
+- GUFI walks the index with many threads. Scatter: each scatter_sql statement
+  runs once per directory and its rows go into that thread's intermediate table
+  (columns = scatter_shape).
+- Gather: gather_sql runs once per thread over its intermediate table, and the
+  rows go into one shared aggregate table (columns = gather_shape). The aggregate
+  table therefore holds one partial result per thread, not a final answer.
+- Final: final_sql runs once over aggregate. Re-combine partials there: SUM the
+  counts and sums, MAX the maxima, and so on. A final_sql without that returns
+  one row per thread.
+- Count raw rows only once. COUNT(*) belongs at the first stage that sees one row
+  per file; every later stage SUMs the counts it receives. If scatter_sql already
+  uses COUNT(*) ... GROUP BY, gather_sql must SUM that column, not COUNT(*) again.
+- Example, symlinks per gid:
+    scatter_shape "gid INT64, size INT64"
+    scatter_sql   ["SELECT gid, size FROM vrpentries WHERE type = 'l'"]
+    gather_shape  "gid INT64, links INT64, bytes INT64"
+    gather_sql    "SELECT gid, COUNT(*), SUM(size) FROM intermediate GROUP BY gid"
+    final_sql     "SELECT gid, SUM(links) AS links, SUM(bytes) AS bytes FROM aggregate GROUP BY gid"
+- Per-group top-N (for example the N largest per owner) needs a window function
+  in final_sql: SELECT ... FROM (SELECT ..., ROW_NUMBER() OVER (PARTITION BY
+  <group> ORDER BY <value> DESC) AS rn FROM aggregate) WHERE rn <= N.
+  A plain LIMIT N in final_sql returns N rows in total.
+- ORDER BY, LIMIT, and OFFSET are allowed only in final_sql, not anywhere in
+  scatter_sql or gather_sql (subqueries and window functions included). Those
+  stages run once per directory or per thread, so ordering or limiting there
+  drops partial results and gives wrong totals. Filter with WHERE instead, and
+  sort or limit once in final_sql.
+
+Time questions
+- Compute cutoffs inside SQL from the current time you were given, e.g.
+  mtime < <now_epoch> - 30 * 86400 for "not modified in 30 days". Do not
+  precompute epoch values by hand.
+
+Treesummary
+- Without treesummary, gufi_du and treesummary tables give empty or zero results;
+  use summary/vrsummary or vrpentries instead.
+
+Results
+- Results above {util.MAX_ROWS} rows come back with truncated = true and are
+  incomplete. Aggregate or filter instead of retrying the same query.
+- Use single quotes for string literals; double quotes are rejected in aggregate SQL.
+"""
+
+if util.GUFI_SOURCE_ROOT is not None:
+    PRIMER = PRIMER.replace(
+        "vrsummary has path (the directory's). name is only the base name.",
+        "vrsummary has path (the directory's). name is only the base name.\n"
+        "- spath is the same entry's path on the source file system that was indexed\n"
+        f"  (e.g. {util.GUFI_SOURCE_ROOT}/myindex/dir/file.txt); tools do not accept it.",
+    )
+
+_cli_root = util.cli_index_root()
+if _cli_root is not None and _cli_root != util.GUFI_INDEX_ROOT:
+    logging.getLogger(__name__).warning(
+        "GUFI_INDEX_ROOT %s differs from the GUFI tools' IndexRoot %s; paths from SQL and from the "
+        "gufi_* tools will not match", util.GUFI_INDEX_ROOT, _cli_root)
+
+mcp = MCPServer(name="gufi-mcp", instructions=PRIMER)
 
 
 @mcp.tool()
@@ -107,8 +206,9 @@ def gufi_location() -> str:
 def sql_file_index(
         sqlin: Annotated[str, Field(description=(
             "A single SELECT statement over exactly one GUFI table: entries, pentries, vrpentries, "
-            "summary, vrsummary, or treesummary (a gufi_vt_ prefix is optional). "
-            "Example: SELECT name, size FROM vrpentries WHERE type = 'f' ORDER BY size DESC LIMIT 10"
+            "summary, vrsummary, or treesummary (a gufi_vt_ prefix is optional). Read gufi://schemas/<table> "
+            "for its columns first. Full paths are the path columns of vrpentries (path, dirpath) and vrsummary (path). "
+            "Example: SELECT path, linkname FROM vrpentries WHERE type = 'l' LIMIT 20"
         ))],
         index: Annotated[str, Field(description="Index name exactly as listed by the gufi://indexes resource.")],
         remote: Annotated[bool, Field(description=(
@@ -116,7 +216,10 @@ def sql_file_index(
             "index is then a path on the remote host."
         ))] = False,
 ) -> GufiQueryResult:
-    """Run a SELECT over one GUFI table across the whole index; WHERE, GROUP BY, ORDER BY and LIMIT apply index-wide."""
+    """Run a SELECT over one GUFI table across the whole index; WHERE, GROUP BY, ORDER BY and LIMIT apply index-wide.
+
+    Subqueries, joins and WITH are not supported. Table and column names: gufi://schemas/all and gufi://schemas/<table>.
+    """
     sql, params = util.build_gufi_vt_select(sqlin, index, remote)
     return util.run_gufi_vt_select(sql, params)
 
@@ -125,7 +228,12 @@ def sql_file_index(
 def aggregate_sql_query(
         query: Annotated[GufiAggregateQuery, Field(description="The aggregate pipeline to run.")],
 ) -> GufiQueryResult:
-    """Run a GUFI scatter/gather aggregate pipeline over an index and return the rows of final_sql."""
+    """Run a GUFI scatter/gather aggregate pipeline over an index and return the rows of final_sql.
+
+    Scatter SQL runs per directory in parallel threads, gather SQL merges each thread's rows into the aggregate
+    table, and final SQL combines those partial results once. Read gufi://indexes for the index name and
+    gufi://schemas/<table> for column names before writing the pipeline.
+    """
     return util.run_aggregate(query)
 
 
@@ -212,114 +320,6 @@ def gufi_schemas(schema: str) -> dict[str, Any]:
         return util.describe_schema_object(schema)
     except util.GufiError as e:
         raise ResourceError(str(e)) from e
-
-
-@mcp.resource("gufi://session-brief")
-def gufi_session_briefing() -> str:
-    """How to use this server's tools and resources."""
-    return """
-You are working with a GUFI MCP server. GUFI is a parallel file system
-indexer: it scans a file tree into SQLite databases so file metadata can be
-searched quickly without walking the live file system for every question.
-
-Prefer the simplest tool that can answer the user. You do not need to use every
-tool in a session. Start with high-level GUFI tools for quick inspection, move
-to SQL when the user needs a more specific query, and use aggregate SQL only
-when a simple tool or one-statement SQL query cannot answer the request cleanly.
-
-Available context:
-- Read gufi://indexes to list known indexes and whether each has treesummary.
-- Read gufi://schemas/all to discover query surfaces, then gufi://schemas/{name}
-  for one table or view (for example vrpentries, pentries, summary, vrsummary).
-- Read gufi://session-brief for this guide. Resource URIs must include the
-  gufi:// prefix; gufi_indexes and session-brief alone are not valid URIs.
-
-Query surfaces: prefer views over base tables
-- vrpentries: best default for file rows that need directory context. Includes
-  file columns plus summary path context (sname, dname). Prefer this over entries.
-- pentries: file metadata with parent inode fields. No path column.
-- vrsummary / vsummary* views: directory-level rolled-up metadata.
-- summary / treesummary: directory rollup tables when available.
-- entries: low-level base table. Avoid for routine agent queries. It has no
-  path column.
-
-Before writing SQL, inspect gufi://schemas/vrpentries or gufi://schemas/pentries
-instead of guessing column names. Column names are checked before a query runs.
-Use single quotes for string literals ('f'); double quotes are rejected in
-aggregate SQL.
-
-Tool guidance:
-- gufi_ls, gufi_du, gufi_find, gufi_stat, gufi_stats, and gufi_get_fattr wrap
-  the GUFI command-line tools. Pass options in the args object; paths are
-  relative to the GUFI index root and start with the index name (for example
-  "Downloads" or "Downloads/subdir"). gufi_du needs treesummary. Results include
-  stderr; non-empty stderr may mean results are incomplete.
-- sql_file_index runs one SELECT over one table (entries, pentries, vrpentries,
-  summary, vrsummary, or treesummary) for a whole index. WHERE, GROUP BY,
-  ORDER BY, LIMIT and aggregate functions apply across the entire index.
-  Subqueries, joins, and WITH are not supported.
-- aggregate_sql_query runs GUFI's parallel scatter/gather pipeline. Use it for
-  index-wide totals or grouping over large indexes, or when treesummary and
-  summary data should be combined with file rows.
-- Results larger than the row limit come back with truncated = true. Add
-  filters or a LIMIT rather than retrying the same query.
-
-Treesummary nuance:
-treesummary exists only when an index has been rolled up. It stores precomputed
-subtree summary data and can make directory-level totals very fast. Read
-gufi://indexes first. If treesummary is false for an index, do not use gufi_du
-or treesummary tables; use SQL over summary or entries tables instead.
-
-aggregate_sql_query fields (the query object):
-- index: index name from gufi://indexes.
-- scatter_shape: columns of the per-thread intermediate table, as
-  "name TYPE, name TYPE" (TYPE: INT64, INTEGER, INT, BIGINT, REAL, FLOAT,
-  DOUBLE, NUMERIC, TEXT, BLOB).
-- scatter_sql: one to three SELECT statements, each reading exactly one table.
-  The table decides when it runs: treesummary/vtsummary* once per tree,
-  summary/vsummary*/vrsummary* once per directory, entries/pentries/vrpentries
-  over each directory's files. At most one statement per kind. Each must
-  return exactly the scatter_shape columns, in order. Rows are inserted into
-  intermediate for you; do not write INSERT.
-- gather_shape: columns of the aggregate table, same format.
-- gather_sql: SELECT from intermediate returning exactly the gather_shape
-  columns. Merges each thread's intermediate rows into aggregate.
-- final_sql: SELECT from aggregate producing the answer. Put global ORDER BY
-  and LIMIT here.
-
-Critical rules:
-- Do not put ORDER BY, LIMIT, or OFFSET in scatter_sql; it is rejected.
-- Gather and final SQL can only read the columns their shape defines.
-- Prefer vrpentries over entries for file/path questions.
-
-Common task patterns:
-
-Name-filtered file listing:
-- Start with gufi_find, or sql_file_index against vrpentries.
-- Filter type = 'f'. Keep output bounded with LIMIT.
-
-Directory or index summary:
-- Read gufi://indexes first, then choose gufi_du, gufi_stats, summary-family
-  views, or SQL depending on what the index supports.
-
-Example aggregate queries:
-
-Total byte size of regular files:
-  {"index": "<name>",
-   "scatter_shape": "size INT64",
-   "scatter_sql": ["SELECT size FROM vrpentries WHERE type = 'f'"],
-   "gather_shape": "total INT64",
-   "gather_sql": "SELECT SUM(size) FROM intermediate",
-   "final_sql": "SELECT SUM(total) AS total FROM aggregate"}
-
-Top UIDs by total regular-file bytes:
-  {"index": "<name>",
-   "scatter_shape": "uid INT64, size INT64",
-   "scatter_sql": ["SELECT uid, size FROM vrpentries WHERE type = 'f'"],
-   "gather_shape": "uid INT64, total_bytes INT64",
-   "gather_sql": "SELECT uid, SUM(size) FROM intermediate GROUP BY uid",
-   "final_sql": "SELECT uid, SUM(total_bytes) AS total_bytes FROM aggregate GROUP BY uid ORDER BY total_bytes DESC LIMIT 10"}
-"""
 
 
 if __name__ == "__main__":

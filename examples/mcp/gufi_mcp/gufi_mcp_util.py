@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import signal
 import sqlite3
 import subprocess
@@ -49,10 +50,24 @@ def _resolve_relative_to_module(path: str) -> Path:
     return candidate.resolve()
 
 
+def _optional_source_root() -> Optional[str]:
+    value = os.getenv("GUFI_SOURCE_ROOT", "").strip()
+    if not value:
+        return None
+    if not value.startswith("/"):
+        raise RuntimeError("GUFI_SOURCE_ROOT must be an absolute path")
+    if any(ch in value for ch in "'\"\0"):
+        raise RuntimeError("GUFI_SOURCE_ROOT must not contain quote or NUL characters")
+    return value.rstrip("/")
+
+
 SCHEMAFILE = _resolve_relative_to_module(_require_env("SCHEMAFILE"))
 GUFIVTLIB = _require_env("GUFIVTLIB")
 GUFI_INDEX_ROOT = Path(_require_env("GUFI_INDEX_ROOT")).resolve()
 REMOTEHOST = os.getenv("REMOTEHOST", "").strip() or None
+# Parent of the indexed source trees, as GUFI_INDEX_ROOT is the parent of the indexes:
+# index <GUFI_INDEX_ROOT>/<name> was built from <GUFI_SOURCE_ROOT>/<name>. Enables spath.
+GUFI_SOURCE_ROOT = _optional_source_root()
 THREADS = os.cpu_count() or 1
 TOOL_TIMEOUT = int(os.getenv("GUFI_MCP_TOOL_TIMEOUT", "300"))
 MAX_ROWS = int(os.getenv("GUFI_MCP_MAX_ROWS", "5000"))
@@ -156,7 +171,7 @@ def resolve_remote_index(index: str) -> str:
         raise GufiError("Remote queries are not configured (REMOTEHOST is not set)")
     if not _REMOTE_INDEX_RE.fullmatch(index) or ".." in index.split("/"):
         raise GufiError(f"Remote index path {index!r} must be a plain path of letters, digits, '.', '_', '-' and '/'")
-    return index
+    return index.rstrip("/") or "/"
 
 
 def _connect_readonly(db_path: Path) -> sqlite3.Connection:
@@ -202,7 +217,8 @@ def describe_schema_object(name: str) -> dict[str, dict[str, str]]:
     if name not in objects:
         raise GufiError(f"Unknown table or view {name!r}. Read gufi://schemas/all for valid names")
     result = run_db_sql(schema_db_path(), "SELECT name, type FROM pragma_table_info(?)", (name,))
-    return load_schema_hints(name, result.rows)
+    paths = {column: {"type": "TEXT", "hint": hint} for column, hint in path_columns(name.lower()).items()}
+    return {**paths, **load_schema_hints(name, [row for row in result.rows if row[0].lower() not in HIDDEN_COLUMNS])}
 
 
 @lru_cache(maxsize=1)
@@ -220,10 +236,100 @@ def get_static_schema() -> dict[str, dict[str, Any]]:
 
 
 def schema_columns(table: str) -> set[str]:
+    """Columns an agent may reference in table: its visible columns plus the server's path columns."""
     schema = get_static_schema()
     if table not in schema:
         raise GufiError(f"Table {table!r} is not described in the schema file")
-    return set(schema[table]["columns"])
+    return (set(schema[table]["columns"]) - HIDDEN_COLUMNS) | set(path_columns(table))
+
+
+#
+# Path columns
+#
+
+# GUFI can only build a path while it is inside the directory being processed:
+# rpath(sname, sroll[, name]) joins that directory with sname and sroll, which are
+# not paths on their own. The server hides them and offers path columns instead,
+# in the form GUFI's command-line tools print: the index name followed by the path
+# inside the index, i.e. relative to GUFI_INDEX_ROOT.
+HIDDEN_COLUMNS = frozenset({"sname", "sroll", "srollsubdirs"})
+PATH_FUNCTIONS = frozenset({"rpath", "spath", "path", "epath", "fpath"})
+ENTRY_PATH_TABLES = frozenset({"vrpentries"})
+DIRECTORY_PATH_TABLES = frozenset({"vrsummary", "vrsummarylong"})
+PATH_TABLES_TEXT = "vrpentries (path, dirpath) and vrsummary (path)"
+PATH_FORM = "the index name followed by the path inside the index, the same form gufi_find prints and the gufi_* tools' path arguments accept"
+
+
+def path_columns(table: str) -> dict[str, str]:
+    """{column: hint} of the path columns the server adds to table."""
+    if table in ENTRY_PATH_TABLES:
+        columns = {
+            "path": f"Full path of the file or link, e.g. myindex/dir/file.txt: {PATH_FORM}.",
+            "dirpath": "Full path of the directory containing the file or link, e.g. myindex/dir.",
+        }
+        kind = "file or link"
+    elif table in DIRECTORY_PATH_TABLES:
+        columns = {"path": f"Full path of the directory, e.g. myindex/dir (the index's top directory is myindex): {PATH_FORM}."}
+        kind = "directory"
+    else:
+        return {}
+    if GUFI_SOURCE_ROOT is not None:
+        columns["spath"] = (f"Path of the {kind} on the source file system that was indexed, "
+                            f"e.g. {GUFI_SOURCE_ROOT}/myindex/dir.")
+    return columns
+
+
+def _index_relative(absolute_sql: str, label: str, root: str) -> str:
+    """SQL turning an absolute path under root into label + the path below root."""
+    return f"'{label}' || substr({absolute_sql}, {len(root) + 1})"
+
+
+def _source_prefix(label: str) -> str:
+    return f"{GUFI_SOURCE_ROOT}/{label}"
+
+
+def scatter_path_sql(table: str, column: str, label: str, root: str) -> str:
+    """Path column of table computed with GUFI's path functions, for gufi_query scatter SQL."""
+    entry = table in ENTRY_PATH_TABLES
+    if column == "spath":
+        return "spath(sname, sroll, name)" if entry else "spath(sname, sroll)"
+    if column == "path" and entry:
+        return _index_relative("rpath(sname, sroll, name)", label, root)
+    return _index_relative("rpath(sname, sroll)", label, root)
+
+
+def gufi_vt_path_sql(table: str, column: str, label: str, root: str, name_sql: str) -> str:
+    """Path column of table computed from a gufi_vt_* row, whose rpath column is rpath(sname, sroll)."""
+    prefix = _source_prefix(label) if column == "spath" else label
+    directory = _index_relative('"rpath"', prefix, root)
+    if table in ENTRY_PATH_TABLES and column != "dirpath":
+        return f"{directory} || '/' || {name_sql}"
+    return directory
+
+
+def expand_path_columns(sql: str, context: str, column_sql) -> str:
+    """Replace each table reference that needs path columns with a derived table providing them.
+
+    Only the table name is spliced, so the rest of the agent's SQL reaches GUFI unchanged.
+    column_sql(table, column) returns the SQL for one path column.
+    """
+    tree = parse_select(sql, context)
+    used = {column.name.lower() for column in tree.find_all(exp.Column)}
+    edits = []
+    for table in tree.find_all(exp.Table):
+        name = table.name.lower()
+        wanted = [column for column in path_columns(name) if column in used]
+        if not wanted:
+            continue
+        projection = ", ".join(f"{column_sql(name, column)} AS {column}" for column in wanted)
+        derived = f"(SELECT {projection}, * FROM {name})"
+        if not table.alias:
+            derived += f" AS {table.name}"
+        meta = table.this.meta
+        edits.append((meta["start"], meta["end"] + 1, derived))
+    for start, end, text in sorted(edits, reverse=True):
+        sql = sql[:start] + text + sql[end:]
+    return sql
 
 
 def load_schema_hints(name: str, schema: list[list[Any]]) -> dict[str, dict[str, str]]:
@@ -299,10 +405,42 @@ def _single_table(tree: exp.Select, context: str) -> str:
     return tables[0]
 
 
-def _check_columns(tree: exp.Select, allowed: set[str], table: str, context: str) -> None:
+PATH_COLUMN_NAMES = frozenset({"path", "dirpath", "spath"})
+
+
+def _check_columns(tree: exp.Select, allowed: set[str], table: str, context: str, path_hint: str = "") -> None:
     unknown = sorted(select_columns(tree) - allowed)
     if unknown:
-        raise GufiError(f"{context}: column(s) {', '.join(unknown)} do not exist in {table}")
+        hint = f". {path_hint}" if path_hint and PATH_COLUMN_NAMES & set(unknown) else ""
+        raise GufiError(f"{context}: column(s) {', '.join(unknown)} do not exist in {table}{hint}")
+
+
+TABLE_PATH_HINT = f"Path columns exist only in {PATH_TABLES_TEXT}"
+CARRY_PATH_HINT = (f"Path columns come from {PATH_TABLES_TEXT} in scatter_sql; select them there and declare them "
+                   "as TEXT in scatter_shape (and gather_shape) to use them in later stages")
+USE_PATH_COLUMNS = f"Use the path columns instead: {PATH_TABLES_TEXT}"
+
+
+def _reject_path_internals(tree: exp.Expression, context: str) -> None:
+    """sname/sroll are not paths and GUFI's path functions return index-internal forms; both are hidden."""
+    for column in tree.find_all(exp.Column):
+        if column.name.lower() in HIDDEN_COLUMNS:
+            raise GufiError(f"{context}: {column.name} is internal rollup bookkeeping, not a path, and is not "
+                            f"available. {USE_PATH_COLUMNS}")
+    for call in tree.find_all(exp.Anonymous):
+        if call.name.lower() in PATH_FUNCTIONS:
+            raise GufiError(f"{context}: {call.name.lower()}() is not available. {USE_PATH_COLUMNS}")
+
+
+def _reject_ordering(tree: exp.Expression, context: str) -> None:
+    """ORDER BY, LIMIT and OFFSET anywhere in tree (subqueries and window clauses included)."""
+    for node_type, keyword in ((exp.Order, "ORDER BY"), (exp.Limit, "LIMIT"), (exp.Offset, "OFFSET")):
+        if tree.find(node_type) is not None:
+            raise GufiError(
+                f"{context}: {keyword} is only allowed in final_sql. Scatter and gather SQL run once per "
+                "directory or thread, so ordering or limiting there drops or reorders partial results; "
+                "move it to final_sql"
+            )
 
 
 def _check_projection_width(tree: exp.Select, expected: int, target: str, context: str) -> None:
@@ -359,12 +497,12 @@ def _phase_for_table(table: str) -> str:
 class GufiAggregateQuery(BaseModel):
     """An index-wide GUFI aggregate pipeline (gufi_query -I, -T/-S/-E, -K, -J, -G)."""
 
-    model_config = ConfigDict(extra="forbid", validate_default=True)
+    model_config = ConfigDict(extra="forbid")
 
     index: str = Field(
         description=(
             "Name of the index to query, exactly as listed by the gufi://indexes resource. "
-            "Scatter SQL that reads treesummary tables requires an index with treesummary."
+            "Scatter SQL that reads treesummary tables requires an index whose gufi://indexes entry has treesummary true."
         ),
     )
 
@@ -372,41 +510,49 @@ class GufiAggregateQuery(BaseModel):
         min_length=1,
         max_length=3,
         description=(
-            "One to three SELECT statements run per directory in parallel; each result row is inserted into "
-            "the intermediate table. Each statement reads exactly one table, which decides its phase: "
-            "treesummary/vtsummary* (tree), summary/vsummary*/vrsummary* (directory summary), or "
-            "entries/pentries/vrpentries (files). At most one statement per phase. "
-            "Each must return exactly the columns of scatter_shape, in order, and must not use ORDER BY, LIMIT, or OFFSET. "
-            "Example: SELECT size FROM vrpentries WHERE type = 'f'"
+            "Scatter phase: one to three SELECT statements that GUFI runs in parallel threads, once per directory; "
+            "each result row is inserted into that thread's intermediate table. Each statement reads exactly one "
+            "table, which decides its phase: treesummary/vtsummary* (once per tree), summary/vsummary*/vrsummary* "
+            "(once per directory), or entries/pentries/vrpentries (the directory's files). At most one statement per "
+            "phase. Each must return exactly the columns of scatter_shape, in order. ORDER BY, LIMIT and OFFSET are "
+            "rejected anywhere here (subqueries and windows included): they would apply per directory only. "
+            f"Full paths are the path columns of {PATH_TABLES_TEXT}; this is the only stage that can read them. "
+            "Read gufi://schemas/all for table names and gufi://schemas/<table> for column names before writing it. "
+            "Example: SELECT gid, size FROM vrpentries WHERE type = 'l'"
         ),
     )
 
     scatter_shape: str = Field(
-        default="size INT64",
         description=(
             "Columns of the intermediate table that scatter_sql rows are inserted into, as comma-separated 'name TYPE' "
-            "pairs (TYPE: INT64, INTEGER, INT, BIGINT, REAL, FLOAT, DOUBLE, NUMERIC, TEXT, BLOB)."
+            "pairs (TYPE: INT64, INTEGER, INT, BIGINT, REAL, FLOAT, DOUBLE, NUMERIC, TEXT, BLOB). "
+            "Example: 'gid INT64, size INT64'"
         ),
     )
 
     gather_sql: str = Field(
-        default="SELECT SUM(size) FROM intermediate",
         description=(
-            "SELECT run against each thread's intermediate table; its rows are inserted into the aggregate table. "
-            "Must read only from intermediate and return exactly the columns of gather_shape, in order."
+            "Gather phase: SELECT run against each thread's intermediate table; its rows are inserted into the shared "
+            "aggregate table. Must read only from intermediate and return exactly the columns of gather_shape, in order. "
+            "It runs once per thread, so the aggregate table holds one partial result per thread. ORDER BY, LIMIT "
+            "and OFFSET are rejected anywhere here; they belong in final_sql. "
+            "Example: SELECT gid, COUNT(*), SUM(size) FROM intermediate GROUP BY gid"
         ),
     )
 
     gather_shape: str = Field(
-        default="total INT64",
-        description="Columns of the aggregate table, as comma-separated 'name TYPE' pairs.",
+        description=(
+            "Columns of the aggregate table, as comma-separated 'name TYPE' pairs. "
+            "Example: 'gid INT64, links INT64, bytes INT64'"
+        ),
     )
 
     final_sql: str = Field(
-        default="SELECT SUM(total) AS total FROM aggregate",
         description=(
-            "SELECT run once against the aggregate table to produce the result. Must read only from aggregate. "
-            "Put global ORDER BY and LIMIT here."
+            "SELECT run once against the aggregate table to produce the answer. Must read only from aggregate. "
+            "Combine the per-thread partial results here (SUM of counts and sums, MAX of maxima), and put global "
+            "ORDER BY and LIMIT here; this is the only stage where they are allowed. "
+            "Example: SELECT gid, SUM(links) AS links, SUM(bytes) AS bytes FROM aggregate GROUP BY gid ORDER BY links DESC"
         ),
     )
 
@@ -424,6 +570,10 @@ class GufiAggregateQuery(BaseModel):
     def shape_valid(cls, shape: str, info) -> str:
         with _as_value_error():
             columns = parse_shape(shape, info.field_name)
+            hidden = sorted(HIDDEN_COLUMNS & set(columns))
+            if hidden:
+                raise GufiError(f"{info.field_name}: {', '.join(hidden)} is internal rollup bookkeeping, not a path. "
+                                f"Carry a path column as TEXT instead ({PATH_TABLES_TEXT})")
         return ", ".join(f"{name} {col_type}" for name, col_type in columns.items())
 
     @field_validator("scatter_sql")
@@ -436,12 +586,8 @@ class GufiAggregateQuery(BaseModel):
                 sql = _strip_terminators(sql)
                 tree = parse_select(sql, context)
                 _reject_double_quotes(sql, context)
-                for clause in ("order", "limit", "offset"):
-                    if tree.args.get(clause):
-                        raise GufiError(
-                            f"{context}: {clause.upper()} is applied per directory, not index-wide; "
-                            "move it to final_sql"
-                        )
+                _reject_ordering(tree, context)
+                _reject_path_internals(tree, context)
                 cleaned.append(sql)
         return cleaned
 
@@ -450,8 +596,11 @@ class GufiAggregateQuery(BaseModel):
     def statement_valid(cls, sql: str, info) -> str:
         sql = _strip_terminators(sql)
         with _as_value_error():
-            parse_select(sql, info.field_name)
+            tree = parse_select(sql, info.field_name)
             _reject_double_quotes(sql, info.field_name)
+            if info.field_name == "gather_sql":
+                _reject_ordering(tree, info.field_name)
+            _reject_path_internals(tree, info.field_name)
         return sql
 
     @model_validator(mode="after")
@@ -472,7 +621,7 @@ class GufiAggregateQuery(BaseModel):
                         f"{context}: more than one scatter statement reads a {phase}-phase table; "
                         "combine them into one statement"
                     )
-                _check_columns(tree, schema_columns(table), table, context)
+                _check_columns(tree, schema_columns(table), table, context, TABLE_PATH_HINT)
                 _check_projection_width(tree, len(intermediate), "scatter_shape", context)
                 if phase == "T" and not has_treesummary(self.index):
                     raise GufiError(f"{context}: index {self.index!r} has no treesummary table; use summary or entries tables")
@@ -481,13 +630,13 @@ class GufiAggregateQuery(BaseModel):
             gather = parse_select(self.gather_sql, "gather_sql")
             if select_tables(gather, "gather_sql") != [INTERMEDIATE_TABLE]:
                 raise GufiError("gather_sql must read only from the intermediate table")
-            _check_columns(gather, set(intermediate), "intermediate (scatter_shape)", "gather_sql")
+            _check_columns(gather, set(intermediate), "intermediate (scatter_shape)", "gather_sql", CARRY_PATH_HINT)
             _check_projection_width(gather, len(aggregate), "gather_shape", "gather_sql")
 
             final = parse_select(self.final_sql, "final_sql")
             if select_tables(final, "final_sql") != [AGGREGATE_TABLE]:
                 raise GufiError("final_sql must read only from the aggregate table")
-            _check_columns(final, set(aggregate), "aggregate (gather_shape)", "final_sql")
+            _check_columns(final, set(aggregate), "aggregate (gather_shape)", "final_sql", CARRY_PATH_HINT)
 
         self._phases = phases
         return self
@@ -501,14 +650,16 @@ class GufiAggregateQuery(BaseModel):
         such as SUM(...) as text.
         """
         aggregate_columns = ", ".join(parse_shape(self.gather_shape, "gather_shape"))
-        options = [
-            f'index="{resolve_local_index(self.index)}"',
-            f"threads={THREADS}",
-            _gufi_vt_arg("I", f"CREATE TABLE {INTERMEDIATE_TABLE}({self.scatter_shape})"),
-        ]
+        root = str(resolve_local_index(self.index))
+        options = [f'index="{root}"', f"threads={THREADS}"]
+        if GUFI_SOURCE_ROOT is not None:
+            options.append(f'p="{_source_prefix(self.index)}"')
+        options.append(_gufi_vt_arg("I", f"CREATE TABLE {INTERMEDIATE_TABLE}({self.scatter_shape})"))
         for phase in ("T", "S", "E"):
             if phase in self._phases:
-                options.append(_gufi_vt_arg(phase, f"INSERT INTO {INTERMEDIATE_TABLE} {self._phases[phase]}"))
+                sql = expand_path_columns(self._phases[phase], f"scatter {phase}",
+                                          lambda table, column: scatter_path_sql(table, column, self.index, root))
+                options.append(_gufi_vt_arg(phase, f"INSERT INTO {INTERMEDIATE_TABLE} {sql}"))
         options.extend([
             _gufi_vt_arg("K", f"CREATE TABLE {AGGREGATE_TABLE}({self.gather_shape})"),
             _gufi_vt_arg("J", f"INSERT INTO {AGGREGATE_TABLE} {self.gather_sql}"),
@@ -587,6 +738,49 @@ def run_db_sql(db_path: Path, sql: str, params: tuple = ()) -> GufiQueryResult:
         conn.close()
 
 
+# gufi_vt_* emit SELECT path(), epath(), fpath(), rpath(), level(), * FROM <view> and store the
+# values by position under a schema compiled into the extension. Some GUFI builds declare a
+# schema that differs from the view (gufi_vt_vrsummary lacks crtime, shifting every later
+# column by one), so a column is read from the declared name at its view position.
+GUFI_VT_EXTRA_COLUMNS = ("path", "epath", "fpath", "rpath", "level")
+_GUFI_VT_COLUMN_MAPS: dict[str, Optional[dict[str, str]]] = {}
+
+
+def _gufi_vt_column_map(vt: str) -> Optional[dict[str, str]]:
+    """{view column: declared gufi_vt column holding it}, or None when the two schemas agree."""
+    if vt not in _GUFI_VT_COLUMN_MAPS:
+        try:
+            conn = _connect_gufi_vt()
+        except GufiError:
+            return None
+        try:
+            declared = [row[1] for row in conn.execute(f"PRAGMA table_xinfo(gufi_vt_{vt})") if not row[6]]
+        finally:
+            conn.close()
+        view = list(get_static_schema()[vt]["columns"])
+        stored = declared[len(GUFI_VT_EXTRA_COLUMNS):]
+        _GUFI_VT_COLUMN_MAPS[vt] = None if stored == view else dict(zip(view, stored))
+        if _GUFI_VT_COLUMN_MAPS[vt] is not None:
+            logger.warning("gufi_vt_%s declares a schema that differs from the %s view; remapping columns", vt, vt)
+    return _GUFI_VT_COLUMN_MAPS[vt]
+
+
+def _gufi_vt_stored(vt: str, column: str) -> str:
+    """Name of the gufi_vt_<vt> column that holds the view's column."""
+    mapping = _gufi_vt_column_map(vt)
+    if mapping is None:
+        return column
+    if column not in mapping:
+        raise GufiError(f"sql_file_index: column {column} cannot be read through the installed gufi_vt_{vt}; "
+                        "use aggregate_sql_query instead")
+    return mapping[column]
+
+
+def _gufi_vt_source(vt: str, column: str) -> str:
+    stored = _gufi_vt_stored(vt, column)
+    return f'"{column}"' if stored == column else f'"{stored}" AS "{column}"'
+
+
 def build_gufi_vt_select(sql: str, index: str, remote: bool = False) -> tuple[str, tuple]:
     """Rewrite a SELECT over one GUFI table to read from the matching gufi_vt_* function.
 
@@ -606,13 +800,32 @@ def build_gufi_vt_select(sql: str, index: str, remote: bool = False) -> tuple[st
     table = table_name.removeprefix("gufi_vt_")
     if table not in GUFI_VT_TABLES:
         raise GufiError(f"{context}: table {table_name!r} is not queryable. Use one of: {', '.join(sorted(GUFI_VT_TABLES))}")
-    _check_columns(tree, schema_columns(table), table, context)
+    _reject_path_internals(tree, context)
+    _check_columns(tree, schema_columns(table), table, context, TABLE_PATH_HINT)
 
+    # gufi_vt_* positional arguments: index, threads, min_level, max_level, path_list, verbose[, remote_cmd, remote_args]
+    if remote:
+        root = resolve_remote_index(index)
+        args, params = "?, ?, NULL, NULL, NULL, 0, 'ssh', ?", (root, THREADS, REMOTEHOST)
+    else:
+        root = str(resolve_local_index(index))
+        args, params = "?, ?, NULL, NULL, NULL, 0", (root, THREADS)
+    label = root.rsplit("/", 1)[-1]
+
+    vt = GUFI_VT_TABLES[table]
+    paths = path_columns(table)
+    mapping = _gufi_vt_column_map(vt)
     if tree.is_star:
-        source_columns = "*"
+        wanted = [col for col in get_static_schema()[vt]["columns"]
+                  if col not in HIDDEN_COLUMNS and (mapping is None or col in mapping)] + list(paths)
     else:
         # Columns are already checked against the schema; any column works when none are referenced.
-        source_columns = ", ".join(f'"{col}"' for col in sorted(select_columns(tree)) or ["name"])
+        wanted = sorted(select_columns(tree)) or ["name"]
+    name_sql = f'"{_gufi_vt_stored(vt, "name")}"' if paths else ""
+    source_columns = ", ".join(
+        f'{gufi_vt_path_sql(table, col, label, root, name_sql)} AS "{col}"' if col in paths else _gufi_vt_source(vt, col)
+        for col in wanted
+    )
 
     source = sources[0]
     alias = source.alias or table
@@ -620,16 +833,10 @@ def build_gufi_vt_select(sql: str, index: str, remote: bool = False) -> tuple[st
     replacement.set("alias", exp.TableAlias(this=exp.to_identifier(alias)))
     source.replace(replacement)
 
-    # gufi_vt_* positional arguments: index, threads, min_level, max_level, path_list, verbose[, remote_cmd, remote_args]
-    if remote:
-        args, params = "?, ?, NULL, NULL, NULL, 0, 'ssh', ?", (resolve_remote_index(index), THREADS, REMOTEHOST)
-    else:
-        args, params = "?, ?, NULL, NULL, NULL, 0", (str(resolve_local_index(index)), THREADS)
-
     # gufi_vt hangs if SQLite stops reading before gufi_query finishes writing (e.g. a
     # bare LIMIT), so the source is always read in full into a materialized CTE first.
     rewritten = (
-        f"WITH {placeholder} AS MATERIALIZED (SELECT {source_columns} FROM gufi_vt_{GUFI_VT_TABLES[table]}({args})) "
+        f"WITH {placeholder} AS MATERIALIZED (SELECT {source_columns} FROM gufi_vt_{vt}({args})) "
         + tree.sql(dialect=SQL_DIALECT)
     )
     return rewritten, params
@@ -780,6 +987,30 @@ def build_tool_command(binary: str, args: BaseModel, flags: dict[str, str],
     return cmd
 
 
+def relative_index_paths(text: str) -> str:
+    """Rewrite absolute paths under GUFI_INDEX_ROOT into the index-name-first form.
+
+    Most GUFI tools print that form already; gufi_stat and gufi_du --summarize print absolute paths.
+    """
+    prefix = re.escape(f"{str(GUFI_INDEX_ROOT).rstrip('/')}/")
+    return re.sub(rf"(?<![^\s'\"]){prefix}", "", text)
+
+
+def cli_index_root() -> Optional[Path]:
+    """IndexRoot from the server config the installed GUFI command-line tools read, if it can be found."""
+    gufi_find = shutil.which("gufi_find")
+    if gufi_find is None:
+        return None
+    config_module = Path(gufi_find).resolve().parent.parent / "lib" / "gufi_config.py"
+    try:
+        match = re.search(r"^PATH = '([^']+)'", config_module.read_text(), re.MULTILINE)
+        config = Path(match.group(1)).read_text() if match else ""
+    except OSError:
+        return None
+    root = re.search(r"^IndexRoot=(.+)$", config, re.MULTILINE)
+    return Path(root.group(1).strip()).resolve() if root else None
+
+
 def run_gufi_tool(cmd: list[str], delim: Optional[str] = "\t") -> GufiToolResult:
     """Run a GUFI command-line tool and split its stdout into rows."""
     logger.debug("Running %s", cmd)
@@ -794,7 +1025,7 @@ def run_gufi_tool(cmd: list[str], delim: Optional[str] = "\t") -> GufiToolResult
     if proc.returncode != 0:
         raise GufiError(f"{cmd[0]} exited with status {proc.returncode}: {stderr or 'no error output'}")
 
-    lines = [line for line in proc.stdout.splitlines() if line.strip()]
+    lines = [line for line in relative_index_paths(proc.stdout).splitlines() if line.strip()]
     truncated = len(lines) > MAX_ROWS
     lines = lines[:MAX_ROWS]
     rows = [line.split(delim) if delim else [line] for line in lines]
@@ -817,7 +1048,7 @@ class GufiToolArgsLS(BaseModel):
 
     path: CliPath = Field(
         default=".",
-        description="Directory to list, relative to the GUFI index root (e.g. 'Downloads' or 'Downloads/sub').",
+        description="Directory to list, relative to the GUFI index root. Paths start with an index name from gufi://indexes, e.g. 'myindex' or 'myindex/sub'.",
     )
 
     all: bool = Field(default=False, description="If true, include entries starting with '.' (ls -a).")
@@ -875,8 +1106,8 @@ class GufiToolArgsDU(BaseModel):
         default_factory=lambda: ["."],
         min_length=1,
         description=(
-            "One or more paths to summarize, relative to the GUFI index root. "
-            "Directories need treesummary data for meaningful results."
+            "One or more paths to summarize, relative to the GUFI index root. Paths start with an index name from gufi://indexes, e.g. 'myindex' or 'myindex/sub'. "
+            "Directories need treesummary data (gufi://indexes shows which indexes have it)."
         ),
     )
 
@@ -913,7 +1144,7 @@ class GufiToolArgsStat(BaseModel):
     files: list[CliPath] = Field(
         default_factory=lambda: ["."],
         min_length=1,
-        description="Files or directories to stat, relative to the GUFI index root.",
+        description="Files or directories to stat, relative to the GUFI index root. Paths start with an index name from gufi://indexes, e.g. 'myindex' or 'myindex/sub'.",
     )
 
     format: Optional[str] = Field(
@@ -1002,7 +1233,7 @@ class GufiToolArgsStats(BaseModel):
 
     path: CliPath = Field(
         default=".",
-        description="Path to compute the statistic for, relative to the GUFI index root.",
+        description="Path to compute the statistic for, relative to the GUFI index root. Paths start with an index name from gufi://indexes, e.g. 'myindex' or 'myindex/sub'.",
     )
 
     recursive: bool = Field(
@@ -1048,7 +1279,7 @@ class GufiToolArgsGetfattr(BaseModel):
     paths: list[CliPath] = Field(
         default_factory=lambda: ["."],
         min_length=1,
-        description="Paths to read extended attributes from, relative to the GUFI index root.",
+        description="Paths to read extended attributes from, relative to the GUFI index root. Paths start with an index name from gufi://indexes, e.g. 'myindex' or 'myindex/sub'.",
     )
 
     name: Optional[str] = Field(default=None, min_length=1, description="Dump the value of this named extended attribute only.")
@@ -1087,7 +1318,7 @@ class GufiToolArgsFind(BaseModel):
     paths: list[CliPath] = Field(
         default_factory=lambda: ["."],
         min_length=1,
-        description="Starting paths for the search, relative to the GUFI index root.",
+        description="Starting paths for the search, relative to the GUFI index root. Paths start with an index name from gufi://indexes, e.g. 'myindex' or 'myindex/sub'.",
     )
 
     maxdepth: Optional[int] = Field(default=None, ge=0, description="Descend at most this many directory levels below each starting path.")
