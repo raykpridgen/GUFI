@@ -26,7 +26,7 @@ def _manifest(**overrides: object) -> registry.IndexManifest:
 def _scenario(**overrides: object) -> dict:
     base = {
         "id": "s1", "prompt": "Count files in {index}", "tags": [], "enabled": True, "index": "eval_master",
-        "parameters": {}, "ground_truth": {"scatter_sql": ["SELECT size FROM vrpentries"]}, "notes": "",
+        "parameters": {}, "ground_truth": {"per_directory_sql": ["SELECT size FROM vrpentries"]}, "notes": "",
     }
     base.update(overrides)
     return base
@@ -59,7 +59,7 @@ def test_registry_mode_rules(tmp_path: Path) -> None:
     (_scenario(extra=1), "Extra inputs"),
     ({k: v for k, v in _scenario().items() if k != "notes"}, "notes"),
     (_scenario(id="bad id"), "id"),
-    (_scenario(ground_truth={"index": "x", "scatter_sql": []}), "must not set index"),
+    (_scenario(ground_truth={"index": "x", "per_directory_sql": []}), "must not set index"),
 ])
 def test_registry_rejects_bad_entries(tmp_path: Path, item: dict, message: str) -> None:
     with pytest.raises(registry.RegistryError, match=message):
@@ -75,13 +75,13 @@ def test_render_fills_placeholders() -> None:
     scenario = registry.Scenario.model_validate(_scenario(
         prompt="Today is {fixed_now_date}; last {parameters.days} days of {index}",
         parameters={"days": 60},
-        ground_truth={"scatter_sql": ["SELECT mtime FROM vrpentries WHERE mtime < {fixed_now} - {parameters.days} * 86400"],
-                      "final_sql": "SELECT SUM(n) FROM aggregate"},
+        ground_truth={"per_directory_sql": ["SELECT mtime FROM vrpentries WHERE mtime < {fixed_now} - {parameters.days} * 86400"],
+                      "final_sql": "SELECT SUM(n) FROM partial"},
     ))
     item = registry.render_scenario(scenario, "single", _manifest())
     assert item.prompt == "Today is 2026-10-12; last 60 days of eval_master"
     assert item.ground_truth["index"] == "eval_master"
-    assert item.ground_truth["scatter_sql"] == [f"SELECT mtime FROM vrpentries WHERE mtime < {FIXED_NOW} - 60 * 86400"]
+    assert item.ground_truth["per_directory_sql"] == [f"SELECT mtime FROM vrpentries WHERE mtime < {FIXED_NOW} - 60 * 86400"]
 
 
 def test_render_reports_missing_parameter() -> None:
@@ -136,9 +136,9 @@ def test_float_rounding_and_none() -> None:
 
 
 def test_is_ordered_top_level_only() -> None:
-    assert comparator.is_ordered("SELECT a FROM aggregate ORDER BY a DESC LIMIT 10")
+    assert comparator.is_ordered("SELECT a FROM partial ORDER BY a DESC LIMIT 10")
     assert not comparator.is_ordered(
-        "SELECT u FROM (SELECT u, ROW_NUMBER() OVER (PARTITION BY u ORDER BY s) AS rn FROM aggregate) WHERE rn <= 10"
+        "SELECT u FROM (SELECT u, ROW_NUMBER() OVER (PARTITION BY u ORDER BY s) AS rn FROM partial) WHERE rn <= 10"
     )
 
 
@@ -163,7 +163,7 @@ def test_single_scores_last_successful_call() -> None:
               _event("resource", "gufi://indexes"), _event("tool", "aggregate_sql_query", ok=False),
               _event("tool", "aggregate_sql_query")]
     calls = [_call([[1]]), _call([], ok=False), _call([[42]], duration=50)]
-    score = metrics.score_single(_result(events, calls), "eval_master", [[42]], "SELECT x FROM aggregate", 20)
+    score = metrics.score_single(_result(events, calls), "eval_master", [[42]], "SELECT x FROM partial", 20)
     assert score.passed
     assert score.resources_consumed == 2
     assert score.aggregate_revision_count == 2
@@ -180,7 +180,7 @@ def test_single_scores_last_successful_call() -> None:
     ([_call([[42]])], "max_tool_calls", ["max_tool_calls"]),
 ])
 def test_single_failure_tags(calls: list, stop: str, tags: list) -> None:
-    score = metrics.score_single(_result([], calls, stop), "eval_master", [[42]], "SELECT x FROM aggregate", 0)
+    score = metrics.score_single(_result([], calls, stop), "eval_master", [[42]], "SELECT x FROM partial", 0)
     assert score.failure_tags == tags
     assert score.passed == (tags == ["max_tool_calls"])
 
@@ -188,7 +188,7 @@ def test_single_failure_tags(calls: list, stop: str, tags: list) -> None:
 def test_truncated_result_fails() -> None:
     call = _call([[42]])
     call.truncated = True
-    score = metrics.score_single(_result([], [call]), "eval_master", [[42]], "SELECT x FROM aggregate", 0)
+    score = metrics.score_single(_result([], [call]), "eval_master", [[42]], "SELECT x FROM partial", 0)
     assert not score.passed and "truncated" in score.reason
 
 
@@ -250,7 +250,7 @@ def test_add_usage_reads_openrouter_cost() -> None:
 def test_summary_lines_have_identical_keys(tmp_path: Path) -> None:
     writer = reporter.RunWriter(tmp_path, "run")
     result = _result([_event("tool", "aggregate_sql_query")], [_call([[1]])])
-    score = metrics.score_single(result, "eval_master", [[1]], "SELECT x FROM aggregate", 1)
+    score = metrics.score_single(result, "eval_master", [[1]], "SELECT x FROM partial", 1)
     single = reporter.record_single(writer, "a", 1, result, score, {"index": "eval_master"}, [[1]], 1, {"agent": "replay"})
     general = reporter.record_general(writer, "b", 1, result, metrics.general_metrics(result), {"agent": "replay"})
     assert list(single) == list(general) == list(reporter.SUMMARY_KEYS)
@@ -295,7 +295,7 @@ def _agent_visible_text() -> str:
 def test_no_ground_truth_statement_is_shown_to_agents() -> None:
     visible = _agent_visible_text()
     for item in _rendered_single():
-        for sql in [*item.ground_truth["scatter_sql"], item.ground_truth["final_sql"]]:
+        for sql in [*item.ground_truth["per_directory_sql"], item.ground_truth["final_sql"]]:
             assert " ".join(sql.lower().split()) not in visible, f"{item.scenario.id} leaks: {sql}"
 
 
@@ -305,7 +305,8 @@ def test_primer_covers_core_guidance() -> None:
     primer = gufi_mcp_server.PRIMER
     assert gufi_mcp_server.mcp.instructions == primer
     for needle in ("gufi://indexes", "gufi://schemas/all", "dirpath", "myindex/dir/file.txt", "vrpentries",
-                   "rollup", "ORDER BY", "treesummary", "86400", "SUM the"):
+                   "per_directory_sql", "partial_sql", "FROM partial", "rollup", "ORDER BY", "treesummary",
+                       "86400", "SUM counts"):
         assert needle in primer, needle
 
 

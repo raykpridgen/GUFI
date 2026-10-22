@@ -42,11 +42,11 @@ def _aggregate(table: str, columns: list[str], where: str = "") -> set[tuple]:
     names = ", ".join(f"c{i}" for i in range(len(columns)))
     query = util.GufiAggregateQuery.model_validate({
         "index": INDEX,
-        "scatter_sql": [f"SELECT {', '.join(columns)} FROM {table} {where}"],
-        "scatter_shape": shape,
-        "gather_sql": f"SELECT {names} FROM intermediate",
-        "gather_shape": shape,
-        "final_sql": f"SELECT {names} FROM aggregate",
+        "per_directory_sql": [f"SELECT {', '.join(columns)} FROM {table} {where}"],
+        "per_directory_shape": shape,
+        "partial_sql": f"SELECT {names} FROM per_directory",
+        "partial_shape": shape,
+        "final_sql": f"SELECT {names} FROM partial",
     })
     return {tuple(row) for row in util.run_aggregate(query).rows}
 

@@ -16,7 +16,7 @@ from eval_lib.agent import (
 from eval_lib.mcp_session import CallOutcome, Telemetry
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-DEFAULT_MODEL = "openai/gpt-4o-mini"
+DEFAULT_MODEL = "anthropic/claude-opus-5.5"
 READ_RESOURCE_TOOL = "read_resource"
 TOOL_RESULT_CHARS = 20_000
 
