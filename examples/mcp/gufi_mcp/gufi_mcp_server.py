@@ -114,9 +114,9 @@ Paths
 - vrpentries has path (the file's full path) and dirpath (its directory's);
   vrsummary has path (the directory's). name is only the base name.
 - Path columns are ordinary TEXT columns: select, filter (path LIKE
-  'myindex/dir/%'), or group by them, in sql_file_index or in scatter_sql.
-  To use one in gather_sql or final_sql, carry it through scatter_shape and
-  gather_shape like any other column.
+  'myindex/dir/%'), or group by them, in sql_file_index or in per_directory_sql.
+  To use one in partial_sql or final_sql, carry it through per_directory_shape and
+  partial_shape like any other column.
 - Other functions include ext(name) (text after the last '.'), bytecat(size) and
   agecat(time) (GUFI size and age categories).
 
@@ -124,34 +124,33 @@ Choosing a tool
 - gufi_ls, gufi_find, gufi_du, gufi_stat, gufi_stats, gufi_get_fattr wrap GUFI's
   command-line tools; paths start with an index name (e.g. "myindex/sub").
 - sql_file_index runs one SELECT over one table across the whole index.
-- aggregate_sql_query runs GUFI's parallel scatter/gather pipeline.
+- aggregate_sql_query runs GUFI's parallel per_directory / partial / final pipeline.
 
-How aggregate_sql_query works (scatter/gather)
-- GUFI walks the index with many threads. Scatter: each scatter_sql statement
-  runs once per directory and its rows go into that thread's intermediate table
-  (columns = scatter_shape).
-- Gather: gather_sql runs once per thread over its intermediate table, and the
-  rows go into one shared aggregate table (columns = gather_shape). The aggregate
-  table therefore holds one partial result per thread, not a final answer.
-- Final: final_sql runs once over aggregate. Re-combine partials there: SUM the
-  counts and sums, MAX the maxima, and so on. A final_sql without that returns
-  one row per thread.
+How aggregate_sql_query works (per_directory, partial, final)
+- GUFI walks the index with many threads. Per-directory: each per_directory_sql
+  statement runs once per directory; rows go into that thread's per_directory table
+  (columns = per_directory_shape).
+- Partial: partial_sql runs once per thread over per_directory, and rows go into
+  the shared partial table (columns = partial_shape). That table holds one partial
+  result per thread, not the final answer.
+- Final: final_sql runs once over partial. Re-combine partials there: SUM counts
+  and sums, MAX maxima, and so on. A final_sql without that returns one row per thread.
 - Count raw rows only once. COUNT(*) belongs at the first stage that sees one row
-  per file; every later stage SUMs the counts it receives. If scatter_sql already
-  uses COUNT(*) ... GROUP BY, gather_sql must SUM that column, not COUNT(*) again.
+  per file; every later stage SUMs the counts it receives. If per_directory_sql
+  already uses COUNT(*) ... GROUP BY, partial_sql must SUM that column, not COUNT(*) again.
 - Example, symlinks per gid:
-    scatter_shape "gid INT64, size INT64"
-    scatter_sql   ["SELECT gid, size FROM vrpentries WHERE type = 'l'"]
-    gather_shape  "gid INT64, links INT64, bytes INT64"
-    gather_sql    "SELECT gid, COUNT(*), SUM(size) FROM intermediate GROUP BY gid"
-    final_sql     "SELECT gid, SUM(links) AS links, SUM(bytes) AS bytes FROM aggregate GROUP BY gid"
+    per_directory_shape "gid INT64, size INT64"
+    per_directory_sql   ["SELECT gid, size FROM vrpentries WHERE type = 'l'"]
+    partial_shape  "gid INT64, links INT64, bytes INT64"
+    partial_sql    "SELECT gid, COUNT(*), SUM(size) FROM per_directory GROUP BY gid"
+    final_sql      "SELECT gid, SUM(links) AS links, SUM(bytes) AS bytes FROM partial GROUP BY gid"
 - Per-group top-N (for example the N largest per owner) needs a window function
   in final_sql: SELECT ... FROM (SELECT ..., ROW_NUMBER() OVER (PARTITION BY
-  <group> ORDER BY <value> DESC) AS rn FROM aggregate) WHERE rn <= N.
+  <group> ORDER BY <value> DESC) AS rn FROM partial) WHERE rn <= N.
   A plain LIMIT N in final_sql returns N rows in total.
-- ORDER BY, LIMIT, and OFFSET are allowed only in final_sql, not anywhere in
-  scatter_sql or gather_sql (subqueries and window functions included). Those
-  stages run once per directory or per thread, so ordering or limiting there
+- ORDER BY, LIMIT, and OFFSET are allowed only in final_sql, not in
+  per_directory_sql or partial_sql (subqueries and window functions included).
+  Those stages run once per directory or per thread, so ordering or limiting there
   drops partial results and gives wrong totals. Filter with WHERE instead, and
   sort or limit once in final_sql.
 
@@ -228,10 +227,10 @@ def sql_file_index(
 def aggregate_sql_query(
         query: Annotated[GufiAggregateQuery, Field(description="The aggregate pipeline to run.")],
 ) -> GufiQueryResult:
-    """Run a GUFI scatter/gather aggregate pipeline over an index and return the rows of final_sql.
+    """Run a GUFI per_directory / partial / final pipeline over an index and return the rows of final_sql.
 
-    Scatter SQL runs per directory in parallel threads, gather SQL merges each thread's rows into the aggregate
-    table, and final SQL combines those partial results once. Read gufi://indexes for the index name and
+    per_directory_sql runs once per directory, partial_sql merges each thread's rows into the partial table,
+    and final_sql combines those partial results once. Read gufi://indexes for the index name and
     gufi://schemas/<table> for column names before writing the pipeline.
     """
     return util.run_aggregate(query)

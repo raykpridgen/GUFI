@@ -41,7 +41,7 @@ COLORS = {"correct": "#2e7d32", "incorrect": "#c62828", "ungraded": "#757575",
 ERROR_CATEGORIES = [
     ("bare sname/sroll", r"is not a path and is only valid as an argument to rpath|is internal rollup bookkeeping"),
     ("sname/sroll carried in shape", r"cannot be carried between stages"),
-    ("rpath outside scatter", r"rpath\(\) only works in scatter_sql"),
+    ("rpath outside per_directory", r"rpath\(\) only works in per_directory_sql"),
     ("path function", r"\w+\(\) is not available\. Use the path columns"),
     ("path column not carried", r"Path columns come from"),
     ("path column on wrong table", r"Path columns exist only in"),

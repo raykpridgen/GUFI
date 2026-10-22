@@ -14,11 +14,11 @@
   index: eval_master
   parameters: {}
   ground_truth:
-    scatter_shape: "size INT64"
-    scatter_sql: ["SELECT size FROM vrpentries WHERE type = 'f'"]
-    gather_shape: "total INT64"
-    gather_sql: "SELECT SUM(size) FROM intermediate"
-    final_sql: "SELECT SUM(total) AS total FROM aggregate"
+    per_directory_shape: "size INT64"
+    per_directory_sql: ["SELECT size FROM vrpentries WHERE type = 'f'"]
+    partial_shape: "total INT64"
+    partial_sql: "SELECT SUM(size) FROM per_directory"
+    final_sql: "SELECT SUM(total) AS total FROM partial"
   notes: "eval_plan example 1."
 
 - id: total_dir_size
@@ -28,11 +28,11 @@
   index: eval_master
   parameters: {}
   ground_truth:
-    scatter_shape: "size INT64"
-    scatter_sql: ["SELECT size FROM summary WHERE isroot = 1"]
-    gather_shape: "total INT64"
-    gather_sql: "SELECT SUM(size) FROM intermediate"
-    final_sql: "SELECT SUM(total) AS total FROM aggregate"
+    per_directory_shape: "size INT64"
+    per_directory_sql: ["SELECT size FROM summary WHERE isroot = 1"]
+    partial_shape: "total INT64"
+    partial_sql: "SELECT SUM(size) FROM per_directory"
+    final_sql: "SELECT SUM(total) AS total FROM partial"
   notes: "eval_plan example 2. Directories live in summary, not entries; isroot = 1 avoids counting rolled-up rows."
 
 - id: ext_histogram
@@ -42,11 +42,11 @@
   index: eval_master
   parameters: {}
   ground_truth:
-    scatter_shape: "ext TEXT"
-    scatter_sql: ["SELECT ext(name) FROM vrpentries WHERE type = 'f'"]
-    gather_shape: "ext TEXT, count INT64"
-    gather_sql: "SELECT ext, COUNT(*) FROM intermediate GROUP BY ext"
-    final_sql: "SELECT ext, SUM(count) AS count FROM aggregate GROUP BY ext"
+    per_directory_shape: "ext TEXT"
+    per_directory_sql: ["SELECT ext(name) FROM vrpentries WHERE type = 'f'"]
+    partial_shape: "ext TEXT, count INT64"
+    partial_sql: "SELECT ext, COUNT(*) FROM per_directory GROUP BY ext"
+    final_sql: "SELECT ext, SUM(count) AS count FROM partial GROUP BY ext"
   notes: "eval_plan example 3, restricted to regular files. GUFI ext() treats a hidden name without a dot-suffix (.metrics) as its own extension."
 
 - id: size_histogram
@@ -56,11 +56,11 @@
   index: eval_master
   parameters: {}
   ground_truth:
-    scatter_shape: "cat TEXT"
-    scatter_sql: ["SELECT bytecat(size) FROM vrpentries WHERE type = 'f'"]
-    gather_shape: "cat TEXT, count INT64"
-    gather_sql: "SELECT cat, COUNT(*) FROM intermediate GROUP BY cat"
-    final_sql: "SELECT cat, SUM(count) AS count FROM aggregate GROUP BY cat"
+    per_directory_shape: "cat TEXT"
+    per_directory_sql: ["SELECT bytecat(size) FROM vrpentries WHERE type = 'f'"]
+    partial_shape: "cat TEXT, count INT64"
+    partial_sql: "SELECT cat, COUNT(*) FROM per_directory GROUP BY cat"
+    final_sql: "SELECT cat, SUM(count) AS count FROM partial GROUP BY cat"
   notes: "eval_plan example 4. Natural wording: ground truth uses GUFI's bytecat categories, which the prompt does not name, so other bucketings fail."
 
 - id: age_histogram
@@ -70,11 +70,11 @@
   index: eval_master
   parameters: {}
   ground_truth:
-    scatter_shape: "cat TEXT"
-    scatter_sql: ["SELECT agecat(mtime) FROM vrpentries WHERE type = 'f'"]
-    gather_shape: "cat TEXT, count INT64"
-    gather_sql: "SELECT cat, COUNT(*) FROM intermediate GROUP BY cat"
-    final_sql: "SELECT cat, SUM(count) AS count FROM aggregate GROUP BY cat"
+    per_directory_shape: "cat TEXT"
+    per_directory_sql: ["SELECT agecat(mtime) FROM vrpentries WHERE type = 'f'"]
+    partial_shape: "cat TEXT, count INT64"
+    partial_sql: "SELECT cat, COUNT(*) FROM per_directory GROUP BY cat"
+    final_sql: "SELECT cat, SUM(count) AS count FROM partial GROUP BY cat"
   notes: "eval_plan example 5. Natural wording: ground truth uses GUFI's agecat categories, which the prompt does not name. agecat is relative to the wall clock, so ground truth and agent must run close together (they do within a trial)."
 
 - id: top10_size_global
@@ -84,11 +84,11 @@
   index: eval_master
   parameters: {}
   ground_truth:
-    scatter_shape: "path TEXT, size INT64"
-    scatter_sql: ["SELECT path, size FROM vrpentries WHERE type = 'f'"]
-    gather_shape: "path TEXT, size INT64"
-    gather_sql: "SELECT path, size FROM intermediate"
-    final_sql: "SELECT path, size FROM aggregate ORDER BY size DESC LIMIT 10"
+    per_directory_shape: "path TEXT, size INT64"
+    per_directory_sql: ["SELECT path, size FROM vrpentries WHERE type = 'f'"]
+    partial_shape: "path TEXT, size INT64"
+    partial_sql: "SELECT path, size FROM per_directory"
+    final_sql: "SELECT path, size FROM partial ORDER BY size DESC LIMIT 10"
   notes: "eval_plan example 6. Full path is the vrpentries path column (index name first, as gufi_find prints it)."
 
 - id: top10_size_per_uid
@@ -98,11 +98,11 @@
   index: eval_master
   parameters: {}
   ground_truth:
-    scatter_shape: "uid INT64, path TEXT, size INT64"
-    scatter_sql: ["SELECT uid, path, size FROM vrpentries WHERE type = 'f'"]
-    gather_shape: "uid INT64, path TEXT, size INT64"
-    gather_sql: "SELECT uid, path, size FROM intermediate"
-    final_sql: "SELECT uid, path, size FROM (SELECT uid, path, size, ROW_NUMBER() OVER (PARTITION BY uid ORDER BY size DESC) AS rn FROM aggregate) WHERE rn <= 10"
+    per_directory_shape: "uid INT64, path TEXT, size INT64"
+    per_directory_sql: ["SELECT uid, path, size FROM vrpentries WHERE type = 'f'"]
+    partial_shape: "uid INT64, path TEXT, size INT64"
+    partial_sql: "SELECT uid, path, size FROM per_directory"
+    final_sql: "SELECT uid, path, size FROM (SELECT uid, path, size, ROW_NUMBER() OVER (PARTITION BY uid ORDER BY size DESC) AS rn FROM partial) WHERE rn <= 10"
   notes: "eval_plan example 7. No outer ORDER BY, so rows are compared as a set."
 
 - id: ext_winner
@@ -112,11 +112,11 @@
   index: eval_master
   parameters: {}
   ground_truth:
-    scatter_shape: "ext TEXT"
-    scatter_sql: ["SELECT ext(name) FROM vrpentries WHERE type = 'f'"]
-    gather_shape: "ext TEXT, count INT64"
-    gather_sql: "SELECT ext, COUNT(*) FROM intermediate GROUP BY ext"
-    final_sql: "SELECT ext, SUM(count) AS count FROM aggregate GROUP BY ext ORDER BY count DESC LIMIT 1"
+    per_directory_shape: "ext TEXT"
+    per_directory_sql: ["SELECT ext(name) FROM vrpentries WHERE type = 'f'"]
+    partial_shape: "ext TEXT, count INT64"
+    partial_sql: "SELECT ext, COUNT(*) FROM per_directory GROUP BY ext"
+    final_sql: "SELECT ext, SUM(count) AS count FROM partial GROUP BY ext ORDER BY count DESC LIMIT 1"
   notes: "From eval/eval_plan.md templates."
 
 - id: count_over_1gib
@@ -126,11 +126,11 @@
   index: eval_master
   parameters: {threshold: 1073741824}
   ground_truth:
-    scatter_shape: "size INT64"
-    scatter_sql: ["SELECT size FROM vrpentries WHERE type = 'f' AND size > {parameters.threshold}"]
-    gather_shape: "n INT64"
-    gather_sql: "SELECT COUNT(*) FROM intermediate"
-    final_sql: "SELECT SUM(n) AS n FROM aggregate"
+    per_directory_shape: "size INT64"
+    per_directory_sql: ["SELECT size FROM vrpentries WHERE type = 'f' AND size > {parameters.threshold}"]
+    partial_shape: "n INT64"
+    partial_sql: "SELECT COUNT(*) FROM per_directory"
+    final_sql: "SELECT SUM(n) AS n FROM partial"
   notes: "Threshold size template."
 
 - id: oldest_k
@@ -140,11 +140,11 @@
   index: eval_master
   parameters: {k: 5}
   ground_truth:
-    scatter_shape: "path TEXT, mtime INT64"
-    scatter_sql: ["SELECT path, mtime FROM vrpentries WHERE type = 'f'"]
-    gather_shape: "path TEXT, mtime INT64"
-    gather_sql: "SELECT path, mtime FROM intermediate"
-    final_sql: "SELECT path, mtime FROM aggregate ORDER BY mtime ASC LIMIT {parameters.k}"
+    per_directory_shape: "path TEXT, mtime INT64"
+    per_directory_sql: ["SELECT path, mtime FROM vrpentries WHERE type = 'f'"]
+    partial_shape: "path TEXT, mtime INT64"
+    partial_sql: "SELECT path, mtime FROM per_directory"
+    final_sql: "SELECT path, mtime FROM partial ORDER BY mtime ASC LIMIT {parameters.k}"
   notes: "K-oldest template, by mtime rather than ctime: ctime is the index build time for every entry. Natural wording: an answer with dates instead of epoch seconds fails the row compare."
 
 - id: not_modified_n_days
@@ -154,11 +154,11 @@
   index: eval_master
   parameters: {days: 60}
   ground_truth:
-    scatter_shape: "mtime INT64"
-    scatter_sql: ["SELECT mtime FROM vrpentries WHERE type = 'f' AND mtime < {fixed_now} - {parameters.days} * 86400"]
-    gather_shape: "n INT64"
-    gather_sql: "SELECT COUNT(*) FROM intermediate"
-    final_sql: "SELECT SUM(n) AS n FROM aggregate"
+    per_directory_shape: "mtime INT64"
+    per_directory_sql: ["SELECT mtime FROM vrpentries WHERE type = 'f' AND mtime < {fixed_now} - {parameters.days} * 86400"]
+    partial_shape: "n INT64"
+    partial_sql: "SELECT COUNT(*) FROM per_directory"
+    final_sql: "SELECT SUM(n) AS n FROM partial"
   notes: "Uses the manifest fixed_now (midnight UTC of the reference date), not the wall clock."
 
 - id: count_and_size
@@ -168,9 +168,9 @@
   index: eval_master
   parameters: {}
   ground_truth:
-    scatter_shape: "size INT64"
-    scatter_sql: ["SELECT size FROM vrpentries WHERE type = 'f'"]
-    gather_shape: "n INT64, total INT64"
-    gather_sql: "SELECT COUNT(*), SUM(size) FROM intermediate"
-    final_sql: "SELECT SUM(n) AS n, SUM(total) AS total FROM aggregate"
+    per_directory_shape: "size INT64"
+    per_directory_sql: ["SELECT size FROM vrpentries WHERE type = 'f'"]
+    partial_shape: "n INT64, total INT64"
+    partial_sql: "SELECT COUNT(*), SUM(size) FROM per_directory"
+    final_sql: "SELECT SUM(n) AS n, SUM(total) AS total FROM partial"
   notes: "Canonical ground truth is one query with two columns (eval_design.md framework notes)."

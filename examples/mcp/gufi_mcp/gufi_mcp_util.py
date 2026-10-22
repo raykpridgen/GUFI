@@ -74,7 +74,7 @@ MAX_ROWS = int(os.getenv("GUFI_MCP_MAX_ROWS", "5000"))
 
 SQL_DIALECT = "sqlite"
 
-# Tables each aggregate scatter phase may read from. gufi_query runs T against
+# Tables each per-directory phase may read from. gufi_query runs T against
 # treesummary, S against each directory's summary, and E against its entries.
 TREE_TABLES = frozenset({"treesummary", "vtsummarydir", "vtsummaryuser", "vtsummarygroup"})
 SUMMARY_TABLES = frozenset({"summary", "summarylong", "vsummarydir", "vsummaryuser",
@@ -94,8 +94,8 @@ GUFI_VT_TABLES = {
     "vrpentries": "vrpentries",
 }
 
-INTERMEDIATE_TABLE = "intermediate"
-AGGREGATE_TABLE = "aggregate"
+PER_DIRECTORY_TABLE = "per_directory"
+PARTIAL_TABLE = "partial"
 AGGREGATE_VTAB = "temp.gufi_mcp"
 
 
@@ -288,8 +288,8 @@ def _source_prefix(label: str) -> str:
     return f"{GUFI_SOURCE_ROOT}/{label}"
 
 
-def scatter_path_sql(table: str, column: str, label: str, root: str) -> str:
-    """Path column of table computed with GUFI's path functions, for gufi_query scatter SQL."""
+def per_directory_path_sql(table: str, column: str, label: str, root: str) -> str:
+    """Path column of table computed with GUFI's path functions, for gufi_query per-directory SQL."""
     entry = table in ENTRY_PATH_TABLES
     if column == "spath":
         return "spath(sname, sroll, name)" if entry else "spath(sname, sroll)"
@@ -416,8 +416,8 @@ def _check_columns(tree: exp.Select, allowed: set[str], table: str, context: str
 
 
 TABLE_PATH_HINT = f"Path columns exist only in {PATH_TABLES_TEXT}"
-CARRY_PATH_HINT = (f"Path columns come from {PATH_TABLES_TEXT} in scatter_sql; select them there and declare them "
-                   "as TEXT in scatter_shape (and gather_shape) to use them in later stages")
+CARRY_PATH_HINT = (f"Path columns come from {PATH_TABLES_TEXT} in per_directory_sql; select them there and declare them "
+                   "as TEXT in per_directory_shape (and partial_shape) to use them in later stages")
 USE_PATH_COLUMNS = f"Use the path columns instead: {PATH_TABLES_TEXT}"
 
 
@@ -437,7 +437,7 @@ def _reject_ordering(tree: exp.Expression, context: str) -> None:
     for node_type, keyword in ((exp.Order, "ORDER BY"), (exp.Limit, "LIMIT"), (exp.Offset, "OFFSET")):
         if tree.find(node_type) is not None:
             raise GufiError(
-                f"{context}: {keyword} is only allowed in final_sql. Scatter and gather SQL run once per "
+                f"{context}: {keyword} is only allowed in final_sql. Per-directory and partial SQL run once per "
                 "directory or thread, so ordering or limiting there drops or reorders partial results; "
                 "move it to final_sql"
             )
@@ -487,7 +487,7 @@ def _phase_for_table(table: str) -> str:
         if table in tables:
             return phase
     allowed = sorted(TREE_TABLES | SUMMARY_TABLES | ENTRIES_TABLES)
-    raise GufiError(f"Table {table!r} cannot be used in scatter_sql. Allowed tables: {', '.join(allowed)}")
+    raise GufiError(f"Table {table!r} cannot be used in per_directory_sql. Allowed tables: {', '.join(allowed)}")
 
 
 #
@@ -502,19 +502,19 @@ class GufiAggregateQuery(BaseModel):
     index: str = Field(
         description=(
             "Name of the index to query, exactly as listed by the gufi://indexes resource. "
-            "Scatter SQL that reads treesummary tables requires an index whose gufi://indexes entry has treesummary true."
+            "per_directory_sql that reads treesummary tables requires an index whose gufi://indexes entry has treesummary true."
         ),
     )
 
-    scatter_sql: list[str] = Field(
+    per_directory_sql: list[str] = Field(
         min_length=1,
         max_length=3,
         description=(
-            "Scatter phase: one to three SELECT statements that GUFI runs in parallel threads, once per directory; "
-            "each result row is inserted into that thread's intermediate table. Each statement reads exactly one "
+            "Per-directory stage: one to three SELECT statements that GUFI runs in parallel threads, once per directory; "
+            "each result row is inserted into that thread's per_directory table. Each statement reads exactly one "
             "table, which decides its phase: treesummary/vtsummary* (once per tree), summary/vsummary*/vrsummary* "
             "(once per directory), or entries/pentries/vrpentries (the directory's files). At most one statement per "
-            "phase. Each must return exactly the columns of scatter_shape, in order. ORDER BY, LIMIT and OFFSET are "
+            "phase. Each must return exactly the columns of per_directory_shape, in order. ORDER BY, LIMIT and OFFSET are "
             "rejected anywhere here (subqueries and windows included): they would apply per directory only. "
             f"Full paths are the path columns of {PATH_TABLES_TEXT}; this is the only stage that can read them. "
             "Read gufi://schemas/all for table names and gufi://schemas/<table> for column names before writing it. "
@@ -522,37 +522,37 @@ class GufiAggregateQuery(BaseModel):
         ),
     )
 
-    scatter_shape: str = Field(
+    per_directory_shape: str = Field(
         description=(
-            "Columns of the intermediate table that scatter_sql rows are inserted into, as comma-separated 'name TYPE' "
+            "Columns of the per_directory table that per_directory_sql rows are inserted into, as comma-separated 'name TYPE' "
             "pairs (TYPE: INT64, INTEGER, INT, BIGINT, REAL, FLOAT, DOUBLE, NUMERIC, TEXT, BLOB). "
             "Example: 'gid INT64, size INT64'"
         ),
     )
 
-    gather_sql: str = Field(
+    partial_sql: str = Field(
         description=(
-            "Gather phase: SELECT run against each thread's intermediate table; its rows are inserted into the shared "
-            "aggregate table. Must read only from intermediate and return exactly the columns of gather_shape, in order. "
-            "It runs once per thread, so the aggregate table holds one partial result per thread. ORDER BY, LIMIT "
+            "Partial stage: SELECT run against each thread's per_directory table; its rows are inserted into the shared "
+            "partial table. Must read only from per_directory and return exactly the columns of partial_shape, in order. "
+            "It runs once per thread, so the partial table holds one partial result per thread. ORDER BY, LIMIT "
             "and OFFSET are rejected anywhere here; they belong in final_sql. "
-            "Example: SELECT gid, COUNT(*), SUM(size) FROM intermediate GROUP BY gid"
+            "Example: SELECT gid, COUNT(*), SUM(size) FROM per_directory GROUP BY gid"
         ),
     )
 
-    gather_shape: str = Field(
+    partial_shape: str = Field(
         description=(
-            "Columns of the aggregate table, as comma-separated 'name TYPE' pairs. "
+            "Columns of the partial table, as comma-separated 'name TYPE' pairs. "
             "Example: 'gid INT64, links INT64, bytes INT64'"
         ),
     )
 
     final_sql: str = Field(
         description=(
-            "SELECT run once against the aggregate table to produce the answer. Must read only from aggregate. "
+            "SELECT run once against the partial table to produce the answer. Must read only from partial. "
             "Combine the per-thread partial results here (SUM of counts and sums, MAX of maxima), and put global "
             "ORDER BY and LIMIT here; this is the only stage where they are allowed. "
-            "Example: SELECT gid, SUM(links) AS links, SUM(bytes) AS bytes FROM aggregate GROUP BY gid ORDER BY links DESC"
+            "Example: SELECT gid, SUM(links) AS links, SUM(bytes) AS bytes FROM partial GROUP BY gid ORDER BY links DESC"
         ),
     )
 
@@ -565,7 +565,7 @@ class GufiAggregateQuery(BaseModel):
             resolve_local_index(index)
         return index
 
-    @field_validator("scatter_shape", "gather_shape")
+    @field_validator("per_directory_shape", "partial_shape")
     @classmethod
     def shape_valid(cls, shape: str, info) -> str:
         with _as_value_error():
@@ -576,13 +576,13 @@ class GufiAggregateQuery(BaseModel):
                                 f"Carry a path column as TEXT instead ({PATH_TABLES_TEXT})")
         return ", ".join(f"{name} {col_type}" for name, col_type in columns.items())
 
-    @field_validator("scatter_sql")
+    @field_validator("per_directory_sql")
     @classmethod
-    def scatter_statements_valid(cls, statements: list[str]) -> list[str]:
+    def per_directory_statements_valid(cls, statements: list[str]) -> list[str]:
         cleaned = []
         with _as_value_error():
             for i, sql in enumerate(statements):
-                context = f"scatter_sql[{i}]"
+                context = f"per_directory_sql[{i}]"
                 sql = _strip_terminators(sql)
                 tree = parse_select(sql, context)
                 _reject_double_quotes(sql, context)
@@ -591,14 +591,14 @@ class GufiAggregateQuery(BaseModel):
                 cleaned.append(sql)
         return cleaned
 
-    @field_validator("gather_sql", "final_sql")
+    @field_validator("partial_sql", "final_sql")
     @classmethod
     def statement_valid(cls, sql: str, info) -> str:
         sql = _strip_terminators(sql)
         with _as_value_error():
             tree = parse_select(sql, info.field_name)
             _reject_double_quotes(sql, info.field_name)
-            if info.field_name == "gather_sql":
+            if info.field_name == "partial_sql":
                 _reject_ordering(tree, info.field_name)
             _reject_path_internals(tree, info.field_name)
         return sql
@@ -607,36 +607,36 @@ class GufiAggregateQuery(BaseModel):
     def pipeline_consistent(self) -> "GufiAggregateQuery":
         """Check that every stage reads tables and columns that the previous stage provides."""
         with _as_value_error():
-            intermediate = parse_shape(self.scatter_shape, "scatter_shape")
-            aggregate = parse_shape(self.gather_shape, "gather_shape")
+            per_directory_cols = parse_shape(self.per_directory_shape, "per_directory_shape")
+            partial_cols = parse_shape(self.partial_shape, "partial_shape")
 
             phases: dict[str, str] = {}
-            for i, sql in enumerate(self.scatter_sql):
-                context = f"scatter_sql[{i}]"
+            for i, sql in enumerate(self.per_directory_sql):
+                context = f"per_directory_sql[{i}]"
                 tree = parse_select(sql, context)
                 table = _single_table(tree, context)
                 phase = _phase_for_table(table)
                 if phase in phases:
                     raise GufiError(
-                        f"{context}: more than one scatter statement reads a {phase}-phase table; "
+                        f"{context}: more than one per_directory_sql statement reads a {phase}-phase table; "
                         "combine them into one statement"
                     )
                 _check_columns(tree, schema_columns(table), table, context, TABLE_PATH_HINT)
-                _check_projection_width(tree, len(intermediate), "scatter_shape", context)
+                _check_projection_width(tree, len(per_directory_cols), "per_directory_shape", context)
                 if phase == "T" and not has_treesummary(self.index):
                     raise GufiError(f"{context}: index {self.index!r} has no treesummary table; use summary or entries tables")
                 phases[phase] = sql
 
-            gather = parse_select(self.gather_sql, "gather_sql")
-            if select_tables(gather, "gather_sql") != [INTERMEDIATE_TABLE]:
-                raise GufiError("gather_sql must read only from the intermediate table")
-            _check_columns(gather, set(intermediate), "intermediate (scatter_shape)", "gather_sql", CARRY_PATH_HINT)
-            _check_projection_width(gather, len(aggregate), "gather_shape", "gather_sql")
+            gather = parse_select(self.partial_sql, "partial_sql")
+            if select_tables(gather, "partial_sql") != [PER_DIRECTORY_TABLE]:
+                raise GufiError("partial_sql must read only from the per_directory table")
+            _check_columns(gather, set(per_directory_cols), "per_directory (per_directory_shape)", "partial_sql", CARRY_PATH_HINT)
+            _check_projection_width(gather, len(partial_cols), "partial_shape", "partial_sql")
 
             final = parse_select(self.final_sql, "final_sql")
-            if select_tables(final, "final_sql") != [AGGREGATE_TABLE]:
-                raise GufiError("final_sql must read only from the aggregate table")
-            _check_columns(final, set(aggregate), "aggregate (gather_shape)", "final_sql", CARRY_PATH_HINT)
+            if select_tables(final, "final_sql") != [PARTIAL_TABLE]:
+                raise GufiError("final_sql must read only from the partial table")
+            _check_columns(final, set(partial_cols), "partial (partial_shape)", "final_sql", CARRY_PATH_HINT)
 
         self._phases = phases
         return self
@@ -644,35 +644,35 @@ class GufiAggregateQuery(BaseModel):
     def build_query_string(self) -> str:
         """CREATE VIRTUAL TABLE statement that runs this pipeline through gufi_vt.
 
-        The virtual table yields the aggregate table's rows; final_sql is applied
+        The virtual table yields the partial table's rows; final_sql is applied
         on top of it by final_query_string(). gufi_vt only knows the types of plain
         columns, so running final_sql inside gufi_vt would return computed values
         such as SUM(...) as text.
         """
-        aggregate_columns = ", ".join(parse_shape(self.gather_shape, "gather_shape"))
+        partial_columns = ", ".join(parse_shape(self.partial_shape, "partial_shape"))
         root = str(resolve_local_index(self.index))
         options = [f'index="{root}"', f"threads={THREADS}"]
         if GUFI_SOURCE_ROOT is not None:
             options.append(f'p="{_source_prefix(self.index)}"')
-        options.append(_gufi_vt_arg("I", f"CREATE TABLE {INTERMEDIATE_TABLE}({self.scatter_shape})"))
+        options.append(_gufi_vt_arg("I", f"CREATE TABLE {PER_DIRECTORY_TABLE}({self.per_directory_shape})"))
         for phase in ("T", "S", "E"):
             if phase in self._phases:
-                sql = expand_path_columns(self._phases[phase], f"scatter {phase}",
-                                          lambda table, column: scatter_path_sql(table, column, self.index, root))
-                options.append(_gufi_vt_arg(phase, f"INSERT INTO {INTERMEDIATE_TABLE} {sql}"))
+                sql = expand_path_columns(self._phases[phase], f"per_directory {phase}",
+                                          lambda table, column: per_directory_path_sql(table, column, self.index, root))
+                options.append(_gufi_vt_arg(phase, f"INSERT INTO {PER_DIRECTORY_TABLE} {sql}"))
         options.extend([
-            _gufi_vt_arg("K", f"CREATE TABLE {AGGREGATE_TABLE}({self.gather_shape})"),
-            _gufi_vt_arg("J", f"INSERT INTO {AGGREGATE_TABLE} {self.gather_sql}"),
-            _gufi_vt_arg("G", f"SELECT {aggregate_columns} FROM {AGGREGATE_TABLE}"),
+            _gufi_vt_arg("K", f"CREATE TABLE {PARTIAL_TABLE}({self.partial_shape})"),
+            _gufi_vt_arg("J", f"INSERT INTO {PARTIAL_TABLE} {self.partial_sql}"),
+            _gufi_vt_arg("G", f"SELECT {partial_columns} FROM {PARTIAL_TABLE}"),
         ])
         return f"CREATE VIRTUAL TABLE {AGGREGATE_VTAB} USING gufi_vt({', '.join(options)})"
 
     def final_query_string(self) -> str:
-        """final_sql run over the virtual table's rows, materialized as the aggregate table.
+        """final_sql run over the virtual table's rows, materialized as the partial table.
 
         Materializing first also avoids the gufi_vt hang when final_sql stops reading early.
         """
-        return f"WITH {AGGREGATE_TABLE} AS MATERIALIZED (SELECT * FROM {AGGREGATE_VTAB}) {self.final_sql}"
+        return f"WITH {PARTIAL_TABLE} AS MATERIALIZED (SELECT * FROM {AGGREGATE_VTAB}) {self.final_sql}"
 
 
 def _strip_terminators(sql: str) -> str:
