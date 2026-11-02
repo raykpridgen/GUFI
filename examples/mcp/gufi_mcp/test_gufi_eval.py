@@ -416,9 +416,8 @@ def test_describe_schema_object_appends_function_tags(monkeypatch: pytest.Monkey
 
     _fresh_catalog()
     monkeypatch.setattr(util, "list_schema_objects", lambda: {"vrpentries": "view"})
-    monkeypatch.setattr(util, "schema_db_path", lambda: Path("unused.db"))
     rows = [["name", "TEXT"], ["size", "INT64"], ["mtime", "INT64"], ["inode", "TEXT"], ["sname", "TEXT"]]
-    monkeypatch.setattr(util, "run_db_sql", lambda *args: SimpleNamespace(rows=rows))
+    monkeypatch.setattr(util, "table_columns", lambda name: rows)
     described = util.describe_schema_object("vrpentries")
     assert "Functions: bytecat(size)" in described["size"]["hint"]
     assert "agecat(mtime)" in described["mtime"]["hint"]

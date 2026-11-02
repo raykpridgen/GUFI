@@ -148,13 +148,13 @@ mcp = MCPServer(name="gufi-mcp", instructions=PRIMER)
 
 @mcp.tool()
 def gufi_version() -> str:
-    """Version of the gufi_query binary the server uses."""
+    """Version of the gufi_query binary the server uses (on the GUFI host when queries run remotely)."""
     return util.gufi_query_version()
 
 
 @mcp.tool()
 def gufi_location() -> str:
-    """Absolute path of the gufi_query binary the server uses."""
+    """Absolute path of the gufi_query binary the server uses (on the GUFI host when queries run remotely)."""
     return util.gufi_query_path()
 
 
