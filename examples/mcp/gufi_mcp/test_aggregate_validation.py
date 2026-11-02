@@ -230,6 +230,27 @@ def test_path_functions_fail_in_later_stages() -> None:
     _invalid(r"rpath\(\) is not available", final_sql="SELECT rpath(total, total) FROM partial")
 
 
+@pytest.mark.parametrize("function", sorted(util.BLOCKED_FUNCTIONS))
+@pytest.mark.parametrize("field, template", [
+    ("per_directory_sql", "SELECT {f}('id') FROM entries"),
+    ("partial_sql", "SELECT {f}('id') FROM per_directory"),
+    ("final_sql", "SELECT {f}('id') AS total FROM partial"),
+])
+def test_shell_functions_fail_in_every_stage(function: str, field: str, template: str) -> None:
+    sql = template.format(f=function)
+    _invalid(rf"{function}\(\) runs shell commands", **{field: [sql] if field == "per_directory_sql" else sql})
+
+
+def test_gufi_functions_pass_validation() -> None:
+    util.GufiAggregateQuery.model_validate(_payload(
+        per_directory_shape="band TEXT",
+        per_directory_sql=["SELECT bytecat(size) FROM vrpentries WHERE type = 'f'"],
+        partial_shape="band TEXT, n INT64",
+        partial_sql="SELECT band, COUNT(*) FROM per_directory GROUP BY band",
+        final_sql="SELECT band, SUM(n) AS n FROM partial GROUP BY band",
+    ))
+
+
 def test_rollup_internals_cannot_be_carried() -> None:
     _invalid("sname, sroll is internal rollup bookkeeping", per_directory_shape="sname TEXT, sroll INT64")
 
@@ -262,71 +283,7 @@ def test_extra_fields_fail() -> None:
     _invalid("Extra inputs", threads=99)
 
 
-# sql_file_index rewriting
-
-def test_vt_select_rewrites_table(tmp_path: Path) -> None:
-    sql, params = util.build_gufi_vt_select(
-        "SELECT name, size FROM vrpentries WHERE type = 'f' ORDER BY size DESC LIMIT 3;", "testidx")
-    assert sql == (
-        'WITH __gufi_mcp_source__ AS MATERIALIZED (SELECT "name", "size", "type" '
-        "FROM gufi_vt_vrpentries(?, ?, NULL, NULL, NULL, 0)) "
-        "SELECT name, size FROM __gufi_mcp_source__ AS vrpentries WHERE type = 'f' ORDER BY size DESC LIMIT 3"
-    )
-    assert params == (str(tmp_path / "testidx"), util.THREADS)
-
-
-def test_vt_select_keeps_alias_and_prefix() -> None:
-    sql, _ = util.build_gufi_vt_select("SELECT p.name FROM gufi_vt_pentries p", "testidx")
-    assert "FROM gufi_vt_pentries(" in sql and "__gufi_mcp_source__ AS p" in sql
-
-
-def test_vt_select_star_reads_visible_columns_and_paths(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setitem(util._GUFI_VT_COLUMN_MAPS, "vrsummary", None)
-    sql, _ = util.build_gufi_vt_select("SELECT * FROM vrsummary", "testidx")
-    source = sql[:sql.index("FROM gufi_vt_vrsummary(")]
-    assert '"dname", "name", "type"' in source and '"totfiles"' in source
-    assert '"sname"' not in source and '"sroll"' not in source and '"srollsubdirs"' not in source
-    assert source.endswith("""'testidx' || substr("rpath", %d) AS "path" """ % (len(str(util.GUFI_INDEX_ROOT / "testidx")) + 1))
-
-
-def test_vt_select_builds_paths_from_the_rpath_column(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setitem(util._GUFI_VT_COLUMN_MAPS, "vrpentries", None)
-    sql, _ = util.build_gufi_vt_select("SELECT path FROM vrpentries WHERE dirpath = 'testidx/a'", "testidx")
-    start = len(str(tmp_path / "testidx")) + 1
-    assert (f"""(SELECT 'testidx' || substr("rpath", {start}) AS "dirpath", """
-            f"""'testidx' || substr("rpath", {start}) || '/' || "name" AS "path" FROM gufi_vt_vrpentries(""") in sql
-    assert sql.endswith("SELECT path FROM __gufi_mcp_source__ AS vrpentries WHERE dirpath = 'testidx/a'")
-
-
-def test_vt_select_spath(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setitem(util._GUFI_VT_COLUMN_MAPS, "vrsummary", None)
-    monkeypatch.setattr(util, "GUFI_SOURCE_ROOT", "/lustre/proj")
-    sql, _ = util.build_gufi_vt_select("SELECT spath FROM vrsummary", "testidx")
-    assert f"""'/lustre/proj/testidx' || substr("rpath", {len(str(tmp_path / 'testidx')) + 1}) AS "spath" """ in sql
-
-
-def test_vt_select_remote_paths_use_the_remote_index_name(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(util, "REMOTEHOST", "user@host")
-    monkeypatch.setitem(util._GUFI_VT_COLUMN_MAPS, "vrsummary", None)
-    sql, params = util.build_gufi_vt_select("SELECT path FROM vrsummary", "/srv/search/proj/", remote=True)
-    assert """'proj' || substr("rpath", 17) AS "path" """ in sql
-    assert params[0] == "/srv/search/proj"
-
-
-def test_vt_select_remaps_shifted_vt_schema(monkeypatch: pytest.MonkeyPatch) -> None:
-    view = list(util.get_static_schema()["vrsummary"]["columns"])
-    shifted = [c for c in view if c != "crtime"]
-    monkeypatch.setitem(util._GUFI_VT_COLUMN_MAPS, "vrsummary", dict(zip(view, shifted)))
-    sql, _ = util.build_gufi_vt_select("SELECT name, totfiles FROM vrsummary", "testidx")
-    assert '(SELECT "name", "totlinks" AS "totfiles" FROM gufi_vt_vrsummary(' in sql
-    with pytest.raises(util.GufiError, match="isrolledup cannot be read"):
-        util.build_gufi_vt_select("SELECT isrolledup FROM vrsummary", "testidx")
-
-
-def test_vt_select_reads_entries_through_pentries() -> None:
-    sql, _ = util.build_gufi_vt_select("SELECT name FROM entries", "testidx")
-    assert "FROM gufi_vt_pentries(" in sql and "__gufi_mcp_source__ AS entries" in sql
-
+# gufi_vt watchdog
 
 def test_watchdog_turns_overrun_into_error(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(util, "TOOL_TIMEOUT", 0.05)
@@ -339,114 +296,6 @@ def test_watchdog_passes_through_fast_queries(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(util, "TOOL_TIMEOUT", 5)
     with util._gufi_vt_watchdog():
         pass
-
-
-def test_vt_select_preserves_literal_case() -> None:
-    sql, _ = util.build_gufi_vt_select("SELECT name FROM pentries WHERE name = 'README.md'", "testidx")
-    assert "'README.md'" in sql
-
-
-@pytest.mark.parametrize("sql, message", [
-    ("SELECT name FROM pentries WHERE name IN (SELECT name FROM pentries)", "only be referenced once"),
-    ("SELECT name FROM vsummarydir", "not queryable"),
-    ("SELECT nope FROM pentries", "nope do not exist"),
-    ("SELECT name FROM pentries WHERE size > ?", "bind parameters"),
-    ("SELECT 1", "exactly one table"),
-    ("SELECT rpath(sname, sroll, name) FROM vrpentries", "sname is internal rollup bookkeeping"),
-    ("SELECT sname, name FROM vrpentries", "sname is internal rollup bookkeeping"),
-    ("SELECT fpath() FROM vrpentries", r"fpath\(\) is not available"),
-    ("SELECT path FROM pentries", "Path columns exist only in vrpentries"),
-])
-def test_vt_select_rejects(sql: str, message: str) -> None:
-    with pytest.raises(util.GufiError, match=message):
-        util.build_gufi_vt_select(sql, "testidx")
-
-
-def test_vt_select_rejects_unknown_index() -> None:
-    with pytest.raises(util.GufiError, match="Unknown index"):
-        util.build_gufi_vt_select("SELECT name FROM pentries", "nope")
-
-
-def test_remote_requires_configuration(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(util, "REMOTEHOST", None)
-    with pytest.raises(util.GufiError, match="REMOTEHOST"):
-        util.build_gufi_vt_select("SELECT name FROM pentries", "idx", remote=True)
-
-
-def test_remote_rejects_unsafe_path(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(util, "REMOTEHOST", "user@host")
-    with pytest.raises(util.GufiError, match="plain path"):
-        util.build_gufi_vt_select("SELECT name FROM pentries", "../x", remote=True)
-
-
-# Command-line tool arguments
-
-def test_tool_command_keeps_zero_and_repeats_lists() -> None:
-    args = util.GufiToolArgsFind(paths=["idx"], maxdepth=0, uid=0, file_type=["f", "d"], size="-2k", empty=True)
-    cmd = util.build_tool_command("gufi_find", args, util.args_find_dict, leading=args.paths)
-    assert cmd == ["gufi_find", "idx", "-maxdepth=0", "-empty", "-size=-2k", "-type=f", "-type=d", "-uid=0"]
-
-
-def test_tool_command_uses_enum_value() -> None:
-    args = util.GufiToolArgsStats(statistic="depth", order="DESC")
-    cmd = util.build_tool_command("gufi_stats", args, util.args_stats_dict, trailing=[args.statistic.value])
-    assert cmd == ["gufi_stats", "--order=DESC", "depth"]
-
-
-@pytest.mark.parametrize("model, field", [
-    (util.GufiToolArgsLS, "path"),
-    (util.GufiToolArgsDU, "paths"),
-    (util.GufiToolArgsStat, "files"),
-    (util.GufiToolArgsFind, "paths"),
-    (util.GufiToolArgsGetfattr, "paths"),
-    (util.GufiToolArgsStats, "path"),
-])
-def test_paths_cannot_look_like_options(model: type, field: str) -> None:
-    value = "--help" if field == "path" else ["--help"]
-    with pytest.raises(ValidationError, match="must not start with '-'"):
-        model(**{field: value})
-
-
-@pytest.mark.parametrize("field", ["fprint", "print0", "skip_file", "delim"])
-def test_removed_find_options_are_rejected(field: str) -> None:
-    with pytest.raises(ValidationError, match="Extra inputs"):
-        util.GufiToolArgsFind(**{field: "x"})
-
-
-@pytest.mark.parametrize("value, ok", [("+5", True), ("-5", True), (7, True), ("5d", False), ("", False)])
-def test_find_numbers(value: object, ok: bool) -> None:
-    if ok:
-        util.GufiToolArgsFind(mtime=value)
-    else:
-        with pytest.raises(ValidationError):
-            util.GufiToolArgsFind(mtime=value)
-
-
-@pytest.mark.parametrize("model, flags", [
-    (util.GufiToolArgsLS, util.args_ls_dict),
-    (util.GufiToolArgsDU, util.args_du_dict),
-    (util.GufiToolArgsStat, util.args_stat_dict),
-    (util.GufiToolArgsStats, util.args_stats_dict),
-    (util.GufiToolArgsGetfattr, util.args_getfattr_dict),
-    (util.GufiToolArgsFind, util.args_find_dict),
-])
-def test_flag_maps_cover_only_model_fields(model: type, flags: dict) -> None:
-    assert set(flags) <= set(model.model_fields)
-    # Every valued option must use a long flag so it can be passed as --flag=value.
-    for field, flag in flags.items():
-        if model.model_fields[field].annotation is not bool:
-            assert len(flag) > 2, field
-
-
-def test_tool_models_build_with_defaults() -> None:
-    for model in (util.GufiToolArgsLS, util.GufiToolArgsDU, util.GufiToolArgsStat,
-                  util.GufiToolArgsStats, util.GufiToolArgsGetfattr, util.GufiToolArgsFind):
-        model()
-
-
-def test_cli_output_paths_are_index_relative(tmp_path: Path) -> None:
-    text = f"  File: '{tmp_path}/idx/a'\n8618796 {tmp_path}/idx\nidx/b\n/other{tmp_path}/idx/c"
-    assert util.relative_index_paths(text) == f"  File: 'idx/a'\n8618796 idx\nidx/b\n/other{tmp_path}/idx/c"
 
 
 # Schema resource

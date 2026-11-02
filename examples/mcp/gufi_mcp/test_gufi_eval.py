@@ -157,18 +157,56 @@ def _call(rows: list, ok: bool = True, index: str = "eval_master", duration: flo
     return AggregateCall(t_ms=0, query={"index": index}, ok=ok, duration_ms=duration, rows=rows, row_count=len(rows))
 
 
-def test_single_scores_last_successful_call() -> None:
+def test_single_passes_on_a_later_attempt() -> None:
     events = [_event("resource", "gufi://schemas/all"),
               _event("resource", "gufi://schemas/all"), _event("tool", "aggregate_sql_query"),
               _event("resource", "gufi://indexes"), _event("tool", "aggregate_sql_query", ok=False),
               _event("tool", "aggregate_sql_query")]
     calls = [_call([[1]]), _call([], ok=False), _call([[42]], duration=50)]
     score = metrics.score_single(_result(events, calls), "eval_master", [[42]], "SELECT x FROM partial", 20)
-    assert score.passed
+    assert score.passed and score.passed_on_attempt == 3 and not score.one_shot_pass
+    assert [a.passed for a in score.attempts] == [False, False, True]
     assert score.resources_consumed == 2
     assert score.aggregate_revision_count == 2
     assert score.timing_delta_ms == 30
     assert score.failure_tags == ["multiple_aggregate"]
+
+
+def test_single_later_successful_call_replaces_a_match() -> None:
+    calls = [_call([[42]], duration=40), _call([[1]])]
+    score = metrics.score_single(_result([], calls), "eval_master", [[42]], "SELECT x FROM partial", 0)
+    assert not score.passed and score.passed_on_attempt is None and not score.one_shot_pass
+    assert score.scored is calls[1]
+    assert score.failure_tags == ["wrong_result", "replaced_match", "multiple_aggregate"]
+
+
+def test_single_failed_call_does_not_replace_a_match() -> None:
+    calls = [_call([[42]]), _call([], ok=False)]
+    score = metrics.score_single(_result([], calls), "eval_master", [[42]], "SELECT x FROM partial", 0)
+    assert score.passed and score.passed_on_attempt == 1
+    assert not score.one_shot_pass
+
+
+def test_single_one_shot_is_one_matching_call() -> None:
+    score = metrics.score_single(_result([], [_call([[42]])]), "eval_master", [[42]], "SELECT x FROM partial", 0)
+    assert score.passed and score.passed_on_attempt == 1 and score.one_shot_pass
+
+
+def test_single_only_grades_up_to_max_attempts() -> None:
+    calls = [_call([[1]]), _call([[2]]), _call([[42]])]
+    score = metrics.score_single(_result([], calls, "max_attempts"), "eval_master", [[42]],
+                                 "SELECT x FROM partial", 0, max_attempts=2)
+    assert not score.passed and score.passed_on_attempt is None
+    assert len(score.attempts) == 2 and score.scored is calls[1]
+    assert score.failure_tags == ["wrong_result", "max_attempts", "multiple_aggregate"]
+    assert "attempt 2 of 2" in score.reason
+
+
+def test_single_wrong_index_attempt_can_be_corrected() -> None:
+    calls = [_call([[42]], index="vault"), _call([[42]])]
+    score = metrics.score_single(_result([], calls), "eval_master", [[42]], "SELECT x FROM partial", 0)
+    assert score.passed and score.passed_on_attempt == 2
+    assert "wrong_index" not in score.failure_tags
 
 
 @pytest.mark.parametrize("calls, stop, tags", [
@@ -233,8 +271,9 @@ def test_openai_tools_adds_read_resource() -> None:
 def test_single_system_prompt_mentions_grading() -> None:
     from eval_lib.agent import EvalConstraints, TrialContext
     context = TrialContext(server=None, index="eval_master", fixed_now=FIXED_NOW, fixed_now_iso="2026-10-12T00:00:00+00:00")
-    text = driver.system_prompt(context, EvalConstraints(mode="single", allowed_tools=["aggregate_sql_query"]))
-    assert "last successful aggregate_sql_query" in text and "2026-10-12" in text
+    text = driver.system_prompt(context, EvalConstraints(mode="single", allowed_tools=["aggregate_sql_query"],
+                                                         max_aggregate_calls=3))
+    assert "up to 3 times" in text and "call it again" in text and "2026-10-12" in text
 
 
 def test_add_usage_reads_openrouter_cost() -> None:
@@ -255,11 +294,26 @@ def test_summary_lines_have_identical_keys(tmp_path: Path) -> None:
     general = reporter.record_general(writer, "b", 1, result, metrics.general_metrics(result), {"agent": "replay"})
     assert list(single) == list(general) == list(reporter.SUMMARY_KEYS)
     assert general["pass"] is None and general["similarity_path"] == "" and general["failure_tags"] == []
-    assert single["executions"] is None and single["final_response_path"] == ""
+    assert general["passed_on_attempt"] is None and general["one_shot_pass"] is None
+    assert single["passed_on_attempt"] == 1 and single["one_shot_pass"] is True
+    assert single["executions"] == [0, 1] and single["final_response_path"] == ""
     lines = [json.loads(line) for line in (tmp_path / "run" / "summary.jsonl").read_text().splitlines()]
     assert [list(line) for line in lines] == [list(reporter.SUMMARY_KEYS)] * 2
     for rel in (single["similarity_path"], single["trace_path"], general["final_response_path"]):
         assert (tmp_path / "run" / rel).is_file()
+
+
+def test_summarize_reports_one_shot_and_cumulative_rates() -> None:
+    def line(sid: str, attempt: object, tool_calls: int) -> dict:
+        return {"mode": "single", "scenario_id": sid, "pass": attempt is not None, "passed_on_attempt": attempt,
+                "one_shot_pass": attempt == 1, "executions": [0, tool_calls], "usage": {}}
+
+    results = gufi_eval.summarize([line("a", 1, 1), line("a", 2, 2), line("b", None, 3), line("b", 3, 3)], 3)
+    assert results["single_pass_rate"] == 0.75
+    assert results["single_one_shot_pass_rate"] == 0.25
+    assert results["single_pass_rate_by_attempt"] == {1: 0.25, 2: 0.5, 3: 0.75}
+    assert results["single_mean_tool_calls"] == 2.25
+    assert results["single_one_shot_rate_by_scenario"] == {"a": 0.5, "b": 0.0}
 
 
 def test_summary_rejects_wrong_keys(tmp_path: Path) -> None:
@@ -301,13 +355,107 @@ def test_no_ground_truth_statement_is_shown_to_agents() -> None:
 
 def test_primer_covers_core_guidance() -> None:
     import gufi_mcp_server
+    import gufi_mcp_util as util
+
+    os.environ.setdefault("SCHEMAFILE", str(HERE / "schema_hints.json"))
+    util.get_static_schema.cache_clear()
+    util.path_column_hints.cache_clear()
 
     primer = gufi_mcp_server.PRIMER
     assert gufi_mcp_server.mcp.instructions == primer
-    for needle in ("gufi://indexes", "gufi://schemas/all", "dirpath", "myindex/dir/file.txt", "vrpentries",
+    for needle in ("gufi://indexes", "gufi://schemas/all", "vrpentries",
                    "per_directory_sql", "partial_sql", "FROM partial", "rollup", "ORDER BY", "treesummary",
-                       "86400", "SUM counts"):
+                   "SUM counts"):
         assert needle in primer, needle
+
+    schema = util.get_static_schema()
+    vrp = schema["vrpentries"]["columns"]
+    assert "86400" in vrp["mtime"]["hint"]
+    assert "1024" in vrp["mode"]["hint"]
+    assert not {"path", "dirpath", "spath"} & set(vrp)
+    paths = util.path_columns("vrpentries")
+    assert "myindex/dir/file.txt" in paths["path"] and "LIKE" in paths["dirpath"]
+
+
+PRIMER_BUDGET_CHARS = 4000
+
+
+def test_primer_points_to_functions_within_budget() -> None:
+    import gufi_mcp_server
+
+    assert "gufi://functions" in gufi_mcp_server.PRIMER
+    assert len(gufi_mcp_server.PRIMER) < PRIMER_BUDGET_CHARS
+    for name in ("bytecat", "agecat", "uidtouser"):
+        assert name not in gufi_mcp_server.PRIMER, name
+
+
+def _fresh_catalog() -> None:
+    import gufi_mcp_util as util
+
+    os.environ.setdefault("SCHEMAFILE", str(HERE / "schema_hints.json"))
+    for cached in (util.get_static_schema, util.path_column_hints, util.function_catalog, util._column_tags):
+        cached.cache_clear()
+
+
+def test_column_tags_name_the_matching_functions() -> None:
+    import gufi_mcp_util as util
+
+    _fresh_catalog()
+    assert any(tag.startswith("bytecat(size)") for tag in util.functions_for_column("size"))
+    assert any(tag.startswith("agecat(mtime)") for tag in util.functions_for_column("mtime"))
+    assert any(tag.startswith("ext(name)") for tag in util.functions_for_column("name"))
+    assert any(tag.startswith("uidtouser(duid)") for tag in util.functions_for_column("duid"))
+    assert len([t for t in util.functions_for_column("size") if "stdevs" in t]) == 1
+    assert util.functions_for_column("inode") == []
+    for hidden in ("blocksize", "hostname", "rpad"):
+        assert not any(hidden in tag for column in util._column_tags() for tag in util.functions_for_column(column))
+
+
+def test_describe_schema_object_appends_function_tags(monkeypatch: pytest.MonkeyPatch) -> None:
+    import gufi_mcp_util as util
+
+    _fresh_catalog()
+    monkeypatch.setattr(util, "list_schema_objects", lambda: {"vrpentries": "view"})
+    monkeypatch.setattr(util, "schema_db_path", lambda: Path("unused.db"))
+    rows = [["name", "TEXT"], ["size", "INT64"], ["mtime", "INT64"], ["inode", "TEXT"], ["sname", "TEXT"]]
+    monkeypatch.setattr(util, "run_db_sql", lambda *args: SimpleNamespace(rows=rows))
+    described = util.describe_schema_object("vrpentries")
+    assert "Functions: bytecat(size)" in described["size"]["hint"]
+    assert "agecat(mtime)" in described["mtime"]["hint"]
+    assert "ext(name)" in described["name"]["hint"] and "basename(path)" in described["path"]["hint"]
+    assert "Functions:" not in described["inode"]["hint"]
+    assert "sname" not in described
+
+
+def test_function_catalog_matches_schema_and_hides_shell_functions() -> None:
+    import gufi_mcp_util as util
+
+    _fresh_catalog()
+    schema = util.get_static_schema()
+    known = {column for table in schema.values() for column in table["columns"]} | {"path", "dirpath", "spath"}
+    for name, entry in util.function_catalog().items():
+        assert entry["signature"].startswith(f"{name}("), name
+        assert set(entry.get("columns", [])) <= known, name
+    listed = util.list_functions()
+    assert {"bytecat", "agecat", "ext", "uidtouser", "stdev_from_parts"} <= set(listed)
+    assert not {"blocksize", "hostname", "rpad"} & set(listed)
+    assert not util.BLOCKED_FUNCTIONS & set(util.function_catalog())
+    assert "Zero" in util.describe_function("bytecat")["detail"]
+    with pytest.raises(util.GufiError, match="shell commands"):
+        util.describe_function("strop")
+    with pytest.raises(util.GufiError, match="Unknown function"):
+        util.describe_function("nosuch")
+    for hint in (c["hint"] for table in schema.values() for c in table["columns"].values()):
+        assert "bytecat" not in hint and "agecat" not in hint
+
+
+def test_function_catalog_leaks_no_ground_truth() -> None:
+    _fresh_catalog()
+    catalog = json.loads((HERE / "schema_hints.json").read_text())["functions"]
+    text = " ".join(json.dumps(catalog).lower().split())
+    for item in _rendered_single():
+        for sql in [*item.ground_truth["per_directory_sql"], item.ground_truth["final_sql"]]:
+            assert " ".join(sql.lower().split()) not in text, f"{item.scenario.id} leaks: {sql}"
 
 
 def test_agents_never_see_rollup_path_internals() -> None:
@@ -405,12 +553,12 @@ _MANIFEST = Path(os.getenv("GUFI_INDEX_ROOT", "/nonexistent")) / "eval_master.ma
 def test_replay_run_passes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     code = gufi_eval.main(["run", "--agent", "replay", "--mode", "both", "--output", str(tmp_path),
                            "--scenario", "total_file_size", "--scenario", "top10_size_per_uid",
-                           "--scenario", "largest_files"])
+                           "--scenario", "largest_directories"])
     assert code == 0
     (run,) = tmp_path.iterdir()
     lines = [json.loads(line) for line in (run / "summary.jsonl").read_text().splitlines()]
     assert sorted((line["mode"], line["scenario_id"], line["pass"]) for line in lines) == [
-        ("general", "largest_files", None), ("general", "top10_size_per_uid", None),
+        ("general", "largest_directories", None), ("general", "top10_size_per_uid", None),
         ("general", "total_file_size", None),
         ("single", "top10_size_per_uid", True), ("single", "total_file_size", True)]
     manifest = json.loads((run / "manifest.json").read_text())

@@ -3,6 +3,9 @@
 
     uv run --with matplotlib python plot_run.py eval_runs/<run_id> [--output plots/<run_id>]
 
+Single-mode trials are graded by the eval (summary.jsonl "pass"), and get extra plots on
+aggregate attempts, failure reasons, and GUFI function use.
+
 General-mode trials have no pass/fail, so outcome plots use only the mirrored scenarios
 (those also in scenarios.single.yaml). A trial counts as correct when its final answer
 contains the ground-truth values for at least GRADE_THRESHOLD of the ground-truth rows;
@@ -47,6 +50,10 @@ ERROR_CATEGORIES = [
     ("path column on wrong table", r"Path columns exist only in"),
     ("ORDER/LIMIT outside final", r"is only allowed in final_sql"),
     ("sql_file_index path", r"cannot build full paths"),
+    ("shell function", r"runs shell commands"),
+    ("treesummary missing", r"no treesummary"),
+    ("stage read wrong table", r"must read only from the (partial|per_directory) table"),
+    ("WITH clause", r"WITH clauses are not supported"),
     ("unknown column", r"do not exist in"),
     ("column count mismatch", r"returns \d+ column\(s\) but"),
     ("SQL parse error", r"could not be parsed|syntax error"),
@@ -55,6 +62,24 @@ ERROR_CATEGORIES = [
     ("SQLite runtime error", r"SQLite error|gufi_vt rejected"),
     ("timeout", r"did not finish within"),
 ]
+
+# Why a graded single-mode trial failed, from its similarity.json reason; first match wins.
+FAILURE_REASONS = [
+    ("result truncated", r"truncated"),
+    ("wrong column count", r"column counts differ"),
+    ("wrong row count", r"row count \d+ != expected"),
+    ("wrong values", r"values differ"),
+    ("no aggregate call", r"agent made no aggregate call"),
+    ("every call failed", r"no successful aggregate call"),
+    ("hit attempt cap", r"max_attempts|attempt cap"),
+]
+FAILURE_COLORS = {"wrong values": "#c62828", "wrong row count": "#ef6c00", "wrong column count": "#f9a825",
+                  "result truncated": "#6a1b9a", "no aggregate call": "#455a64", "every call failed": "#000000",
+                  "hit attempt cap": "#8d6e63", "replaced a correct answer": "#ad1457", "other": "#9e9e9e"}
+
+GUFI_FUNCTIONS = ("bytecat", "agecat", "ext", "intcat", "epochtoage", "strftime", "uidtouser", "gidtogroup",
+                  "modetotxt", "human_readable_size", "basename", "median", "stdevs", "stdevp", "stdev_from_parts")
+_FUNCTION_RE = re.compile(rf"\b({'|'.join(GUFI_FUNCTIONS)})\s*\(", re.IGNORECASE)
 
 
 @dataclass
@@ -72,6 +97,11 @@ class Trial:
     tool_s: float = 0.0
     resource_s: float = 0.0
     first_call_ok: bool | None = None
+    mode: str = "general"
+    aggregate_calls: int = 0
+    passed_on_attempt: int | None = None
+    failure_reason: str | None = None
+    functions_used: set[str] = field(default_factory=set)
 
     @property
     def model_s(self) -> float:
@@ -119,8 +149,32 @@ def load_trials(run: Path) -> list[Trial]:
                 t.resource_s += seconds
         t.first_call_ok = bool(tool_events[0].get("ok")) if tool_events else None
         t.final_text = trace.get("final_text") or ""
+        t.mode = row.get("mode", "general")
+        if t.mode == "single":
+            load_single_grade(run, row, trace, t)
         trials.append(t)
     return trials
+
+
+def failure_reason(reason: str) -> str:
+    return next((name for name, pattern in FAILURE_REASONS if re.search(pattern, reason)), "other")
+
+
+def load_single_grade(run: Path, row: dict[str, Any], trace: dict[str, Any], t: Trial) -> None:
+    """Outcome, attempts, failure reason, and GUFI functions used, for a single-mode trial."""
+    t.outcome = "correct" if row["pass"] else "incorrect"
+    t.passed_on_attempt = row.get("passed_on_attempt")
+    calls = trace.get("aggregate_calls") or []
+    t.aggregate_calls = len(calls)
+    for call in calls:
+        query = call.get("query") or {}
+        sql = " ".join([*query.get("per_directory_sql", []), query.get("partial_sql", ""), query.get("final_sql", "")])
+        t.functions_used.update(m.lower() for m in _FUNCTION_RE.findall(sql))
+    if not row["pass"]:
+        similarity = run / row["similarity_path"] if row.get("similarity_path") else None
+        reason = json.loads(similarity.read_text()).get("reason", "") if similarity and similarity.exists() else ""
+        t.failure_reason = "replaced a correct answer" if "replaced_match" in row.get("failure_tags", []) \
+            else failure_reason(reason)
 
 
 #
@@ -302,9 +356,97 @@ def plot_overall(trials: list[Trial], out: Path) -> None:
                 color=COLORS["incorrect"], label="incorrect")
         ax.set_yticks(yy, names)
         ax.set_xlabel("trials")
-        ax.set_title(f"Answer correctness, mirrored scenarios (graded against ground truth, threshold {GRADE_THRESHOLD:.0%})")
+        if all(t.mode == "single" for t in trials):
+            ax.set_title("Pass/fail by scenario (eval's row comparison of the graded aggregate call)")
+        else:
+            ax.set_title(f"Answer correctness, mirrored scenarios (graded against ground truth, threshold {GRADE_THRESHOLD:.0%})")
         ax.legend(loc="lower right")
         save(fig, out / "07_correctness_by_scenario.png")
+
+
+#
+# Single-mode plots (single/)
+#
+
+def plot_single(trials: list[Trial], out: Path) -> None:
+    single = [t for t in trials if t.mode == "single"]
+    if not single:
+        return
+    n = len(single)
+    by_scenario: dict[str, list[Trial]] = defaultdict(list)
+    for t in single:
+        by_scenario[t.scenario].append(t)
+    scenarios = sorted(by_scenario, key=lambda s: np.mean([t.outcome == "correct" for t in by_scenario[s]]))
+
+    max_calls = max([t.aggregate_calls for t in single] + [1])
+    fig, axes = plt.subplots(1, 2, figsize=(13, 4.5))
+    attempts = range(1, max_calls + 1)
+    rates = [np.mean([t.passed_on_attempt is not None and t.passed_on_attempt <= k for t in single]) for k in attempts]
+    axes[0].plot(list(attempts), rates, marker="o", color=COLORS["correct"])
+    for k, r in zip(attempts, rates):
+        axes[0].annotate(f"{r:.0%}", (k, r), textcoords="offset points", xytext=(0, 6), ha="center", fontsize=8)
+    axes[0].set_ylim(0, 1.05)
+    axes[0].set_xticks(list(attempts))
+    axes[0].set_xlabel("passed within this many aggregate calls")
+    axes[0].set_ylabel("pass rate")
+    axes[0].set_title(f"Pass rate by attempt (n={n})")
+    counts = Counter(t.aggregate_calls for t in single)
+    xs = sorted(counts)
+    passed = [sum(1 for t in single if t.aggregate_calls == x and t.outcome == "correct") for x in xs]
+    failed = [counts[x] - p for x, p in zip(xs, passed)]
+    axes[1].bar(xs, passed, color=COLORS["correct"], label="pass")
+    axes[1].bar(xs, failed, bottom=passed, color=COLORS["incorrect"], label="fail")
+    axes[1].set_xticks(xs)
+    axes[1].set_xlabel("aggregate calls in trial")
+    axes[1].set_ylabel("trials")
+    axes[1].set_title("Aggregate calls per trial")
+    axes[1].legend()
+    save(fig, out / "single" / "01_attempts.png")
+
+    reasons = [r for r, _ in Counter(t.failure_reason for t in single if t.failure_reason).most_common()]
+    y = np.arange(len(scenarios))
+    fig, ax = plt.subplots(figsize=(11, max(5, len(scenarios) * 0.4)))
+    left = np.zeros(len(scenarios))
+    segments = [("pass", COLORS["correct"], lambda t: t.outcome == "correct")]
+    segments += [(r, FAILURE_COLORS.get(r, FAILURE_COLORS["other"]), (lambda r: lambda t: t.failure_reason == r)(r))
+                 for r in reasons]
+    for label, color, pick in segments:
+        values = np.array([sum(1 for t in by_scenario[s] if pick(t)) for s in scenarios], dtype=float)
+        ax.barh(y, values, left=left, color=color, label=label)
+        left += values
+    ax.set_yticks(y, scenarios, fontsize=8)
+    ax.set_xlabel("trials")
+    ax.set_title("Outcome by scenario: pass, or why the graded call failed")
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=4, fontsize=8)
+    save(fig, out / "single" / "02_outcome_by_scenario.png")
+
+    functions = [f for f in GUFI_FUNCTIONS if any(f in t.functions_used for t in single)]
+    if functions:
+        matrix = np.array([[np.mean([f in t.functions_used for t in by_scenario[s]]) for f in functions]
+                           for s in scenarios])
+        fig, ax = plt.subplots(figsize=(max(6, len(functions) * 1.1 + 3), max(5, len(scenarios) * 0.4)))
+        im = ax.imshow(matrix, cmap="Blues", vmin=0, vmax=1, aspect="auto")
+        ax.set_xticks(range(len(functions)), functions, rotation=35, ha="right")
+        ax.set_yticks(range(len(scenarios)), scenarios, fontsize=8)
+        for i in range(len(scenarios)):
+            for j in range(len(functions)):
+                if matrix[i, j]:
+                    ax.text(j, i, f"{matrix[i, j]:.0%}", ha="center", va="center", fontsize=8)
+        ax.set_title("Share of trials whose aggregate SQL used each GUFI function")
+        fig.colorbar(im, ax=ax, shrink=0.7)
+        save(fig, out / "single" / "03_gufi_function_use.png")
+
+    fig, ax = plt.subplots(figsize=(10, max(5, len(scenarios) * 0.4)))
+    width = 0.4
+    passed = [[t.n_calls for t in by_scenario[s] if t.outcome == "correct"] for s in scenarios]
+    failed = [[t.n_calls for t in by_scenario[s] if t.outcome != "correct"] for s in scenarios]
+    ax.barh(y - width / 2, [np.mean(v) if v else 0 for v in passed], width, color=COLORS["correct"], label="pass")
+    ax.barh(y + width / 2, [np.mean(v) if v else 0 for v in failed], width, color=COLORS["incorrect"], label="fail")
+    ax.set_yticks(y, scenarios, fontsize=8)
+    ax.set_xlabel("mean tool calls + resource reads per trial")
+    ax.set_title("Effort per trial by scenario, pass vs fail")
+    ax.legend()
+    save(fig, out / "single" / "04_effort_by_scenario.png")
 
 
 #
@@ -419,10 +561,11 @@ def main() -> int:
     out = args.output or HERE / "plots" / args.run.name
 
     trials = load_trials(args.run)
-    truth = ground_truth_rows()
-    for t in trials:
-        if t.scenario in truth:
-            t.outcome = "correct" if answer_matches(t.final_text, truth[t.scenario]) else "incorrect"
+    if any(t.mode == "general" for t in trials):
+        truth = ground_truth_rows()
+        for t in trials:
+            if t.mode == "general" and t.scenario in truth:
+                t.outcome = "correct" if answer_matches(t.final_text, truth[t.scenario]) else "incorrect"
 
     groups = defaultdict(list)
     for t in trials:
@@ -432,6 +575,7 @@ def main() -> int:
     for outcome in OUTCOMES:
         plot_outcome(groups[outcome], outcome, out)
     plot_comparison(groups, out)
+    plot_single(trials, out)
 
     grades = {t.scenario: [] for t in trials if t.outcome != "ungraded"}
     for t in trials:
@@ -448,6 +592,12 @@ def main() -> int:
         "correct_by_scenario": {k: f"{sum(v)}/{len(v)}" for k, v in sorted(grades.items())},
         "error_categories": dict(error_counts(trials).most_common()),
     }
+    single = [t for t in trials if t.mode == "single"]
+    if single:
+        summary["grading"] = "single-mode trials use the eval's pass/fail, not answer text"
+        summary["single_failure_reasons"] = dict(Counter(t.failure_reason for t in single if t.failure_reason).most_common())
+        summary["single_mean_aggregate_calls"] = round(float(np.mean([t.aggregate_calls for t in single])), 3)
+        summary["single_function_use"] = dict(Counter(f for t in single for f in t.functions_used).most_common())
     (out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     print(json.dumps(summary, indent=2))
     return 0

@@ -141,7 +141,8 @@ async def run_trial(item: RenderedScenario, trial: int, driver: AgentDriver, ser
     if item.mode == "single":
         gt_rows, gt_ms = await run_ground_truth(full, item.ground_truth)
         constraints = EvalConstraints(mode="single", allowed_tools=[AGGREGATE_TOOL],
-                                      max_tool_calls=args.max_tool_calls, timeout_s=args.timeout)
+                                      max_tool_calls=args.max_tool_calls, timeout_s=args.timeout,
+                                      max_aggregate_calls=args.max_attempts)
     else:
         constraints = EvalConstraints(mode="general", allowed_tools=[t.name for t in await full.list_tools()],
                                       max_tool_calls=args.max_tool_calls, timeout_s=args.timeout)
@@ -150,9 +151,12 @@ async def run_trial(item: RenderedScenario, trial: int, driver: AgentDriver, ser
     result = await driver.run(item.prompt, context, constraints)
     agent = driver.config()
     if item.mode == "single":
-        score = score_single(result, scenario.index, gt_rows, item.ground_truth["final_sql"], gt_ms)
+        score = score_single(result, scenario.index, gt_rows, item.ground_truth["final_sql"], gt_ms,
+                             max_attempts=args.max_attempts)
         line = record_single(writer, scenario.id, trial, result, score, item.ground_truth, gt_rows, gt_ms, agent)
-        status = "PASS" if score.passed else f"FAIL {score.failure_tags} {score.reason}"
+        calls = len(result.aggregate_calls)
+        status = (f"PASS on attempt {score.passed_on_attempt} ({calls} aggregate call(s))" if score.passed
+                  else f"FAIL {score.failure_tags} {score.reason}")
     else:
         line = record_general(writer, scenario.id, trial, result, general_metrics(result), agent)
         status = f"done executions={line['executions']} stop={result.stop_reason}"
@@ -162,23 +166,36 @@ async def run_trial(item: RenderedScenario, trial: int, driver: AgentDriver, ser
     return line
 
 
-def summarize(lines: list[dict[str, Any]]) -> dict[str, Any]:
-    per_scenario: dict[str, list[bool]] = defaultdict(list)
+def _rate(values: list[bool]) -> Optional[float]:
+    return sum(values) / len(values) if values else None
+
+
+def summarize(lines: list[dict[str, Any]], max_attempts: Optional[int] = None) -> dict[str, Any]:
+    single = [line for line in lines if line["mode"] == "single"]
+    per_scenario: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for line in single:
+        per_scenario[line["scenario_id"]].append(line)
     cost = 0.0
     tokens = 0
     for line in lines:
-        if line["mode"] == "single":
-            per_scenario[line["scenario_id"]].append(bool(line["pass"]))
         usage = line.get("usage") or {}
         cost += usage.get("cost") or 0
         tokens += usage.get("total_tokens") or 0
-    rates = {sid: sum(v) / len(v) for sid, v in per_scenario.items()}
-    single_trials = [p for v in per_scenario.values() for p in v]
+    # Cumulative: share of trials that had matched by attempt n.
+    deepest = max([line["passed_on_attempt"] or 0 for line in single] + [max_attempts or 0])
+    by_attempt = {n: _rate([bool(line["passed_on_attempt"]) and line["passed_on_attempt"] <= n for line in single])
+                  for n in range(1, deepest + 1)}
+    tool_calls = [line["executions"][1] for line in single if line.get("executions")]
     return {
-        "single_pass_rate": (sum(single_trials) / len(single_trials)) if single_trials else None,
-        "single_pass_rate_by_scenario": rates,
+        "single_pass_rate": _rate([bool(line["pass"]) for line in single]),
+        "single_one_shot_pass_rate": _rate([bool(line["one_shot_pass"]) for line in single]),
+        "single_pass_rate_by_attempt": by_attempt,
+        "single_mean_tool_calls": round(sum(tool_calls) / len(tool_calls), 3) if tool_calls else None,
+        "single_pass_rate_by_scenario": {sid: _rate([bool(x["pass"]) for x in v]) for sid, v in per_scenario.items()},
+        "single_one_shot_rate_by_scenario": {sid: _rate([bool(x["one_shot_pass"]) for x in v])
+                                             for sid, v in per_scenario.items()},
         "trials": len(lines),
-        "single_trials": len(single_trials),
+        "single_trials": len(single),
         "general_trials": sum(1 for line in lines if line["mode"] == "general"),
         "total_cost_usd": round(cost, 6),
         "total_tokens": tokens,
@@ -200,6 +217,7 @@ async def run_command(args: argparse.Namespace) -> int:
         "openrouter_model": agent_config.get("model"),
         "concurrency": args.concurrency,
         "max_tool_calls": args.max_tool_calls,
+        "max_attempts": args.max_attempts,
         "timeout_s": args.timeout,
         "scenario_filter": args.scenario or [],
         "scenario_files": {m: str(Path(getattr(args, f"scenarios_{m}")).resolve()) for m in modes},
@@ -227,7 +245,7 @@ async def run_command(args: argparse.Namespace) -> int:
 
         await asyncio.gather(*(guarded(item, t) for item in items for t in range(1, args.trials + 1)))
 
-    results = summarize(lines)
+    results = summarize(lines, args.max_attempts)
     results["infrastructure_errors"] = failures
     writer.write_json("manifest.json", {
         "run_id": writer.run_id,
@@ -243,9 +261,14 @@ async def run_command(args: argparse.Namespace) -> int:
     })
 
     if results["single_pass_rate"] is not None:
-        print(f"\nSingle-query mean pass rate: {results['single_pass_rate']:.1%} over {results['single_trials']} trial(s)")
+        print(f"\nSingle-query pass rate: {results['single_pass_rate']:.1%} within {args.max_attempts} attempt(s), "
+              f"{results['single_one_shot_pass_rate']:.1%} on the first attempt, over {results['single_trials']} "
+              f"trial(s); mean tool calls {results['single_mean_tool_calls']}")
+        print("  by attempt: " + ", ".join(f"<= {n}: {rate:.0%}" for n, rate in results["single_pass_rate_by_attempt"].items()))
+        one_shot = results["single_one_shot_rate_by_scenario"]
+        print(f"  {'scenario':24s} pass  one-shot")
         for sid, rate in sorted(results["single_pass_rate_by_scenario"].items()):
-            print(f"  {sid:24s} {rate:.0%}")
+            print(f"  {sid:24s} {rate:4.0%}  {one_shot[sid]:4.0%}")
     if results["general_trials"]:
         print(f"General-usage trials recorded: {results['general_trials']}")
     print(f"Tokens: {results['total_tokens']}  cost: ${results['total_cost_usd']:.4f}")
@@ -300,6 +323,8 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     run.add_argument("--temperature", type=float, help="Sampling temperature (default: model default)")
     run.add_argument("--concurrency", type=int, default=4, help="Trials run at once")
     run.add_argument("--max-tool-calls", type=int, default=15, help="Tool calls (incl. resource reads) per trial")
+    run.add_argument("--max-attempts", type=int, default=3,
+                     help="Single-query: aggregate calls graded per trial; any matching one passes (1 = one-shot)")
     run.add_argument("--timeout", type=float, default=180.0, help="Seconds per trial")
     run.add_argument("--output", default=str(HERE / "eval_runs"), help="Directory for run artifacts")
 
@@ -310,6 +335,8 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     args = parser.parse_args(argv)
     if args.command == "run" and args.trials < 1:
         parser.error("--trials must be at least 1")
+    if args.command == "run" and args.max_attempts < 1:
+        parser.error("--max-attempts must be at least 1")
     return args
 
 

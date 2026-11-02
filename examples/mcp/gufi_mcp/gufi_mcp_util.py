@@ -1,4 +1,4 @@
-"""Validation models and execution helpers shared by the GUFI MCP server.
+"""Setup, schema description, and the aggregate query pipeline for the GUFI MCP server.
 
 Every function that can fail for a reason the agent should see raises
 ``GufiError``. It subclasses MCP's ``ToolError``, so when it escapes a tool the
@@ -15,15 +15,14 @@ import sqlite3
 import subprocess
 import threading
 from contextlib import contextmanager
-from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated, Any, Iterator, Literal, Optional
+from typing import Any, Iterator, Optional
 
 import sqlglot
 from dotenv import load_dotenv
 from mcp.server.mcpserver.exceptions import ToolError
-from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Field, PrivateAttr, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 from sqlglot import exp
 from sqlglot.errors import SqlglotError
 
@@ -64,7 +63,6 @@ def _optional_source_root() -> Optional[str]:
 SCHEMAFILE = _resolve_relative_to_module(_require_env("SCHEMAFILE"))
 GUFIVTLIB = _require_env("GUFIVTLIB")
 GUFI_INDEX_ROOT = Path(_require_env("GUFI_INDEX_ROOT")).resolve()
-REMOTEHOST = os.getenv("REMOTEHOST", "").strip() or None
 # Parent of the indexed source trees, as GUFI_INDEX_ROOT is the parent of the indexes:
 # index <GUFI_INDEX_ROOT>/<name> was built from <GUFI_SOURCE_ROOT>/<name>. Enables spath.
 GUFI_SOURCE_ROOT = _optional_source_root()
@@ -81,18 +79,6 @@ SUMMARY_TABLES = frozenset({"summary", "summarylong", "vsummarydir", "vsummaryus
                             "vsummarygroup", "vrsummary", "vrsummarylong"})
 ENTRIES_TABLES = frozenset({"entries", "pentries", "pentries_rollup", "vrpentries"})
 PHASE_TABLES = {"T": TREE_TABLES, "S": SUMMARY_TABLES, "E": ENTRIES_TABLES}
-
-# Table name accepted in sql_file_index -> gufi_vt_<name>(...) function that serves it.
-# gufi_vt_entries intermittently never finishes, so entries is read through
-# pentries, whose columns are a superset of entries.
-GUFI_VT_TABLES = {
-    "treesummary": "treesummary",
-    "summary": "summary",
-    "entries": "pentries",
-    "pentries": "pentries",
-    "vrsummary": "vrsummary",
-    "vrpentries": "vrpentries",
-}
 
 PER_DIRECTORY_TABLE = "per_directory"
 PARTIAL_TABLE = "partial"
@@ -121,20 +107,29 @@ class GufiQueryResult(BaseModel):
         return self
 
 
-class GufiToolResult(BaseModel):
-    """Output of a GUFI command-line tool, split into rows on the tool's delimiter."""
+#
+# GUFI installation
+#
 
-    command: list[str] = Field(description="The argv that was executed.")
-    rows: list[list[str]] = Field(description="Non-empty output lines, split into columns.")
-    row_count: int = Field(description="Number of rows returned (after truncation).")
-    truncated: bool = Field(default=False, description="True if output had more lines than the row limit.")
-    stderr: str = Field(default="", description="Warnings the tool printed to stderr. Non-empty output here may mean results are incomplete.")
+def gufi_query_path() -> str:
+    """Absolute path of the gufi_query binary on PATH."""
+    location = shutil.which("gufi_query")
+    if location is None:
+        raise GufiError("gufi_query was not found on PATH")
+    return location
 
-    @model_validator(mode="after")
-    def row_count_matches(self) -> "GufiToolResult":
-        if self.row_count != len(self.rows):
-            raise ValueError("row_count does not match the number of rows")
-        return self
+
+def gufi_query_version() -> str:
+    """Output of gufi_query --version."""
+    try:
+        proc = subprocess.run([gufi_query_path(), "--version"], capture_output=True, text=True,
+                              timeout=TOOL_TIMEOUT, check=False)
+    except subprocess.TimeoutExpired as e:
+        raise GufiError(f"gufi_query --version timed out after {TOOL_TIMEOUT} seconds") from e
+    if proc.returncode != 0:
+        raise GufiError(f"gufi_query --version exited with status {proc.returncode}: "
+                        f"{proc.stderr.strip() or 'no error output'}")
+    return proc.stdout.strip()
 
 
 #
@@ -160,18 +155,6 @@ def resolve_local_index(index: str) -> Path:
     if any(ch in str(path) for ch in "'\"\0"):
         raise GufiError(f"Index path {path} contains quote characters, which gufi_vt cannot accept")
     return path
-
-
-_REMOTE_INDEX_RE = re.compile(r"^/?[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*/?$")
-
-
-def resolve_remote_index(index: str) -> str:
-    """Validate a path on the remote host. Remote indexes cannot be listed locally."""
-    if REMOTEHOST is None:
-        raise GufiError("Remote queries are not configured (REMOTEHOST is not set)")
-    if not _REMOTE_INDEX_RE.fullmatch(index) or ".." in index.split("/"):
-        raise GufiError(f"Remote index path {index!r} must be a plain path of letters, digits, '.', '_', '-' and '/'")
-    return index.rstrip("/") or "/"
 
 
 def _connect_readonly(db_path: Path) -> sqlite3.Connection:
@@ -218,7 +201,15 @@ def describe_schema_object(name: str) -> dict[str, dict[str, str]]:
         raise GufiError(f"Unknown table or view {name!r}. Read gufi://schemas/all for valid names")
     result = run_db_sql(schema_db_path(), "SELECT name, type FROM pragma_table_info(?)", (name,))
     paths = {column: {"type": "TEXT", "hint": hint} for column, hint in path_columns(name.lower()).items()}
-    return {**paths, **load_schema_hints(name, [row for row in result.rows if row[0].lower() not in HIDDEN_COLUMNS])}
+    described = {**paths, **load_schema_hints(name, [row for row in result.rows if row[0].lower() not in HIDDEN_COLUMNS])}
+    for column, info in described.items():
+        tags = functions_for_column(column)
+        if tags:
+            hint = info["hint"].rstrip()
+            if hint and not hint.endswith("."):
+                hint += "."
+            info["hint"] = f"{hint} Functions: {'; '.join(tags)}.".lstrip()
+    return described
 
 
 @lru_cache(maxsize=1)
@@ -257,7 +248,7 @@ PATH_FUNCTIONS = frozenset({"rpath", "spath", "path", "epath", "fpath"})
 ENTRY_PATH_TABLES = frozenset({"vrpentries"})
 DIRECTORY_PATH_TABLES = frozenset({"vrsummary", "vrsummarylong"})
 PATH_TABLES_TEXT = "vrpentries (path, dirpath) and vrsummary (path)"
-PATH_FORM = "the index name followed by the path inside the index, the same form gufi_find prints and the gufi_* tools' path arguments accept"
+PATH_FORM = "the index name followed by the path inside the index"
 
 
 def path_columns(table: str) -> dict[str, str]:
@@ -276,7 +267,76 @@ def path_columns(table: str) -> dict[str, str]:
     if GUFI_SOURCE_ROOT is not None:
         columns["spath"] = (f"Path of the {kind} on the source file system that was indexed, "
                             f"e.g. {GUFI_SOURCE_ROOT}/myindex/dir.")
-    return columns
+    hints = path_column_hints().get(table, {})
+    return {column: hints.get(column) or hint for column, hint in columns.items()}
+
+
+@lru_cache(maxsize=1)
+def path_column_hints() -> dict[str, dict[str, str]]:
+    """{table: {path column: hint}} from SCHEMAFILE's path_columns section.
+
+    Kept apart from "tables" because those column lists must match the views' real columns.
+    """
+    try:
+        with open(SCHEMAFILE, "r") as f:
+            section = json.load(f).get("path_columns", {})
+    except (OSError, ValueError) as e:
+        raise GufiError(f"Could not load schema file {SCHEMAFILE}: {e}") from e
+    return {table.lower(): {col.lower(): hint for col, hint in cols.items()} for table, cols in section.items()}
+
+
+#
+# GUFI SQL functions
+#
+
+# gufi_query registers these in every stage (per-directory, per-thread, and the
+# aggregate database). strop, intop, and blobop run shell commands through popen(3).
+BLOCKED_FUNCTIONS = frozenset({"strop", "intop", "blobop"})
+
+
+@lru_cache(maxsize=1)
+def function_catalog() -> dict[str, dict[str, Any]]:
+    """{function: entry} from SCHEMAFILE's functions section."""
+    try:
+        with open(SCHEMAFILE, "r") as f:
+            section = json.load(f).get("functions", {})
+    except (OSError, ValueError) as e:
+        raise GufiError(f"Could not load schema file {SCHEMAFILE}: {e}") from e
+    return {name.lower(): entry for name, entry in section.items() if name.lower() not in BLOCKED_FUNCTIONS}
+
+
+@lru_cache(maxsize=1)
+def _column_tags() -> dict[str, list[str]]:
+    """{column: [tag template, ...]} for advertised functions, in catalog order, duplicates dropped."""
+    tags: dict[str, list[str]] = {}
+    for entry in function_catalog().values():
+        if entry.get("advertise", True) and entry.get("tag"):
+            for column in entry.get("columns", []):
+                found = tags.setdefault(column.lower(), [])
+                if entry["tag"] not in found:
+                    found.append(entry["tag"])
+    return tags
+
+
+def functions_for_column(column: str) -> list[str]:
+    """Short function tags for column, e.g. ['bytecat(size) -> size band (...)']."""
+    return [tag.replace("{col}", column) for tag in _column_tags().get(column.lower(), [])]
+
+
+def list_functions() -> dict[str, str]:
+    """{function: signature} of every advertised GUFI SQL function."""
+    return {name: entry["signature"] for name, entry in function_catalog().items() if entry.get("advertise", True)}
+
+
+def describe_function(name: str) -> dict[str, Any]:
+    """Signature, description, applicable columns, and an example for one GUFI SQL function."""
+    key = name.lower()
+    if key in BLOCKED_FUNCTIONS:
+        raise GufiError(f"{key}() runs shell commands and is not available")
+    entry = function_catalog().get(key)
+    if entry is None:
+        raise GufiError(f"Unknown function {name!r}. Read gufi://functions for the list")
+    return {field: entry[field] for field in ("signature", "detail", "columns", "example") if entry.get(field)}
 
 
 def _index_relative(absolute_sql: str, label: str, root: str) -> str:
@@ -296,15 +356,6 @@ def per_directory_path_sql(table: str, column: str, label: str, root: str) -> st
     if column == "path" and entry:
         return _index_relative("rpath(sname, sroll, name)", label, root)
     return _index_relative("rpath(sname, sroll)", label, root)
-
-
-def gufi_vt_path_sql(table: str, column: str, label: str, root: str, name_sql: str) -> str:
-    """Path column of table computed from a gufi_vt_* row, whose rpath column is rpath(sname, sroll)."""
-    prefix = _source_prefix(label) if column == "spath" else label
-    directory = _index_relative('"rpath"', prefix, root)
-    if table in ENTRY_PATH_TABLES and column != "dirpath":
-        return f"{directory} || '/' || {name_sql}"
-    return directory
 
 
 def expand_path_columns(sql: str, context: str, column_sql) -> str:
@@ -430,6 +481,12 @@ def _reject_path_internals(tree: exp.Expression, context: str) -> None:
     for call in tree.find_all(exp.Anonymous):
         if call.name.lower() in PATH_FUNCTIONS:
             raise GufiError(f"{context}: {call.name.lower()}() is not available. {USE_PATH_COLUMNS}")
+
+
+def _reject_blocked_functions(tree: exp.Expression, context: str) -> None:
+    for call in tree.find_all(exp.Anonymous):
+        if call.name.lower() in BLOCKED_FUNCTIONS:
+            raise GufiError(f"{context}: {call.name.lower()}() runs shell commands and is not available")
 
 
 def _reject_ordering(tree: exp.Expression, context: str) -> None:
@@ -588,6 +645,7 @@ class GufiAggregateQuery(BaseModel):
                 _reject_double_quotes(sql, context)
                 _reject_ordering(tree, context)
                 _reject_path_internals(tree, context)
+                _reject_blocked_functions(tree, context)
                 cleaned.append(sql)
         return cleaned
 
@@ -601,6 +659,7 @@ class GufiAggregateQuery(BaseModel):
             if info.field_name == "partial_sql":
                 _reject_ordering(tree, info.field_name)
             _reject_path_internals(tree, info.field_name)
+            _reject_blocked_functions(tree, info.field_name)
         return sql
 
     @model_validator(mode="after")
@@ -738,110 +797,6 @@ def run_db_sql(db_path: Path, sql: str, params: tuple = ()) -> GufiQueryResult:
         conn.close()
 
 
-# gufi_vt_* emit SELECT path(), epath(), fpath(), rpath(), level(), * FROM <view> and store the
-# values by position under a schema compiled into the extension. Some GUFI builds declare a
-# schema that differs from the view (gufi_vt_vrsummary lacks crtime, shifting every later
-# column by one), so a column is read from the declared name at its view position.
-GUFI_VT_EXTRA_COLUMNS = ("path", "epath", "fpath", "rpath", "level")
-_GUFI_VT_COLUMN_MAPS: dict[str, Optional[dict[str, str]]] = {}
-
-
-def _gufi_vt_column_map(vt: str) -> Optional[dict[str, str]]:
-    """{view column: declared gufi_vt column holding it}, or None when the two schemas agree."""
-    if vt not in _GUFI_VT_COLUMN_MAPS:
-        try:
-            conn = _connect_gufi_vt()
-        except GufiError:
-            return None
-        try:
-            declared = [row[1] for row in conn.execute(f"PRAGMA table_xinfo(gufi_vt_{vt})") if not row[6]]
-        finally:
-            conn.close()
-        view = list(get_static_schema()[vt]["columns"])
-        stored = declared[len(GUFI_VT_EXTRA_COLUMNS):]
-        _GUFI_VT_COLUMN_MAPS[vt] = None if stored == view else dict(zip(view, stored))
-        if _GUFI_VT_COLUMN_MAPS[vt] is not None:
-            logger.warning("gufi_vt_%s declares a schema that differs from the %s view; remapping columns", vt, vt)
-    return _GUFI_VT_COLUMN_MAPS[vt]
-
-
-def _gufi_vt_stored(vt: str, column: str) -> str:
-    """Name of the gufi_vt_<vt> column that holds the view's column."""
-    mapping = _gufi_vt_column_map(vt)
-    if mapping is None:
-        return column
-    if column not in mapping:
-        raise GufiError(f"sql_file_index: column {column} cannot be read through the installed gufi_vt_{vt}; "
-                        "use aggregate_sql_query instead")
-    return mapping[column]
-
-
-def _gufi_vt_source(vt: str, column: str) -> str:
-    stored = _gufi_vt_stored(vt, column)
-    return f'"{column}"' if stored == column else f'"{stored}" AS "{column}"'
-
-
-def build_gufi_vt_select(sql: str, index: str, remote: bool = False) -> tuple[str, tuple]:
-    """Rewrite a SELECT over one GUFI table to read from the matching gufi_vt_* function.
-
-    Returns the rewritten SQL and the parameters to bind for its index arguments.
-    """
-    context = "sql_file_index"
-    placeholder = "__gufi_mcp_source__"
-    if placeholder in sql:
-        raise GufiError(f"{context}: SQL must not contain {placeholder}")
-
-    tree = parse_select(_strip_terminators(sql), context)
-    table_name = _single_table(tree, context)
-    sources = list(tree.find_all(exp.Table))
-    if len(sources) != 1:
-        raise GufiError(f"{context}: the table may only be referenced once (no subqueries or self-joins); "
-                        "use aggregate_sql_query for multi-step queries")
-    table = table_name.removeprefix("gufi_vt_")
-    if table not in GUFI_VT_TABLES:
-        raise GufiError(f"{context}: table {table_name!r} is not queryable. Use one of: {', '.join(sorted(GUFI_VT_TABLES))}")
-    _reject_path_internals(tree, context)
-    _check_columns(tree, schema_columns(table), table, context, TABLE_PATH_HINT)
-
-    # gufi_vt_* positional arguments: index, threads, min_level, max_level, path_list, verbose[, remote_cmd, remote_args]
-    if remote:
-        root = resolve_remote_index(index)
-        args, params = "?, ?, NULL, NULL, NULL, 0, 'ssh', ?", (root, THREADS, REMOTEHOST)
-    else:
-        root = str(resolve_local_index(index))
-        args, params = "?, ?, NULL, NULL, NULL, 0", (root, THREADS)
-    label = root.rsplit("/", 1)[-1]
-
-    vt = GUFI_VT_TABLES[table]
-    paths = path_columns(table)
-    mapping = _gufi_vt_column_map(vt)
-    if tree.is_star:
-        wanted = [col for col in get_static_schema()[vt]["columns"]
-                  if col not in HIDDEN_COLUMNS and (mapping is None or col in mapping)] + list(paths)
-    else:
-        # Columns are already checked against the schema; any column works when none are referenced.
-        wanted = sorted(select_columns(tree)) or ["name"]
-    name_sql = f'"{_gufi_vt_stored(vt, "name")}"' if paths else ""
-    source_columns = ", ".join(
-        f'{gufi_vt_path_sql(table, col, label, root, name_sql)} AS "{col}"' if col in paths else _gufi_vt_source(vt, col)
-        for col in wanted
-    )
-
-    source = sources[0]
-    alias = source.alias or table
-    replacement = exp.to_table(placeholder)
-    replacement.set("alias", exp.TableAlias(this=exp.to_identifier(alias)))
-    source.replace(replacement)
-
-    # gufi_vt hangs if SQLite stops reading before gufi_query finishes writing (e.g. a
-    # bare LIMIT), so the source is always read in full into a materialized CTE first.
-    rewritten = (
-        f"WITH {placeholder} AS MATERIALIZED (SELECT {source_columns} FROM gufi_vt_{vt}({args})) "
-        + tree.sql(dialect=SQL_DIALECT)
-    )
-    return rewritten, params
-
-
 _GUFI_VT_LOCK = threading.Lock()
 
 
@@ -895,15 +850,6 @@ def _gufi_vt_watchdog() -> Iterator[None]:
             raise timeout_error
 
 
-def run_gufi_vt_select(sql: str, params: tuple) -> GufiQueryResult:
-    with _gufi_vt_watchdog():
-        conn = _connect_gufi_vt()
-        try:
-            return _fetch(conn, sql, params, drain=True)
-        finally:
-            conn.close()
-
-
 def run_aggregate(query: GufiAggregateQuery) -> GufiQueryResult:
     create = query.build_query_string()
     with _gufi_vt_watchdog():
@@ -917,527 +863,3 @@ def run_aggregate(query: GufiAggregateQuery) -> GufiQueryResult:
             return _fetch(conn, query.final_query_string(), drain=True)
         finally:
             conn.close()
-
-
-#
-# Command-line tools
-#
-
-def _check_cli_path(value: str) -> str:
-    value = value.strip()
-    if not value:
-        raise ValueError("path must not be empty")
-    if value.startswith("-"):
-        raise ValueError(f"path {value!r} must not start with '-'")
-    if any(ch in value for ch in "\0\n\r"):
-        raise ValueError("path must not contain NUL or newline characters")
-    return value
-
-
-CliPath = Annotated[str, AfterValidator(_check_cli_path)]
-"""A path relative to the GUFI index root (or absolute within it), safe to pass as an argv element."""
-
-_FIND_NUMBER_RE = re.compile(r"[+-]?\d+")
-_FIND_SIZE_RE = re.compile(r"[+-]?\d+[bcwkMG]?")
-
-
-def _check_find_number(value: Any) -> str:
-    value = str(value).strip()
-    if not _FIND_NUMBER_RE.fullmatch(value):
-        raise ValueError("must be an integer, optionally prefixed with + (more than) or - (less than)")
-    return value
-
-
-def _check_find_size(value: str) -> str:
-    value = value.strip()
-    if not _FIND_SIZE_RE.fullmatch(value):
-        raise ValueError("must be an integer with optional +/- prefix and unit suffix b, c, w, k, M, or G (e.g. +10M)")
-    return value
-
-
-FindNumber = Annotated[str, BeforeValidator(_check_find_number)]
-FindSize = Annotated[str, AfterValidator(_check_find_size)]
-
-
-def _cli_value(value: Any) -> str:
-    return str(value.value if isinstance(value, Enum) else value)
-
-
-def build_tool_command(binary: str, args: BaseModel, flags: dict[str, str],
-                       leading: list[str] = (), trailing: list[str] = ()) -> list[str]:
-    """Turn a validated tool model into argv.
-
-    Booleans become bare flags, None and False are omitted, lists repeat the flag,
-    and other values are passed as '--flag=value' so values beginning with '-'
-    are not mistaken for options.
-    """
-    cmd = [binary, *leading]
-    for field, flag in flags.items():
-        value = getattr(args, field)
-        if value is None or value is False:
-            continue
-        if value is True:
-            cmd.append(flag)
-            continue
-        if len(flag) <= 2:
-            raise GufiError(f"{binary}: valued option {field} must map to a long flag")
-        items = value if isinstance(value, list) else [value]
-        cmd.extend(f"{flag}={_cli_value(item)}" for item in items)
-    cmd.extend(trailing)
-    return cmd
-
-
-def relative_index_paths(text: str) -> str:
-    """Rewrite absolute paths under GUFI_INDEX_ROOT into the index-name-first form.
-
-    Most GUFI tools print that form already; gufi_stat and gufi_du --summarize print absolute paths.
-    """
-    prefix = re.escape(f"{str(GUFI_INDEX_ROOT).rstrip('/')}/")
-    return re.sub(rf"(?<![^\s'\"]){prefix}", "", text)
-
-
-def cli_index_root() -> Optional[Path]:
-    """IndexRoot from the server config the installed GUFI command-line tools read, if it can be found."""
-    gufi_find = shutil.which("gufi_find")
-    if gufi_find is None:
-        return None
-    config_module = Path(gufi_find).resolve().parent.parent / "lib" / "gufi_config.py"
-    try:
-        match = re.search(r"^PATH = '([^']+)'", config_module.read_text(), re.MULTILINE)
-        config = Path(match.group(1)).read_text() if match else ""
-    except OSError:
-        return None
-    root = re.search(r"^IndexRoot=(.+)$", config, re.MULTILINE)
-    return Path(root.group(1).strip()).resolve() if root else None
-
-
-def run_gufi_tool(cmd: list[str], delim: Optional[str] = "\t") -> GufiToolResult:
-    """Run a GUFI command-line tool and split its stdout into rows."""
-    logger.debug("Running %s", cmd)
-    try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=TOOL_TIMEOUT, check=False)
-    except FileNotFoundError as e:
-        raise GufiError(f"{cmd[0]} was not found on PATH") from e
-    except subprocess.TimeoutExpired as e:
-        raise GufiError(f"{cmd[0]} timed out after {TOOL_TIMEOUT} seconds") from e
-
-    stderr = proc.stderr.strip()
-    if proc.returncode != 0:
-        raise GufiError(f"{cmd[0]} exited with status {proc.returncode}: {stderr or 'no error output'}")
-
-    lines = [line for line in relative_index_paths(proc.stdout).splitlines() if line.strip()]
-    truncated = len(lines) > MAX_ROWS
-    lines = lines[:MAX_ROWS]
-    rows = [line.split(delim) if delim else [line] for line in lines]
-    return GufiToolResult(command=cmd, rows=rows, row_count=len(rows), truncated=truncated, stderr=stderr)
-
-
-def run_gufi_text(cmd: list[str]) -> str:
-    """Run a GUFI command and return its stdout as text."""
-    return "\n".join(row[0] for row in run_gufi_tool(cmd, delim=None).rows)
-
-
-#
-# Tool argument models
-#
-
-class GufiToolArgsLS(BaseModel):
-    """GUFI equivalent of ls: List directory contents."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    path: CliPath = Field(
-        default=".",
-        description="Directory to list, relative to the GUFI index root. Paths start with an index name from gufi://indexes, e.g. 'myindex' or 'myindex/sub'.",
-    )
-
-    all: bool = Field(default=False, description="If true, include entries starting with '.' (ls -a).")
-    almost_all: bool = Field(default=False, description="If true, include entries starting with '.' except '.' and '..' (ls -A).")
-    ignore_backups: bool = Field(default=False, description="If true, exclude entries ending with ~.")
-    full_time: bool = Field(default=False, description="If true, list entries with full time, like 'ls -l --time-style=full-iso'.")
-    no_group: bool = Field(default=False, description="If true, do not print group names in long listings.")
-    human_readable: bool = Field(default=False, description="If true, print sizes with suffixes like K, M, G.")
-    inode: bool = Field(default=False, description="If true, print the inode number of each file.")
-    list_format: bool = Field(default=False, description="If true, use long listing format (ls -l).")
-    numeric_uid_gid: bool = Field(default=False, description="If true, long listing with numeric UID and GID.")
-    reverse: bool = Field(default=False, description="If true, reverse the sort order.")
-    recursive: bool = Field(default=False, description="If true, list subdirectories recursively.")
-    size: bool = Field(default=False, description="If true, print the allocated size of each file in blocks.")
-    sort_size: bool = Field(default=False, description="If true, sort by file size, largest first.")
-    sort_time: bool = Field(default=False, description="If true, sort by modification time, newest first.")
-
-    block_size: Optional[int] = Field(
-        default=None, ge=1, le=1048576,
-        description="With list_format, scale sizes by this many bytes when printing.",
-    )
-
-    time_style: Optional[Literal["full-iso", "iso", "locale", "long-iso"]] = Field(
-        default=None,
-        description="Time/date format used with list_format.",
-    )
-
-
-args_ls_dict = {
-    "all": "-a",
-    "almost_all": "-A",
-    "ignore_backups": "-B",
-    "full_time": "--full-time",
-    "no_group": "--no-group",
-    "human_readable": "-h",
-    "inode": "-i",
-    "list_format": "-l",
-    "numeric_uid_gid": "-n",
-    "reverse": "-r",
-    "recursive": "-R",
-    "size": "-s",
-    "sort_size": "-S",
-    "sort_time": "-t",
-    "block_size": "--block-size",
-    "time_style": "--time-style",
-}
-
-
-class GufiToolArgsDU(BaseModel):
-    """GUFI equivalent of du: Summarize disk usage."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    paths: list[CliPath] = Field(
-        default_factory=lambda: ["."],
-        min_length=1,
-        description=(
-            "One or more paths to summarize, relative to the GUFI index root. Paths start with an index name from gufi://indexes, e.g. 'myindex' or 'myindex/sub'. "
-            "Directories need treesummary data (gufi://indexes shows which indexes have it)."
-        ),
-    )
-
-    apparent_size: bool = Field(
-        default=False,
-        description="If true, print apparent sizes rather than disk usage (may differ for sparse or fragmented files).",
-    )
-    block_size: Optional[int] = Field(default=None, ge=1, le=1048576, description="Scale reported sizes by this block size.")
-    total: bool = Field(default=False, description="If true, produce a grand total across all paths.")
-    human_readable: bool = Field(default=False, description="If true, print sizes in human-readable form (e.g. 1K, 234M, 2G).")
-    inodes: bool = Field(default=False, description="If true, report inode usage instead of block usage.")
-    separate_dirs: bool = Field(default=False, description="If true, do not include the size of subdirectories.")
-    summarize: bool = Field(default=False, description="If true, display only a total for each path.")
-    verbose: bool = Field(default=False, description="If true, report the gufi_query being executed in stderr.")
-
-
-args_du_dict = {
-    "apparent_size": "--apparent-size",
-    "block_size": "--block-size",
-    "total": "--total",
-    "human_readable": "--human-readable",
-    "inodes": "--inodes",
-    "separate_dirs": "--separate-dirs",
-    "summarize": "--summarize",
-    "verbose": "--verbose",
-}
-
-
-class GufiToolArgsStat(BaseModel):
-    """GUFI equivalent of stat: Display file status."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    files: list[CliPath] = Field(
-        default_factory=lambda: ["."],
-        min_length=1,
-        description="Files or directories to stat, relative to the GUFI index root. Paths start with an index name from gufi://indexes, e.g. 'myindex' or 'myindex/sub'.",
-    )
-
-    format: Optional[str] = Field(
-        default=None,
-        min_length=1,
-        description="Optional printf-style format string; output follows this format instead of the default.",
-    )
-    terse: bool = Field(default=False, description="If true, print information in terse form.")
-    verbose: bool = Field(default=False, description="If true, report the command being run in stderr.")
-
-
-args_stat_dict = {
-    "format": "--format",
-    "terse": "--terse",
-    "verbose": "--verbose",
-}
-
-
-class GufiStatsStatistic(str, Enum):
-    DEPTH = "depth"
-    FILESIZE = "filesize"
-    FILECOUNT = "filecount"
-    LINKCOUNT = "linkcount"
-    DIRCOUNT = "dircount"
-    LEAF_DIRS = "leaf-dirs"
-    LEAF_DEPTH = "leaf-depth"
-    LEAF_FILES = "leaf-files"
-    LEAF_LINKS = "leaf-links"
-    TOTAL_FILESIZE = "total-filesize"
-    TOTAL_FILECOUNT = "total-filecount"
-    TOTAL_LINKCOUNT = "total-linkcount"
-    TOTAL_DIRCOUNT = "total-dircount"
-    TOTAL_LEAF_FILES = "total-leaf-files"
-    TOTAL_LEAF_LINKS = "total-leaf-links"
-    FILES_PER_LEVEL = "files-per-level"
-    LINKS_PER_LEVEL = "links-per-level"
-    DIRS_PER_LEVEL = "dirs-per-level"
-    EXTENSIONS = "extensions"
-    EXTENSIONS_HIST = "extensions-hist"
-    FILESIZE_LOG2_BINS = "filesize-log2-bins"
-    FILESIZE_LOG1024_BINS = "filesize-log1024-bins"
-    FILESIZE_LOG2_BINS_HIST = "filesize-log2-bins-hist"
-    FILESIZE_LOG1024_BINS_HIST = "filesize-log1024-bins-hist"
-    DIRFILECOUNT_LOG2_BINS = "dirfilecount-log2-bins"
-    DIRFILECOUNT_LOG1024_BINS = "dirfilecount-log1024-bins"
-    DIRFILECOUNT_LOG2_BINS_HIST = "dirfilecount-log2-bins-hist"
-    DIRFILECOUNT_LOG1024_BINS_HIST = "dirfilecount-log1024-bins-hist"
-    FILE_AGE_ATIME = "file-age-atime"
-    FILE_AGE_MTIME = "file-age-mtime"
-    FILE_AGE_CTIME = "file-age-ctime"
-    DIR_AGE_ATIME = "dir-age-atime"
-    DIR_AGE_MTIME = "dir-age-mtime"
-    DIR_AGE_CTIME = "dir-age-ctime"
-    FILE_AGE_ATIME_HIST = "file-age-atime-hist"
-    FILE_AGE_MTIME_HIST = "file-age-mtime-hist"
-    FILE_AGE_CTIME_HIST = "file-age-ctime-hist"
-    DIR_AGE_ATIME_HIST = "dir-age-atime-hist"
-    DIR_AGE_MTIME_HIST = "dir-age-mtime-hist"
-    DIR_AGE_CTIME_HIST = "dir-age-ctime-hist"
-    UNIQUE_FILE_UID_COUNT = "unique-file-uid-count"
-    UNIQUE_FILE_GID_COUNT = "unique-file-gid-count"
-    UNIQUE_LINK_UID_COUNT = "unique-link-uid-count"
-    UNIQUE_LINK_GID_COUNT = "unique-link-gid-count"
-    UNIQUE_DIR_UID_COUNT = "unique-dir-uid-count"
-    UNIQUE_DIR_GID_COUNT = "unique-dir-gid-count"
-    AVERAGE_LEAF_FILES = "average-leaf-files"
-    AVERAGE_LEAF_LINKS = "average-leaf-links"
-    AVERAGE_LEAF_SIZE = "average-leaf-size"
-    MEDIAN_LEAF_FILES = "median-leaf-files"
-    MEDIAN_LEAF_LINKS = "median-leaf-links"
-    MEDIAN_LEAF_SIZE = "median-leaf-size"
-    DUPLICATE_NAMES = "duplicate-names"
-    UID_SIZE = "uid-size"
-    GID_SIZE = "gid-size"
-
-
-class GufiToolArgsStats(BaseModel):
-    """GUFI equivalent of gufi_stats: Index-level filesystem statistics."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    statistic: GufiStatsStatistic = Field(
-        default=GufiStatsStatistic.TOTAL_FILECOUNT,
-        description="Which statistic to compute.",
-    )
-
-    path: CliPath = Field(
-        default=".",
-        description="Path to compute the statistic for, relative to the GUFI index root. Paths start with an index name from gufi://indexes, e.g. 'myindex' or 'myindex/sub'.",
-    )
-
-    recursive: bool = Field(
-        default=False,
-        description="If true, run recursively for statistics that support it. Mutually exclusive with cumulative.",
-    )
-    cumulative: bool = Field(
-        default=False,
-        description="If true, return cumulative values for statistics that support it. Mutually exclusive with recursive.",
-    )
-    order: Optional[Literal["ASC", "DESC", "least", "most"]] = Field(
-        default=None,
-        description="Sort order, for statistics that produce ordered output.",
-    )
-    num_results: Optional[int] = Field(default=None, ge=1, description="Return only the first n results when applicable.")
-    uid: Optional[str] = Field(default=None, min_length=1, description="Restrict results to this user name or numeric UID.")
-    reftime: Optional[str] = Field(default=None, min_length=1, description="Reference time used when comparing timestamps.")
-    verbose: bool = Field(default=False, description="If true, report the gufi_query being executed in stderr.")
-
-    @model_validator(mode="after")
-    def recursive_and_cumulative_exclusive(self) -> "GufiToolArgsStats":
-        if self.recursive and self.cumulative:
-            raise ValueError("recursive and cumulative cannot both be true")
-        return self
-
-
-args_stats_dict = {
-    "recursive": "--recursive",
-    "cumulative": "--cumulative",
-    "order": "--order",
-    "num_results": "--num-results",
-    "uid": "--uid",
-    "reftime": "--reftime",
-    "verbose": "--verbose",
-}
-
-
-class GufiToolArgsGetfattr(BaseModel):
-    """GUFI equivalent of getfattr: Read extended attributes from indexed paths."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    paths: list[CliPath] = Field(
-        default_factory=lambda: ["."],
-        min_length=1,
-        description="Paths to read extended attributes from, relative to the GUFI index root. Paths start with an index name from gufi://indexes, e.g. 'myindex' or 'myindex/sub'.",
-    )
-
-    name: Optional[str] = Field(default=None, min_length=1, description="Dump the value of this named extended attribute only.")
-    dump: bool = Field(default=False, description="If true, dump all extended attributes on each path.")
-    match: str = Field(
-        default=r"^user\.",
-        min_length=1,
-        description="Regular expression limiting which attribute names are included. Use '-' to include all attributes.",
-    )
-    only_values: bool = Field(default=False, description="If true, dump raw extended attribute values without encoding.")
-    recursive: bool = Field(default=False, description="If true, list attributes recursively for all files and directories.")
-    verbose: bool = Field(default=False, description="If true, report the gufi_query being executed in stderr.")
-
-    @model_validator(mode="after")
-    def name_or_dump_not_both(self) -> "GufiToolArgsGetfattr":
-        if self.name and self.dump:
-            raise ValueError("specify either name or dump, not both")
-        return self
-
-
-args_getfattr_dict = {
-    "name": "--name",
-    "dump": "--dump",
-    "match": "--match",
-    "only_values": "--only-values",
-    "recursive": "--recursive",
-    "verbose": "--verbose",
-}
-
-
-class GufiToolArgsFind(BaseModel):
-    """GUFI equivalent of find: Search indexed directory trees."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    paths: list[CliPath] = Field(
-        default_factory=lambda: ["."],
-        min_length=1,
-        description="Starting paths for the search, relative to the GUFI index root. Paths start with an index name from gufi://indexes, e.g. 'myindex' or 'myindex/sub'.",
-    )
-
-    maxdepth: Optional[int] = Field(default=None, ge=0, description="Descend at most this many directory levels below each starting path.")
-    mindepth: Optional[int] = Field(default=None, ge=0, description="Do not apply tests or actions above this depth.")
-
-    amin: Optional[FindNumber] = Field(default=None, description="Last accessed n minutes ago; +n for more than, -n for less than.")
-    atime: Optional[FindNumber] = Field(default=None, description="Last accessed n*24 hours ago; +n for more than, -n for less than.")
-    cmin: Optional[FindNumber] = Field(default=None, description="Status last changed n minutes ago; +n / -n for more / less than.")
-    ctime: Optional[FindNumber] = Field(default=None, description="Status last changed n*24 hours ago; +n / -n for more / less than.")
-    mmin: Optional[FindNumber] = Field(default=None, description="Data last modified n minutes ago; +n / -n for more / less than.")
-    mtime: Optional[FindNumber] = Field(default=None, description="Data last modified n*24 hours ago; +n / -n for more / less than.")
-
-    anewer: Optional[CliPath] = Field(default=None, description="Accessed more recently than this reference path was modified.")
-    cnewer: Optional[CliPath] = Field(default=None, description="Status changed more recently than this reference path was modified.")
-    newer: Optional[CliPath] = Field(default=None, description="Modified more recently than this reference path.")
-    samefile: Optional[CliPath] = Field(default=None, description="Refers to the same inode as this path.")
-
-    empty: bool = Field(default=False, description="If true, match empty regular files or directories.")
-    executable: bool = Field(default=False, description="If true, match executable files and searchable directories.")
-    readable: bool = Field(default=False, description="If true, match readable files.")
-    writable: bool = Field(default=False, description="If true, match writable files.")
-    false: bool = Field(default=False, description="If true, never match.")
-    true: bool = Field(default=False, description="If true, always match.")
-
-    gid: Optional[int] = Field(default=None, ge=0, description="Numeric group ID must equal n.")
-    group: Optional[str] = Field(default=None, min_length=1, description="Owned by this group name (numeric GID allowed).")
-    uid: Optional[int] = Field(default=None, ge=0, description="Numeric user ID must equal n.")
-    user: Optional[str] = Field(default=None, min_length=1, description="Owned by this user name (numeric UID allowed).")
-    inum: Optional[int] = Field(default=None, ge=0, description="Inode number; prefer samefile when comparing paths.")
-    links: Optional[int] = Field(default=None, ge=0, description="Has exactly n hard links.")
-
-    name: Optional[str] = Field(default=None, min_length=1, description="Base name matches this shell pattern.")
-    iname: Optional[str] = Field(default=None, min_length=1, description="Base name matches this case-insensitive regex.")
-    path_pattern: Optional[str] = Field(default=None, min_length=1, description="Full path matches this shell pattern.")
-    regex: Optional[str] = Field(default=None, min_length=1, description="Full path matches this regular expression.")
-    iregex: Optional[str] = Field(default=None, min_length=1, description="Full path matches this case-insensitive regular expression.")
-    lname: Optional[str] = Field(default=None, min_length=1, description="Symbolic link contents match this shell pattern.")
-
-    perm: Optional[str] = Field(default=None, description="Permission bits as octal mode, optionally prefixed with - or /.")
-    size: Optional[FindSize] = Field(default=None, description="Size predicate, e.g. '+10M' (more than 10 MiB) or '-2k' (less than 2 KiB).")
-    file_type: Optional[list[Literal["b", "c", "d", "p", "f", "l", "s"]]] = Field(
-        default=None,
-        min_length=1,
-        description="Restrict to file type(s): b block, c char, d directory, p fifo, f regular, l symlink, s socket.",
-    )
-
-    ls: bool = Field(default=False, description="List each match in ls -dils format. Mutually exclusive with print and printf.")
-    print: bool = Field(default=False, description="Print the full path of each match (the default action). Mutually exclusive with ls and printf.")
-    printf: Optional[str] = Field(default=None, min_length=1, description="Print each match using a GNU find printf format. Mutually exclusive with ls and print.")
-
-    num_results: Optional[int] = Field(default=None, ge=1, description="Return only the first n matches.")
-    smallest: bool = Field(default=False, description="Sort output by size ascending. Mutually exclusive with largest.")
-    largest: bool = Field(default=False, description="Sort output by size descending. Mutually exclusive with smallest.")
-    compress: bool = Field(default=False, description="If true, reduce memory use via zlib compression when available.")
-    verbose: bool = Field(default=False, description="If true, report the gufi_query being executed in stderr.")
-
-    @field_validator("perm")
-    @classmethod
-    def perm_looks_like_mode(cls, value: Optional[str]) -> Optional[str]:
-        if value is None:
-            return value
-        if not re.fullmatch(r"[-/]?[0-7]{3,4}", value):
-            raise ValueError("perm must be 3 or 4 octal digits, optionally prefixed with - or /")
-        return value
-
-    @model_validator(mode="after")
-    def options_consistent(self) -> "GufiToolArgsFind":
-        if self.maxdepth is not None and self.mindepth is not None and self.mindepth > self.maxdepth:
-            raise ValueError("mindepth cannot be greater than maxdepth")
-        if self.smallest and self.largest:
-            raise ValueError("smallest and largest cannot both be true")
-        if self.false and self.true:
-            raise ValueError("false and true cannot both be true")
-        actions = [name for name in ("ls", "print", "printf") if getattr(self, name)]
-        if len(actions) > 1:
-            raise ValueError(f"choose one action only; multiple set: {', '.join(actions)}")
-        return self
-
-
-args_find_dict = {
-    "maxdepth": "-maxdepth",
-    "mindepth": "-mindepth",
-    "amin": "-amin",
-    "anewer": "-anewer",
-    "atime": "-atime",
-    "cmin": "-cmin",
-    "cnewer": "-cnewer",
-    "ctime": "-ctime",
-    "empty": "-empty",
-    "executable": "-executable",
-    "false": "-false",
-    "gid": "-gid",
-    "group": "-group",
-    "iname": "-iname",
-    "inum": "-inum",
-    "iregex": "-iregex",
-    "links": "-links",
-    "lname": "-lname",
-    "mmin": "-mmin",
-    "mtime": "-mtime",
-    "name": "-name",
-    "newer": "-newer",
-    "path_pattern": "-path",
-    "perm": "-perm",
-    "readable": "-readable",
-    "regex": "-regex",
-    "samefile": "-samefile",
-    "size": "-size",
-    "true": "-true",
-    "file_type": "-type",
-    "uid": "-uid",
-    "user": "-user",
-    "writable": "-writable",
-    "ls": "-ls",
-    "print": "-print",
-    "printf": "-printf",
-    "num_results": "--num-results",
-    "smallest": "--smallest",
-    "largest": "--largest",
-    "compress": "--compress",
-    "verbose": "-V",
-}

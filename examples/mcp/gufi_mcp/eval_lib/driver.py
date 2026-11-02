@@ -16,7 +16,7 @@ from eval_lib.agent import (
 from eval_lib.mcp_session import CallOutcome, Telemetry
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-DEFAULT_MODEL = "anthropic/claude-opus-5.5"
+DEFAULT_MODEL = "openai/gpt-4o-mini"
 READ_RESOURCE_TOOL = "read_resource"
 TOOL_RESULT_CHARS = 20_000
 
@@ -97,10 +97,13 @@ def system_prompt(context: TrialContext, constraints: EvalConstraints, instructi
         "Use this value as 'now' and do date arithmetic inside SQL from it.",
     ]
     if constraints.mode == "single":
+        budget = constraints.max_aggregate_calls
         lines.append(
-            f"Answer with {AGGREGATE_TOOL}: the rows of your last successful {AGGREGATE_TOOL} call are taken as "
-            "your answer, so that call's result must contain exactly the requested answer and nothing else. "
-            "When it does, reply with a short final message and stop calling tools."
+            f"Answer with {AGGREGATE_TOOL}"
+            + (f"; you may call it up to {budget} times" if budget else "")
+            + ". If a call fails or its rows are not exactly the requested answer, fix the query and call it "
+            "again. When a call's result contains exactly the requested answer and nothing else, reply with a "
+            "short final message and stop calling tools."
         )
     else:
         lines.append("When you have the answer, reply with your final answer as a message and stop calling tools.")
@@ -220,6 +223,10 @@ class OpenRouterDriver:
                 for tc in tool_calls:
                     if state["tool_calls"] >= constraints.max_tool_calls:
                         state["stop"] = "max_tool_calls"
+                        return
+                    if (tc.function.name == AGGREGATE_TOOL and constraints.max_aggregate_calls is not None
+                            and len(calls) >= constraints.max_aggregate_calls):
+                        state["stop"] = "max_attempts"
                         return
                     state["tool_calls"] += 1
                     content = await self._dispatch(tc.function.name, tc.function.arguments, context,
