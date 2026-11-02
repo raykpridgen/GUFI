@@ -8,7 +8,7 @@ from typing import Any, Literal, Optional, Protocol
 from eval_lib.mcp_session import GufiMcpServer, TraceEvent
 
 AGGREGATE_TOOL = "aggregate_sql_query"
-StopReason = Literal["final", "max_tool_calls", "timeout", "error"]
+StopReason = Literal["final", "max_tool_calls", "max_attempts", "timeout", "error"]
 
 
 @dataclass

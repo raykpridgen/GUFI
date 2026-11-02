@@ -20,11 +20,11 @@
                 },
                 "name": {
                     "type": "TEXT",
-                    "hint": "Base name of the directory only, not a path. Full path: the path column."
+                    "hint": "Base name of the directory only, not a full path (use path on vrsummary)."
                 },
                 "type": {
                     "type": "TEXT",
-                    "hint": "character d for directory"
+                    "hint": "Always 'd' for the directory this row describes. Files and links are in vrpentries, not in vrsummary."
                 },
                 "inode": {
                     "type": "INT64",
@@ -32,7 +32,7 @@
                 },
                 "mode": {
                     "type": "INT64",
-                    "hint": "unix mode bits"
+                    "hint": "Full Unix st_mode as INT64 in decimal (not octal literals in SQL). Filter with integer bitmasks, e.g. mode & 1024 for setgid, mode & 73 for any execute bit."
                 },
                 "nlink": {
                     "type": "INT64",
@@ -48,7 +48,7 @@
                 },
                 "size": {
                     "type": "INT64",
-                    "hint": "unix logical file size in bytes"
+                    "hint": "Logical size in bytes."
                 },
                 "blksize": {
                     "type": "INT64",
@@ -60,15 +60,15 @@
                 },
                 "atime": {
                     "type": "INT64",
-                    "hint": "unix access time epoch"
+                    "hint": "Unix access time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. atime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "mtime": {
                     "type": "INT64",
-                    "hint": "unix modification time epoch"
+                    "hint": "Unix modification time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. mtime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "ctime": {
                     "type": "INT64",
-                    "hint": "unix change time epoch"
+                    "hint": "Unix status-change time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given; do not hand-compute epochs."
                 },
                 "linkname": {
                     "type": "TEXT",
@@ -288,11 +288,11 @@
             "columns": {
                 "name": {
                     "type": "TEXT",
-                    "hint": "Base name of the file or link only. This table has no path columns; use vrpentries, whose path column holds the full path."
+                    "hint": "Base name of the file or link only, not a full path (use path)."
                 },
                 "type": {
                     "type": "TEXT",
-                    "hint": "character d for file or link"
+                    "hint": "Entry type: 'f' regular file, 'l' symlink. Directory rows are not here; use vrsummary (type 'd') for per-directory metadata and totals."
                 },
                 "inode": {
                     "type": "INT64",
@@ -300,7 +300,7 @@
                 },
                 "mode": {
                     "type": "INT64",
-                    "hint": "unix mode bits"
+                    "hint": "Full Unix st_mode as INT64 in decimal (not octal literals in SQL). Filter with integer bitmasks, e.g. mode & 1024 for setgid, mode & 73 for any execute bit."
                 },
                 "nlink": {
                     "type": "INT64",
@@ -316,7 +316,7 @@
                 },
                 "size": {
                     "type": "INT64",
-                    "hint": "unix logical file size in bytes"
+                    "hint": "Logical size in bytes."
                 },
                 "blksize": {
                     "type": "INT64",
@@ -328,15 +328,15 @@
                 },
                 "atime": {
                     "type": "INT64",
-                    "hint": "unix access time epoch"
+                    "hint": "Unix access time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. atime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "mtime": {
                     "type": "INT64",
-                    "hint": "unix modification time epoch"
+                    "hint": "Unix modification time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. mtime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "ctime": {
                     "type": "INT64",
-                    "hint": "unix change time epoch"
+                    "hint": "Unix status-change time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given; do not hand-compute epochs."
                 },
                 "linkname": {
                     "type": "TEXT",
@@ -396,7 +396,7 @@
                 },
                 "dmode": {
                     "type": "INT64",
-                    "hint": "directory unix mode bits"
+                    "hint": "Directory's st_mode as INT64 (decimal). Same bitmask rules as mode on file rows."
                 },
                 "dnlink": {
                     "type": "INT64",
@@ -412,7 +412,7 @@
                 },
                 "dsize": {
                     "type": "INT64",
-                    "hint": "directory unix logical file size in bytes"
+                    "hint": "Directory row metadata size in bytes (the directory inode), not subtree total (see dtotsize/totsize)."
                 },
                 "dblksize": {
                     "type": "INT64",
@@ -424,15 +424,15 @@
                 },
                 "datime": {
                     "type": "INT64",
-                    "hint": "directory unix access time epoch"
+                    "hint": "Directory unix access time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. atime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "dmtime": {
                     "type": "INT64",
-                    "hint": "directory unix modification time epoch"
+                    "hint": "Directory unix modification time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. mtime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "dctime": {
                     "type": "INT64",
-                    "hint": "directory unix change time epoch"
+                    "hint": "Directory unix status-change time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given; do not hand-compute epochs."
                 },
                 "dlinkname": {
                     "type": "TEXT",
@@ -584,11 +584,11 @@
                 },
                 "name": {
                     "type": "TEXT",
-                    "hint": "Base name of the file or link only, not a path. Full path: the path column."
+                    "hint": "Base name of the file or link only, not a full path (use path)."
                 },
                 "type": {
                     "type": "TEXT",
-                    "hint": "character d for file or link"
+                    "hint": "Entry type: 'f' regular file, 'l' symlink. Directory rows are not here; use vrsummary (type 'd') for per-directory metadata and totals."
                 },
                 "inode": {
                     "type": "INT64",
@@ -596,7 +596,7 @@
                 },
                 "mode": {
                     "type": "INT64",
-                    "hint": "unix mode bits"
+                    "hint": "Full Unix st_mode as INT64 in decimal (not octal literals in SQL). Filter with integer bitmasks, e.g. mode & 1024 for setgid, mode & 73 for any execute bit."
                 },
                 "nlink": {
                     "type": "INT64",
@@ -612,7 +612,7 @@
                 },
                 "size": {
                     "type": "INT64",
-                    "hint": "unix logical file size in bytes"
+                    "hint": "Logical size in bytes."
                 },
                 "blksize": {
                     "type": "INT64",
@@ -624,15 +624,15 @@
                 },
                 "atime": {
                     "type": "INT64",
-                    "hint": "unix access time epoch"
+                    "hint": "Unix access time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. atime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "mtime": {
                     "type": "INT64",
-                    "hint": "unix modification time epoch"
+                    "hint": "Unix modification time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. mtime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "ctime": {
                     "type": "INT64",
-                    "hint": "unix change time epoch"
+                    "hint": "Unix status-change time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given; do not hand-compute epochs."
                 },
                 "linkname": {
                     "type": "TEXT",
@@ -684,11 +684,11 @@
             "columns": {
                 "name": {
                     "type": "TEXT",
-                    "hint": "character name of directory"
+                    "hint": "Base name of the directory only, not a full path (use path on vrsummary)."
                 },
                 "type": {
                     "type": "TEXT",
-                    "hint": "character d for directory"
+                    "hint": "Always 'd' for the directory this row describes. Files and links are in vrpentries, not in vrsummary."
                 },
                 "inode": {
                     "type": "INT64",
@@ -696,7 +696,7 @@
                 },
                 "mode": {
                     "type": "INT64",
-                    "hint": "unix mode bits"
+                    "hint": "Full Unix st_mode as INT64 in decimal (not octal literals in SQL). Filter with integer bitmasks, e.g. mode & 1024 for setgid, mode & 73 for any execute bit."
                 },
                 "nlink": {
                     "type": "INT64",
@@ -712,7 +712,7 @@
                 },
                 "size": {
                     "type": "INT64",
-                    "hint": "unix logical file size in bytes"
+                    "hint": "Logical size in bytes."
                 },
                 "blksize": {
                     "type": "INT64",
@@ -724,15 +724,15 @@
                 },
                 "atime": {
                     "type": "INT64",
-                    "hint": "unix access time epoch"
+                    "hint": "Unix access time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. atime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "mtime": {
                     "type": "INT64",
-                    "hint": "unix modification time epoch"
+                    "hint": "Unix modification time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. mtime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "ctime": {
                     "type": "INT64",
-                    "hint": "unix change time epoch"
+                    "hint": "Unix status-change time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given; do not hand-compute epochs."
                 },
                 "linkname": {
                     "type": "TEXT",
@@ -952,11 +952,11 @@
             "columns": {
                 "name": {
                     "type": "TEXT",
-                    "hint": "character name of directory"
+                    "hint": "Base name of the directory only, not a full path (use path on vrsummary)."
                 },
                 "type": {
                     "type": "TEXT",
-                    "hint": "character d for directory"
+                    "hint": "Always 'd' for the directory this row describes. Files and links are in vrpentries, not in vrsummary."
                 },
                 "inode": {
                     "type": "INT64",
@@ -964,7 +964,7 @@
                 },
                 "mode": {
                     "type": "INT64",
-                    "hint": "unix mode bits"
+                    "hint": "Full Unix st_mode as INT64 in decimal (not octal literals in SQL). Filter with integer bitmasks, e.g. mode & 1024 for setgid, mode & 73 for any execute bit."
                 },
                 "nlink": {
                     "type": "INT64",
@@ -980,7 +980,7 @@
                 },
                 "size": {
                     "type": "INT64",
-                    "hint": "unix logical file size in bytes"
+                    "hint": "Logical size in bytes."
                 },
                 "blksize": {
                     "type": "INT64",
@@ -992,15 +992,15 @@
                 },
                 "atime": {
                     "type": "INT64",
-                    "hint": "unix access time epoch"
+                    "hint": "Unix access time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. atime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "mtime": {
                     "type": "INT64",
-                    "hint": "unix modification time epoch"
+                    "hint": "Unix modification time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. mtime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "ctime": {
                     "type": "INT64",
-                    "hint": "unix change time epoch"
+                    "hint": "Unix status-change time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given; do not hand-compute epochs."
                 },
                 "linkname": {
                     "type": "TEXT",
@@ -1220,11 +1220,11 @@
             "columns": {
                 "name": {
                     "type": "TEXT",
-                    "hint": "character name of directory"
+                    "hint": "Base name of the directory only, not a full path (use path on vrsummary)."
                 },
                 "type": {
                     "type": "TEXT",
-                    "hint": "character d for directory"
+                    "hint": "Always 'd' for the directory this row describes. Files and links are in vrpentries, not in vrsummary."
                 },
                 "inode": {
                     "type": "INT64",
@@ -1232,7 +1232,7 @@
                 },
                 "mode": {
                     "type": "INT64",
-                    "hint": "unix mode bits"
+                    "hint": "Full Unix st_mode as INT64 in decimal (not octal literals in SQL). Filter with integer bitmasks, e.g. mode & 1024 for setgid, mode & 73 for any execute bit."
                 },
                 "nlink": {
                     "type": "INT64",
@@ -1248,7 +1248,7 @@
                 },
                 "size": {
                     "type": "INT64",
-                    "hint": "unix logical file size in bytes"
+                    "hint": "Logical size in bytes."
                 },
                 "blksize": {
                     "type": "INT64",
@@ -1260,15 +1260,15 @@
                 },
                 "atime": {
                     "type": "INT64",
-                    "hint": "unix access time epoch"
+                    "hint": "Unix access time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. atime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "mtime": {
                     "type": "INT64",
-                    "hint": "unix modification time epoch"
+                    "hint": "Unix modification time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. mtime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "ctime": {
                     "type": "INT64",
-                    "hint": "unix change time epoch"
+                    "hint": "Unix status-change time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given; do not hand-compute epochs."
                 },
                 "linkname": {
                     "type": "TEXT",
@@ -1488,11 +1488,11 @@
             "columns": {
                 "name": {
                     "type": "TEXT",
-                    "hint": "Base name of the directory only. This table has no path columns; use vrsummary, whose path column holds the full path."
+                    "hint": "Base name of the directory only, not a full path (use path on vrsummary)."
                 },
                 "type": {
                     "type": "TEXT",
-                    "hint": "character d for directory"
+                    "hint": "Always 'd' for the directory this row describes. Files and links are in vrpentries, not in vrsummary."
                 },
                 "inode": {
                     "type": "INT64",
@@ -1500,7 +1500,7 @@
                 },
                 "mode": {
                     "type": "INT64",
-                    "hint": "unix mode bits"
+                    "hint": "Full Unix st_mode as INT64 in decimal (not octal literals in SQL). Filter with integer bitmasks, e.g. mode & 1024 for setgid, mode & 73 for any execute bit."
                 },
                 "nlink": {
                     "type": "INT64",
@@ -1516,7 +1516,7 @@
                 },
                 "size": {
                     "type": "INT64",
-                    "hint": "unix logical file size in bytes"
+                    "hint": "Logical size in bytes."
                 },
                 "blksize": {
                     "type": "INT64",
@@ -1528,15 +1528,15 @@
                 },
                 "atime": {
                     "type": "INT64",
-                    "hint": "unix access time epoch"
+                    "hint": "Unix access time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. atime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "mtime": {
                     "type": "INT64",
-                    "hint": "unix modification time epoch"
+                    "hint": "Unix modification time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. mtime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "ctime": {
                     "type": "INT64",
-                    "hint": "unix change time epoch"
+                    "hint": "Unix status-change time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given; do not hand-compute epochs."
                 },
                 "linkname": {
                     "type": "TEXT",
@@ -1772,11 +1772,11 @@
                 },
                 "name": {
                     "type": "TEXT",
-                    "hint": "Base name of the directory only, not a path. Full path: the path column."
+                    "hint": "Base name of the directory only, not a full path (use path on vrsummary)."
                 },
                 "type": {
                     "type": "TEXT",
-                    "hint": "character d for directory"
+                    "hint": "Always 'd' for the directory this row describes. Files and links are in vrpentries, not in vrsummary."
                 },
                 "inode": {
                     "type": "INT64",
@@ -1784,7 +1784,7 @@
                 },
                 "mode": {
                     "type": "INT64",
-                    "hint": "unix mode bits"
+                    "hint": "Full Unix st_mode as INT64 in decimal (not octal literals in SQL). Filter with integer bitmasks, e.g. mode & 1024 for setgid, mode & 73 for any execute bit."
                 },
                 "nlink": {
                     "type": "INT64",
@@ -1800,7 +1800,7 @@
                 },
                 "size": {
                     "type": "INT64",
-                    "hint": "unix logical file size in bytes"
+                    "hint": "Logical size in bytes."
                 },
                 "blksize": {
                     "type": "INT64",
@@ -1812,15 +1812,15 @@
                 },
                 "atime": {
                     "type": "INT64",
-                    "hint": "unix access time epoch"
+                    "hint": "Unix access time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. atime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "mtime": {
                     "type": "INT64",
-                    "hint": "unix modification time epoch"
+                    "hint": "Unix modification time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. mtime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "ctime": {
                     "type": "INT64",
-                    "hint": "unix change time epoch"
+                    "hint": "Unix status-change time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given; do not hand-compute epochs."
                 },
                 "linkname": {
                     "type": "TEXT",
@@ -2052,7 +2052,7 @@
                 },
                 "mode": {
                     "type": "INT64",
-                    "hint": "unix mode bits"
+                    "hint": "Full Unix st_mode as INT64 in decimal (not octal literals in SQL). Filter with integer bitmasks, e.g. mode & 1024 for setgid, mode & 73 for any execute bit."
                 },
                 "uid": {
                     "type": "INT64",
@@ -2756,11 +2756,11 @@
             "columns": {
                 "name": {
                     "type": "TEXT",
-                    "hint": "Base name of the file or link only. This table has no path columns; use vrpentries, whose path column holds the full path."
+                    "hint": "Base name of the file or link only, not a full path (use path)."
                 },
                 "type": {
                     "type": "TEXT",
-                    "hint": "character d for file or link"
+                    "hint": "Entry type: 'f' regular file, 'l' symlink. Directory rows are not here; use vrsummary (type 'd') for per-directory metadata and totals."
                 },
                 "inode": {
                     "type": "INT64",
@@ -2768,7 +2768,7 @@
                 },
                 "mode": {
                     "type": "INT64",
-                    "hint": "unix mode bits"
+                    "hint": "Full Unix st_mode as INT64 in decimal (not octal literals in SQL). Filter with integer bitmasks, e.g. mode & 1024 for setgid, mode & 73 for any execute bit."
                 },
                 "nlink": {
                     "type": "INT64",
@@ -2784,7 +2784,7 @@
                 },
                 "size": {
                     "type": "INT64",
-                    "hint": "unix logical file size in bytes"
+                    "hint": "Logical size in bytes."
                 },
                 "blksize": {
                     "type": "INT64",
@@ -2796,15 +2796,15 @@
                 },
                 "atime": {
                     "type": "INT64",
-                    "hint": "unix access time epoch"
+                    "hint": "Unix access time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. atime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "mtime": {
                     "type": "INT64",
-                    "hint": "unix modification time epoch"
+                    "hint": "Unix modification time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. mtime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "ctime": {
                     "type": "INT64",
-                    "hint": "unix change time epoch"
+                    "hint": "Unix status-change time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given; do not hand-compute epochs."
                 },
                 "linkname": {
                     "type": "TEXT",
@@ -2848,11 +2848,11 @@
             "columns": {
                 "name": {
                     "type": "TEXT",
-                    "hint": "Base name of the directory only. This table has no path columns; use vrsummary, whose path column holds the full path."
+                    "hint": "Base name of the directory only, not a full path (use path on vrsummary)."
                 },
                 "type": {
                     "type": "TEXT",
-                    "hint": "character d for directory"
+                    "hint": "Always 'd' for the directory this row describes. Files and links are in vrpentries, not in vrsummary."
                 },
                 "inode": {
                     "type": "INT64",
@@ -2860,7 +2860,7 @@
                 },
                 "mode": {
                     "type": "INT64",
-                    "hint": "unix mode bits"
+                    "hint": "Full Unix st_mode as INT64 in decimal (not octal literals in SQL). Filter with integer bitmasks, e.g. mode & 1024 for setgid, mode & 73 for any execute bit."
                 },
                 "nlink": {
                     "type": "INT64",
@@ -2876,7 +2876,7 @@
                 },
                 "size": {
                     "type": "INT64",
-                    "hint": "unix logical file size in bytes"
+                    "hint": "Logical size in bytes."
                 },
                 "blksize": {
                     "type": "INT64",
@@ -2888,15 +2888,15 @@
                 },
                 "atime": {
                     "type": "INT64",
-                    "hint": "unix access time epoch"
+                    "hint": "Unix access time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. atime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "mtime": {
                     "type": "INT64",
-                    "hint": "unix modification time epoch"
+                    "hint": "Unix modification time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. mtime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "ctime": {
                     "type": "INT64",
-                    "hint": "unix change time epoch"
+                    "hint": "Unix status-change time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given; do not hand-compute epochs."
                 },
                 "linkname": {
                     "type": "TEXT",
@@ -3116,11 +3116,11 @@
             "columns": {
                 "name": {
                     "type": "TEXT",
-                    "hint": "Base name of the file or link only. This table has no path columns; use vrpentries, whose path column holds the full path."
+                    "hint": "Base name of the file or link only, not a full path (use path)."
                 },
                 "type": {
                     "type": "TEXT",
-                    "hint": "character d for file or link"
+                    "hint": "Entry type: 'f' regular file, 'l' symlink. Directory rows are not here; use vrsummary (type 'd') for per-directory metadata and totals."
                 },
                 "inode": {
                     "type": "INT64",
@@ -3128,7 +3128,7 @@
                 },
                 "mode": {
                     "type": "INT64",
-                    "hint": "unix mode bits"
+                    "hint": "Full Unix st_mode as INT64 in decimal (not octal literals in SQL). Filter with integer bitmasks, e.g. mode & 1024 for setgid, mode & 73 for any execute bit."
                 },
                 "nlink": {
                     "type": "INT64",
@@ -3144,7 +3144,7 @@
                 },
                 "size": {
                     "type": "INT64",
-                    "hint": "unix logical file size in bytes"
+                    "hint": "Logical size in bytes."
                 },
                 "blksize": {
                     "type": "INT64",
@@ -3156,15 +3156,15 @@
                 },
                 "atime": {
                     "type": "INT64",
-                    "hint": "unix access time epoch"
+                    "hint": "Unix access time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. atime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "mtime": {
                     "type": "INT64",
-                    "hint": "unix modification time epoch"
+                    "hint": "Unix modification time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given, e.g. mtime < <now_epoch> - 30 * 86400; do not hand-compute epochs."
                 },
                 "ctime": {
                     "type": "INT64",
-                    "hint": "unix change time epoch"
+                    "hint": "Unix status-change time: seconds since epoch (INT64). For relative windows, compute cutoffs in SQL from the current time you were given; do not hand-compute epochs."
                 },
                 "linkname": {
                     "type": "TEXT",
@@ -3228,7 +3228,7 @@
                 },
                 "mode": {
                     "type": "INT64",
-                    "hint": "unix mode bits"
+                    "hint": "Full Unix st_mode as INT64 in decimal (not octal literals in SQL). Filter with integer bitmasks, e.g. mode & 1024 for setgid, mode & 73 for any execute bit."
                 },
                 "uid": {
                     "type": "INT64",
@@ -3256,7 +3256,7 @@
                 },
                 "mode": {
                     "type": "INT64",
-                    "hint": "unix mode bits"
+                    "hint": "Full Unix st_mode as INT64 in decimal (not octal literals in SQL). Filter with integer bitmasks, e.g. mode & 1024 for setgid, mode & 73 for any execute bit."
                 },
                 "uid": {
                     "type": "INT64",
@@ -3523,6 +3523,145 @@
                     "hint": "unix gid"
                 }
             }
+        }
+    },
+    "path_columns": {
+        "vrpentries": {
+            "path": "Full path of the file or link: index name first, then the path inside the index (e.g. myindex/dir/file.txt). Ordinary TEXT: filter with path LIKE 'myindex/dir/%', GROUP BY, etc. In aggregate_sql_query, to use path in partial_sql or final_sql, carry it through per_directory_shape and partial_shape.",
+            "dirpath": "Full path of the directory containing the file or link (e.g. myindex/dir). Filter with dirpath LIKE 'myindex/dir/%'.",
+            "spath": "Path on the source file system that was indexed (not the index-name-first form). For reference only; path filters use the path column."
+        },
+        "vrsummary": {
+            "path": "Full path of the directory (e.g. myindex/dir; the index root is myindex). Index name first, then path inside the index. Filter with path LIKE 'myindex/sub/%'. In aggregate_sql_query, carry path through per_directory_shape and partial_shape to use it in later stages.",
+            "spath": "Path on the source file system that was indexed (not the index-name-first form). For reference only; path filters use the path column."
+        },
+        "vrsummarylong": {
+            "path": "Full path of the directory (e.g. myindex/dir; the index root is myindex). Index name first, then path inside the index. Filter with path LIKE 'myindex/sub/%'. In aggregate_sql_query, carry path through per_directory_shape and partial_shape to use it in later stages.",
+            "spath": "Path on the source file system that was indexed (not the index-name-first form). For reference only; path filters use the path column."
+        }
+    },
+    "functions": {
+        "bytecat": {
+            "signature": "bytecat(bytes INT64) -> TEXT",
+            "columns": ["size", "totsize", "minsize", "maxsize", "dsize", "dtotsize", "dminsize", "dmaxsize", "maxsubdirsize"],
+            "tag": "bytecat({col}) -> size band (Zero, B, K, M, G, ...)",
+            "detail": "GUFI's standard size bands, 1024-based: Zero (0), B (<1K), K (<1M), M (<1G), G (<1T), T (<1P), P (<1E), E. Use it as the group key for a breakdown of files by size.",
+            "example": "SELECT bytecat(size) AS band, COUNT(*) AS n FROM entries GROUP BY band"
+        },
+        "human_readable_size": {
+            "signature": "human_readable_size(bytes INT64) -> TEXT",
+            "columns": ["size", "totsize", "minsize", "maxsize", "dsize", "dtotsize", "dminsize", "dmaxsize", "maxsubdirsize"],
+            "tag": "human_readable_size({col}) -> '1.5M'",
+            "detail": "Formats a byte count with one decimal and a 1024-based unit (K, M, G, T, P, E). For display only: apply it in final_sql to summed values, never group or sum on its output.",
+            "example": "SELECT human_readable_size(SUM(bytes)) FROM partial"
+        },
+        "intcat": {
+            "signature": "intcat(n INT64) -> TEXT",
+            "columns": ["nlink", "totfiles", "totlinks", "totsubdirs", "dtotfiles", "dtotlinks", "maxsubdirfiles", "maxsubdirlinks"],
+            "tag": "intcat({col}) -> count band (Zero, O, K, M, B, ...)",
+            "detail": "1000-based bands for counts: Zero, O (<1000), K (<1 million), M (<1 billion), B (<1 trillion), T, q, Q. Use as a group key to bucket directories by how many entries they hold.",
+            "example": "SELECT intcat(totfiles) AS band FROM vrsummary"
+        },
+        "agecat": {
+            "signature": "agecat(epoch INT64) -> TEXT",
+            "columns": ["mtime", "atime", "ctime", "crtime", "dmtime", "datime", "dctime", "minmtime", "maxmtime", "minatime", "maxatime", "minctime", "maxctime", "mincrtime", "maxcrtime"],
+            "tag": "agecat({col}) -> age band (Secs, Mins, Hrs, Days, Wks, Mos, Yrs, Decs)",
+            "detail": "GUFI's standard age bands, measured from the server's current clock (not a time you pass in): Zero, Secs (<1 min), Mins (<1 h), Hrs (<1 day), Days (<1 week), Wks (<30 days), Mos (<365 days), Yrs (<10 years), Decs. Use it as the group key for a breakdown by age. Errors on times in the future.",
+            "example": "SELECT agecat(atime) AS band, COUNT(*) AS n FROM entries GROUP BY band"
+        },
+        "epochtoage": {
+            "signature": "epochtoage(epoch INT64, unit TEXT) -> INT64",
+            "columns": ["mtime", "atime", "ctime", "crtime", "dmtime", "datime", "dctime"],
+            "tag": "epochtoage({col}, 'd') -> whole days old",
+            "detail": "Age from the server's current clock in whole units, rounded down. unit: 's' seconds, 'm' minutes, 'h' hours, 'd' days (default), 'w' weeks, 'M' months (30 days), 'y' years (365 days), 'D' decades. For cutoffs relative to a time you were given, compare the column with arithmetic on that time instead.",
+            "example": "SELECT epochtoage(atime, 'w') AS weeks FROM entries"
+        },
+        "strftime": {
+            "signature": "strftime(format TEXT, epoch INT64) -> TEXT",
+            "columns": ["mtime", "atime", "ctime", "crtime", "dmtime", "datime", "dctime"],
+            "tag": "strftime('%Y-%m', {col}) -> date text",
+            "detail": "C strftime(3) on an epoch, in the server's local time zone. Replaces SQLite's strftime, so the argument order is (format, epoch) and SQLite modifiers such as 'unixepoch' are not accepted. Useful as a group key by year or month.",
+            "example": "SELECT strftime('%Y', ctime) AS year FROM entries"
+        },
+        "uidtouser": {
+            "signature": "uidtouser(uid INT64) -> TEXT",
+            "columns": ["uid", "duid", "minuid", "maxuid", "dminuid", "dmaxuid"],
+            "tag": "uidtouser({col}) -> user name",
+            "detail": "Looks the uid up on the server host. Returns the number as text when the host has no such user. Group on uid and convert in final_sql, which does one lookup per uid instead of per file.",
+            "example": "SELECT uidtouser(uid) AS owner, SUM(bytes) FROM partial GROUP BY uid"
+        },
+        "gidtogroup": {
+            "signature": "gidtogroup(gid INT64) -> TEXT",
+            "columns": ["gid", "dgid", "mingid", "maxgid", "dmingid", "dmaxgid"],
+            "tag": "gidtogroup({col}) -> group name",
+            "detail": "Looks the gid up on the server host. Returns the number as text when the host has no such group. Group on gid and convert in final_sql.",
+            "example": "SELECT gidtogroup(gid) AS grp, SUM(n) FROM partial GROUP BY gid"
+        },
+        "modetotxt": {
+            "signature": "modetotxt(mode INT64) -> TEXT",
+            "columns": ["mode", "dmode"],
+            "tag": "modetotxt({col}) -> 'drwxr-xr-x'",
+            "detail": "ls-style permission string, including the file type character. For display; filter with integer bitmasks on mode instead.",
+            "example": "SELECT modetotxt(mode) AS perms FROM entries"
+        },
+        "ext": {
+            "signature": "ext(name TEXT) -> TEXT",
+            "columns": ["name", "path"],
+            "tag": "ext({col}) -> extension after the last dot, NULL if none",
+            "detail": "Text after the last '.' (without the dot): 'a.tar.gz' -> 'gz', '.bashrc' -> 'bashrc'. NULL when there is no dot or the name ends with one. Use it as the group key for a breakdown by extension.",
+            "example": "SELECT ext(name) AS e, COUNT(*) AS n FROM entries GROUP BY e"
+        },
+        "basename": {
+            "signature": "basename(path TEXT) -> TEXT",
+            "columns": ["path", "dirpath", "linkname"],
+            "tag": "basename({col}) -> last path component",
+            "detail": "Last component of a path, ignoring trailing slashes. The name column already holds the basename of each entry.",
+            "example": "SELECT basename(dirpath) AS dir FROM vrpentries"
+        },
+        "median": {
+            "signature": "median(x) -> REAL (aggregate)",
+            "columns": ["size", "totsize"],
+            "tag": "median/stdevs/stdevp({col}) aggregates",
+            "detail": "Median of a column. Medians cannot be combined across stages, so a median over the whole index needs every value carried into final_sql: per_directory_sql and partial_sql pass the raw values through and final_sql takes median(value) FROM partial. That row count can be large.",
+            "example": "SELECT median(size) FROM partial"
+        },
+        "stdevs": {
+            "signature": "stdevs(x) -> REAL (aggregate)",
+            "columns": ["size", "totsize"],
+            "tag": "median/stdevs/stdevp({col}) aggregates",
+            "detail": "Sample standard deviation. Over the whole index, compute SUM(x * x), SUM(x) and COUNT(*) in the earlier stages, SUM each in final_sql, and finish with stdev_from_parts.",
+            "example": "SELECT stdevs(size) FROM entries"
+        },
+        "stdevp": {
+            "signature": "stdevp(x) -> REAL (aggregate)",
+            "columns": ["size", "totsize"],
+            "tag": "median/stdevs/stdevp({col}) aggregates",
+            "detail": "Population standard deviation. Combine across stages the same way as stdevs, with stdev_from_parts.",
+            "example": "SELECT stdevp(size) FROM entries"
+        },
+        "stdev_from_parts": {
+            "signature": "stdev_from_parts(sum_of_squares, sum, count, sample INT64) -> REAL",
+            "columns": [],
+            "detail": "Standard deviation from summed parts, for final_sql. sample is 1 for sample and 0 for population standard deviation.",
+            "example": "SELECT stdev_from_parts(SUM(sq), SUM(s), SUM(n), 1) FROM partial"
+        },
+        "hostname": {
+            "signature": "hostname() -> TEXT",
+            "columns": [],
+            "advertise": false,
+            "detail": "Host name of the machine running gufi_query."
+        },
+        "rpad": {
+            "signature": "rpad(text TEXT, width INT64) -> TEXT",
+            "columns": [],
+            "advertise": false,
+            "detail": "Pads text with spaces to width. Used for gufi_ls and gufi_find output."
+        },
+        "blocksize": {
+            "signature": "blocksize(bytes INT64, unit TEXT) -> TEXT",
+            "columns": [],
+            "advertise": false,
+            "detail": "Block count in ls style, meant only for gufi_ls. Do not use it for sizes; use size, bytecat, or human_readable_size."
         }
     }
 }

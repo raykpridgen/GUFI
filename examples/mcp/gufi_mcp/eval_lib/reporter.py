@@ -10,11 +10,11 @@ from pathlib import Path
 from typing import Any, Optional
 
 from eval_lib.agent import AgentResult, AggregateCall
-from eval_lib.metrics import GeneralMetrics, SingleScore
+from eval_lib.metrics import GeneralMetrics, SingleScore, general_metrics
 
 # Every summary.jsonl line has exactly these keys, in both modes.
 SUMMARY_KEYS = (
-    "scenario_id", "trial", "mode", "pass",
+    "scenario_id", "trial", "mode", "pass", "passed_on_attempt", "one_shot_pass",
     "resources_consumed", "timing_delta_ms", "similarity_path",
     "executions", "execution_time_ms", "redundancies", "final_response_path",
     "aggregate_revision_count", "failure_tags",
@@ -84,7 +84,7 @@ def _base_line(scenario_id: str, trial: int, mode: str, result: AgentResult, age
                trace_path: str) -> dict[str, Any]:
     return {
         "scenario_id": scenario_id, "trial": trial, "mode": mode, "pass": None,
-        "resources_consumed": None, "timing_delta_ms": None, "similarity_path": "",
+        "passed_on_attempt": None, "one_shot_pass": None, "resources_consumed": None, "timing_delta_ms": None, "similarity_path": "",
         "executions": None, "execution_time_ms": None, "redundancies": [], "final_response_path": "",
         "aggregate_revision_count": None, "failure_tags": [],
         "agent": agent.get("agent"), "model": agent.get("model"), "stop_reason": result.stop_reason,
@@ -102,10 +102,16 @@ def record_single(writer: RunWriter, scenario_id: str, trial: int, result: Agent
         "scenario": scenario_id,
         "trial": trial,
         "pass": score.passed,
+        "passed_on_attempt": score.passed_on_attempt,
         "aggregate_revision_count": score.aggregate_revision_count,
         "ground_truth": ground_truth,
         "agent": (scored or last).query if (scored or last) else None,
         "agent_attempts": [c.query for c in result.aggregate_calls],
+        "attempt_results": [
+            {"attempt": a.attempt, "ok": a.call.ok, "passed": a.passed, "row_count": a.call.row_count,
+             "reason": a.reason}
+            for a in score.attempts
+        ],
         "gt_row_count": len(gt_rows),
         "agent_row_count": scored.row_count if scored else 0,
         "ordered_compare": score.comparison.ordered if score.comparison else None,
@@ -130,7 +136,10 @@ def record_single(writer: RunWriter, scenario_id: str, trial: int, result: Agent
     })
     line = _base_line(scenario_id, trial, "single", result, agent, writer.rel(trace))
     line.update({
+        **asdict(general_metrics(result)),
         "pass": score.passed,
+        "passed_on_attempt": score.passed_on_attempt,
+        "one_shot_pass": score.one_shot_pass,
         "resources_consumed": score.resources_consumed,
         "timing_delta_ms": score.timing_delta_ms,
         "similarity_path": writer.rel(similarity),
