@@ -9,14 +9,16 @@ import json
 import logging
 import os
 import re
+import shlex
 import shutil
 import signal
 import sqlite3
 import subprocess
 import threading
+import time
 from contextlib import contextmanager
-from functools import lru_cache
-from pathlib import Path
+from functools import lru_cache, wraps
+from pathlib import Path, PurePosixPath
 from typing import Any, Iterator, Optional
 
 import sqlglot
@@ -55,20 +57,62 @@ def _optional_source_root() -> Optional[str]:
         return None
     if not value.startswith("/"):
         raise RuntimeError("GUFI_SOURCE_ROOT must be an absolute path")
-    if any(ch in value for ch in "'\"\0"):
-        raise RuntimeError("GUFI_SOURCE_ROOT must not contain quote or NUL characters")
+    if any(ch in value for ch in "'\"\0$`\\"):
+        raise RuntimeError("GUFI_SOURCE_ROOT must not contain quote, NUL, $, ` or \\ characters")
     return value.rstrip("/")
+
+
+# With remote_cmd, gufi_vt joins the gufi_query command into one string for the
+# remote shell: SQL and -p sit inside double quotes and index paths are unquoted.
+_REMOTE_UNSAFE_SQL = re.compile(r"[$`\\]")
+_REMOTE_SAFE_PATH = re.compile(r"/[A-Za-z0-9._+/-]*")
+
+
+def _optional_remote() -> tuple[Optional[str], list[str]]:
+    """remote_cmd and remote_arg values for gufi_vt, from GUFI_REMOTE_CMD and GUFI_REMOTE_ARGS."""
+    command = os.getenv("GUFI_REMOTE_CMD", "").strip()
+    args = shlex.split(os.getenv("GUFI_REMOTE_ARGS", ""))
+    if not command:
+        if args:
+            raise RuntimeError("GUFI_REMOTE_ARGS is set but GUFI_REMOTE_CMD is not")
+        return None, []
+    if any(ch in value for value in (command, *args) for ch in "'\"\0"):
+        raise RuntimeError("GUFI_REMOTE_CMD and GUFI_REMOTE_ARGS must not contain quote or NUL characters")
+    if Path(command).name == "ssh":
+        # gufi_vt does not redirect the child's stdin, so ssh would read the MCP stdio
+        # stream, and the server cannot answer password or host key prompts.
+        if "-n" not in args:
+            args.insert(0, "-n")
+        if not any(arg.startswith("BatchMode") or arg.startswith("-oBatchMode") for arg in args):
+            args[1:1] = ["-o", "BatchMode=yes"]
+    return command, args
+
+
+def _index_root(remote: bool) -> PurePosixPath:
+    value = _require_env("GUFI_INDEX_ROOT")
+    if not remote:
+        return Path(value).resolve()
+    if not _REMOTE_SAFE_PATH.fullmatch(value):
+        raise RuntimeError("With GUFI_REMOTE_CMD, GUFI_INDEX_ROOT must be an absolute path on the remote host "
+                           "made of letters, digits, and . _ + - / only")
+    return PurePosixPath(value)
 
 
 SCHEMAFILE = _resolve_relative_to_module(_require_env("SCHEMAFILE"))
 GUFIVTLIB = _require_env("GUFIVTLIB")
-GUFI_INDEX_ROOT = Path(_require_env("GUFI_INDEX_ROOT")).resolve()
+# Command and arguments that run gufi_query on another host, e.g. ssh and user@host.
+# Unset, gufi_query runs on this host.
+REMOTE_CMD, REMOTE_ARGS = _optional_remote()
+# Parent of the indexes, on the host that runs gufi_query.
+GUFI_INDEX_ROOT = _index_root(REMOTE_CMD is not None)
 # Parent of the indexed source trees, as GUFI_INDEX_ROOT is the parent of the indexes:
 # index <GUFI_INDEX_ROOT>/<name> was built from <GUFI_SOURCE_ROOT>/<name>. Enables spath.
 GUFI_SOURCE_ROOT = _optional_source_root()
-THREADS = os.cpu_count() or 1
+THREADS = int(os.getenv("GUFI_MCP_THREADS", "0")) or os.cpu_count() or 1
 TOOL_TIMEOUT = int(os.getenv("GUFI_MCP_TOOL_TIMEOUT", "300"))
 MAX_ROWS = int(os.getenv("GUFI_MCP_MAX_ROWS", "5000"))
+# Seconds that index lists, treesummary checks, and schema metadata are reused; 0 disables.
+CACHE_TTL = float(os.getenv("GUFI_MCP_CACHE_TTL", "300"))
 
 SQL_DIALECT = "sqlite"
 
@@ -111,41 +155,109 @@ class GufiQueryResult(BaseModel):
 # GUFI installation
 #
 
+def _where() -> str:
+    return f"on the remote host ({REMOTE_CMD} {' '.join(REMOTE_ARGS)})" if REMOTE_CMD else "on this host"
+
+
+def _run_command(argv: list[str], what: str) -> str:
+    try:
+        proc = subprocess.run(argv, capture_output=True, text=True, stdin=subprocess.DEVNULL,
+                              timeout=TOOL_TIMEOUT, check=False)
+    except subprocess.TimeoutExpired as e:
+        raise GufiError(f"{what} timed out after {TOOL_TIMEOUT} seconds") from e
+    except OSError as e:
+        raise GufiError(f"{what} could not be started: {e}") from e
+    if proc.returncode != 0:
+        raise GufiError(f"{what} exited with status {proc.returncode} {_where()}: "
+                        f"{proc.stderr.strip() or 'no error output'}")
+    return proc.stdout.strip()
+
+
 def gufi_query_path() -> str:
-    """Absolute path of the gufi_query binary on PATH."""
-    location = shutil.which("gufi_query")
-    if location is None:
-        raise GufiError("gufi_query was not found on PATH")
+    """Absolute path of the gufi_query binary that gufi_vt runs, on this host or the remote host."""
+    if REMOTE_CMD:
+        location = _run_command([REMOTE_CMD, *REMOTE_ARGS, "command -v gufi_query"], "command -v gufi_query")
+    else:
+        location = shutil.which("gufi_query") or ""
+    if not location:
+        raise GufiError(f"gufi_query was not found on PATH {_where()}")
     return location
 
 
 def gufi_query_version() -> str:
-    """Output of gufi_query --version."""
-    try:
-        proc = subprocess.run([gufi_query_path(), "--version"], capture_output=True, text=True,
-                              timeout=TOOL_TIMEOUT, check=False)
-    except subprocess.TimeoutExpired as e:
-        raise GufiError(f"gufi_query --version timed out after {TOOL_TIMEOUT} seconds") from e
-    if proc.returncode != 0:
-        raise GufiError(f"gufi_query --version exited with status {proc.returncode}: "
-                        f"{proc.stderr.strip() or 'no error output'}")
-    return proc.stdout.strip()
+    """Output of gufi_query --version, on this host or the remote host."""
+    if REMOTE_CMD:
+        return _run_command([REMOTE_CMD, *REMOTE_ARGS, "gufi_query --version"], "gufi_query --version")
+    return _run_command([gufi_query_path(), "--version"], "gufi_query --version")
 
 
 #
 # Index and schema helpers
 #
+# Everything that reads an index goes through gufi_vt, so the same code serves
+# local indexes and, with GUFI_REMOTE_CMD, indexes on another host. gufi_query
+# attaches each directory's db.db as schema "tree".
+
+_REMOTE_SAFE_NAME = re.compile(r"[A-Za-z0-9._+-]+")
+_CACHES: list = []
+
+
+def _ttl_cache(func):
+    """Reuse results for CACHE_TTL seconds, keyed by the arguments. Errors are not cached."""
+    entries: dict[tuple, tuple[float, Any]] = {}
+    lock = threading.Lock()
+
+    @wraps(func)
+    def wrapper(*args):
+        now = time.monotonic()
+        with lock:
+            hit = entries.get(args)
+        if hit is not None and now - hit[0] < CACHE_TTL:
+            return hit[1]
+        value = func(*args)
+        with lock:
+            entries[args] = (now, value)
+        return value
+
+    wrapper.cache_clear = entries.clear
+    _CACHES.append(wrapper)
+    return wrapper
+
+
+def clear_caches() -> None:
+    for cached in _CACHES:
+        cached.cache_clear()
+
+
+def _introspect(root: str, shape: str, sql: str, min_level: int = 0, max_level: int = 0) -> list[list[Any]]:
+    """Rows of one summary-phase SELECT that gufi_query runs in every directory from min_level to max_level under root."""
+    columns = ", ".join(parse_shape(shape, "introspection shape"))
+    options = gufi_vt_options(root, threads=1, min_level=min_level, max_level=max_level)
+    create = pipeline_statement(options, {"S": sql}, shape, f"SELECT {columns} FROM {PER_DIRECTORY_TABLE}", shape)
+    return run_gufi_vt(create, f"SELECT * FROM {AGGREGATE_VTAB}").rows
+
+
+@_ttl_cache
+def _index_names(root: str) -> tuple[str, ...]:
+    if not REMOTE_CMD and not Path(root).is_dir():
+        raise GufiError(f"GUFI index root {root} does not exist or is not a directory")
+    # gufi_query skips directories without a db.db, so every row is an index.
+    names = sorted(PurePosixPath(row[0]).name for row in _introspect(root, "path TEXT", "SELECT path()", 1, 1))
+    if REMOTE_CMD:
+        unsafe = [name for name in names if not _REMOTE_SAFE_NAME.fullmatch(name)]
+        if unsafe:
+            logger.warning("Skipping remote indexes whose names cannot be passed through the remote shell: %s", unsafe)
+        names = [name for name in names if name not in unsafe]
+    return tuple(names)
+
 
 def get_gufi_indexes() -> list[str]:
     """Names of the indexes directly under GUFI_INDEX_ROOT (directories containing db.db)."""
-    if not GUFI_INDEX_ROOT.is_dir():
-        raise GufiError(f"GUFI index root {GUFI_INDEX_ROOT} does not exist or is not a directory")
-    return sorted(entry.name for entry in GUFI_INDEX_ROOT.iterdir()
-                  if entry.is_dir() and (entry / "db.db").is_file())
+    return list(_index_names(str(GUFI_INDEX_ROOT)))
 
 
-def resolve_local_index(index: str) -> Path:
-    """Resolve an index name from gufi://indexes to its absolute path."""
+def resolve_index(index: str) -> PurePosixPath:
+    """Resolve an index name from gufi://indexes to its absolute path on the host that runs gufi_query."""
     indexes = get_gufi_indexes()
     if index not in indexes:
         raise GufiError(f"Unknown index {index!r}. Available indexes: {', '.join(indexes) or 'none'}")
@@ -157,41 +269,53 @@ def resolve_local_index(index: str) -> Path:
     return path
 
 
-def _connect_readonly(db_path: Path) -> sqlite3.Connection:
-    if not db_path.is_file():
-        raise GufiError(f"Database {db_path} does not exist")
-    try:
-        return sqlite3.connect(f"{db_path.resolve().as_uri()}?mode=ro", uri=True)
-    except sqlite3.Error as e:
-        raise GufiError(f"Could not open {db_path} read-only: {e}") from e
+@_ttl_cache
+def _has_treesummary(root: str) -> bool:
+    rows = _introspect(root, "found INT64",
+                       "SELECT COUNT(*) FROM tree.sqlite_master WHERE type = 'table' AND name = 'treesummary'")
+    return bool(rows and rows[0][0])
 
 
 def has_treesummary(index: str) -> bool:
     """True if the top-level database of the index has a treesummary table."""
-    db_path = resolve_local_index(index) / "db.db"
-    result = run_db_sql(db_path, "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'treesummary'")
-    return result.row_count > 0
+    return _has_treesummary(str(resolve_index(index)))
 
 
-def schema_db_path() -> Path:
-    """Database used to describe the GUFI schema: the root db.db, else the first index."""
-    root_db = GUFI_INDEX_ROOT / "db.db"
-    if root_db.is_file():
-        return root_db
+@_ttl_cache
+def _schema_objects(root: str) -> tuple[tuple[str, str], ...]:
+    rows = _introspect(root, "name TEXT, type TEXT",
+                       "SELECT name, type FROM tree.sqlite_master WHERE sql IS NOT NULL AND type IN ('table', 'view')")
+    by_name = sorted((name, kind) for name, kind in rows)
+    return tuple(sorted(by_name, key=lambda row: row[1], reverse=True))
+
+
+def schema_root() -> str:
+    """Index used to describe the GUFI schema: GUFI_INDEX_ROOT if it has a db.db, else the first index."""
+    root = str(GUFI_INDEX_ROOT)
+    if _schema_objects(root):
+        return root
     indexes = get_gufi_indexes()
     if not indexes:
-        raise GufiError(f"No GUFI indexes found under {GUFI_INDEX_ROOT}")
-    return GUFI_INDEX_ROOT / indexes[0] / "db.db"
+        raise GufiError(f"No GUFI indexes found under {GUFI_INDEX_ROOT} {_where()}")
+    return str(GUFI_INDEX_ROOT / indexes[0])
+
+
+@_ttl_cache
+def _table_info(root: str, name: str) -> tuple[tuple[str, str], ...]:
+    # name is checked against the schema's own object names before it is spliced in.
+    rows = _introspect(root, "cid INT64, name TEXT, type TEXT",
+                       f"SELECT cid, name, type FROM pragma_table_info('{name}', 'tree')")
+    return tuple((column, col_type) for _, column, col_type in sorted(rows))
 
 
 def list_schema_objects() -> dict[str, str]:
     """Map of table/view name to type ('table' or 'view') in the GUFI schema."""
-    result = run_db_sql(
-        schema_db_path(),
-        "SELECT name, type FROM sqlite_master WHERE sql IS NOT NULL AND type IN ('table', 'view') "
-        "ORDER BY type DESC, name",
-    )
-    return {row[0]: row[1] for row in result.rows}
+    return dict(_schema_objects(schema_root()))
+
+
+def table_columns(name: str) -> list[list[str]]:
+    """[column, type] rows of one table or view, in column order."""
+    return [list(row) for row in _table_info(schema_root(), name)]
 
 
 def describe_schema_object(name: str) -> dict[str, dict[str, str]]:
@@ -199,9 +323,9 @@ def describe_schema_object(name: str) -> dict[str, dict[str, str]]:
     objects = list_schema_objects()
     if name not in objects:
         raise GufiError(f"Unknown table or view {name!r}. Read gufi://schemas/all for valid names")
-    result = run_db_sql(schema_db_path(), "SELECT name, type FROM pragma_table_info(?)", (name,))
+    rows = table_columns(name)
     paths = {column: {"type": "TEXT", "hint": hint} for column, hint in path_columns(name.lower()).items()}
-    described = {**paths, **load_schema_hints(name, [row for row in result.rows if row[0].lower() not in HIDDEN_COLUMNS])}
+    described = {**paths, **load_schema_hints(name, [row for row in rows if row[0].lower() not in HIDDEN_COLUMNS])}
     for column, info in described.items():
         tags = functions_for_column(column)
         if tags:
@@ -619,7 +743,7 @@ class GufiAggregateQuery(BaseModel):
     @classmethod
     def index_exists(cls, index: str) -> str:
         with _as_value_error():
-            resolve_local_index(index)
+            resolve_index(index)
         return index
 
     @field_validator("per_directory_shape", "partial_shape")
@@ -642,7 +766,7 @@ class GufiAggregateQuery(BaseModel):
                 context = f"per_directory_sql[{i}]"
                 sql = _strip_terminators(sql)
                 tree = parse_select(sql, context)
-                _reject_double_quotes(sql, context)
+                _reject_unsafe_characters(sql, context)
                 _reject_ordering(tree, context)
                 _reject_path_internals(tree, context)
                 _reject_blocked_functions(tree, context)
@@ -655,7 +779,7 @@ class GufiAggregateQuery(BaseModel):
         sql = _strip_terminators(sql)
         with _as_value_error():
             tree = parse_select(sql, info.field_name)
-            _reject_double_quotes(sql, info.field_name)
+            _reject_unsafe_characters(sql, info.field_name)
             if info.field_name == "partial_sql":
                 _reject_ordering(tree, info.field_name)
             _reject_path_internals(tree, info.field_name)
@@ -708,23 +832,15 @@ class GufiAggregateQuery(BaseModel):
         columns, so running final_sql inside gufi_vt would return computed values
         such as SUM(...) as text.
         """
-        partial_columns = ", ".join(parse_shape(self.partial_shape, "partial_shape"))
-        root = str(resolve_local_index(self.index))
-        options = [f'index="{root}"', f"threads={THREADS}"]
-        if GUFI_SOURCE_ROOT is not None:
-            options.append(f'p="{_source_prefix(self.index)}"')
-        options.append(_gufi_vt_arg("I", f"CREATE TABLE {PER_DIRECTORY_TABLE}({self.per_directory_shape})"))
-        for phase in ("T", "S", "E"):
-            if phase in self._phases:
-                sql = expand_path_columns(self._phases[phase], f"per_directory {phase}",
-                                          lambda table, column: per_directory_path_sql(table, column, self.index, root))
-                options.append(_gufi_vt_arg(phase, f"INSERT INTO {PER_DIRECTORY_TABLE} {sql}"))
-        options.extend([
-            _gufi_vt_arg("K", f"CREATE TABLE {PARTIAL_TABLE}({self.partial_shape})"),
-            _gufi_vt_arg("J", f"INSERT INTO {PARTIAL_TABLE} {self.partial_sql}"),
-            _gufi_vt_arg("G", f"SELECT {partial_columns} FROM {PARTIAL_TABLE}"),
-        ])
-        return f"CREATE VIRTUAL TABLE {AGGREGATE_VTAB} USING gufi_vt({', '.join(options)})"
+        root = str(resolve_index(self.index))
+        source_prefix = _source_prefix(self.index) if GUFI_SOURCE_ROOT is not None else None
+        phases = {
+            phase: expand_path_columns(sql, f"per_directory {phase}",
+                                       lambda table, column: per_directory_path_sql(table, column, self.index, root))
+            for phase, sql in self._phases.items()
+        }
+        return pipeline_statement(gufi_vt_options(root, source_prefix=source_prefix), phases,
+                                  self.per_directory_shape, self.partial_sql, self.partial_shape)
 
     def final_query_string(self) -> str:
         """final_sql run over the virtual table's rows, materialized as the partial table.
@@ -738,15 +854,56 @@ def _strip_terminators(sql: str) -> str:
     return sql.strip().rstrip(";").strip() if isinstance(sql, str) else sql
 
 
-def _reject_double_quotes(sql: str, context: str) -> None:
+def _reject_unsafe_characters(sql: str, context: str) -> None:
     # gufi_vt module arguments are wrapped in double quotes and cannot contain them.
     if '"' in sql:
         raise GufiError(f"{context}: double quotes are not allowed; use single quotes for string literals")
+    if REMOTE_CMD:
+        found = sorted(set(_REMOTE_UNSAFE_SQL.findall(sql)))
+        if found:
+            raise GufiError(f"{context}: {' '.join(found)} cannot be sent to the remote GUFI host; "
+                            "rewrite the SQL without them (for example with char() for a literal character)")
 
 
 def _gufi_vt_arg(key: str, sql: str) -> str:
     # The trailing ';' keeps gufi_vt from stripping a closing single quote off the SQL.
     return f'{key}="{sql};"'
+
+
+def gufi_vt_options(root: str, threads: Optional[int] = None, min_level: Optional[int] = None,
+                    max_level: Optional[int] = None, source_prefix: Optional[str] = None) -> list[str]:
+    """gufi_vt arguments that select the index, the walk, and where gufi_query runs."""
+    options = [f'index="{root}"', f"threads={threads or THREADS}"]
+    if min_level is not None:
+        options.append(f"min_level={min_level}")
+    if max_level is not None:
+        options.append(f"max_level={max_level}")
+    if source_prefix is not None:
+        options.append(f'p="{source_prefix}"')
+    if REMOTE_CMD:
+        options.append(f'remote_cmd="{REMOTE_CMD}"')
+        options.extend(f'remote_arg="{arg}"' for arg in REMOTE_ARGS)
+    return options
+
+
+def pipeline_statement(options: list[str], phases: dict[str, str], per_directory_shape: str,
+                       partial_sql: str, partial_shape: str) -> str:
+    """CREATE VIRTUAL TABLE statement for a gufi_query -I, -T/-S/-E, -K, -J, -G pipeline.
+
+    The virtual table yields the partial table's rows; gufi_vt takes their types
+    from partial_shape.
+    """
+    partial_columns = ", ".join(parse_shape(partial_shape, "partial_shape"))
+    options = [*options, _gufi_vt_arg("I", f"CREATE TABLE {PER_DIRECTORY_TABLE}({per_directory_shape})")]
+    for phase in ("T", "S", "E"):
+        if phase in phases:
+            options.append(_gufi_vt_arg(phase, f"INSERT INTO {PER_DIRECTORY_TABLE} {phases[phase]}"))
+    options.extend([
+        _gufi_vt_arg("K", f"CREATE TABLE {PARTIAL_TABLE}({partial_shape})"),
+        _gufi_vt_arg("J", f"INSERT INTO {PARTIAL_TABLE} {partial_sql}"),
+        _gufi_vt_arg("G", f"SELECT {partial_columns} FROM {PARTIAL_TABLE}"),
+    ])
+    return f"CREATE VIRTUAL TABLE {AGGREGATE_VTAB} USING gufi_vt({', '.join(options)})"
 
 
 #
@@ -788,20 +945,13 @@ def _fetch(conn: sqlite3.Connection, sql: str, params: tuple = (), drain: bool =
     return GufiQueryResult(columns=columns, rows=rows, row_count=len(rows), truncated=truncated)
 
 
-def run_db_sql(db_path: Path, sql: str, params: tuple = ()) -> GufiQueryResult:
-    """Run one statement against a single database file, opened read-only."""
-    conn = _connect_readonly(db_path)
-    try:
-        return _fetch(conn, sql, params)
-    finally:
-        conn.close()
-
-
 _GUFI_VT_LOCK = threading.Lock()
 
 
 def _gufi_query_children() -> list[int]:
-    """PIDs of gufi_query processes started directly by this process (by gufi_vt)."""
+    """PIDs of gufi_query (or remote command) processes started directly by this process (by gufi_vt)."""
+    # /proc/<pid>/stat holds at most 15 characters of the command name.
+    names = {"gufi_query"} | ({Path(REMOTE_CMD).name[:15]} if REMOTE_CMD else set())
     pids = []
     for stat in Path("/proc").glob("[0-9]*/stat"):
         try:
@@ -810,7 +960,7 @@ def _gufi_query_children() -> list[int]:
             continue
         comm = comm_and_rest[comm_and_rest.find("(") + 1:comm_and_rest.rfind(")")]
         fields = comm_and_rest[comm_and_rest.rfind(")") + 2:].split()
-        if comm == "gufi_query" and fields and int(fields[1]) == os.getpid():
+        if comm in names and fields and int(fields[1]) == os.getpid():
             pids.append(int(stat.parent.name))
     return pids
 
@@ -850,16 +1000,31 @@ def _gufi_vt_watchdog() -> Iterator[None]:
             raise timeout_error
 
 
-def run_aggregate(query: GufiAggregateQuery) -> GufiQueryResult:
-    create = query.build_query_string()
+def run_gufi_vt(create: str, select: str, what: str = "query") -> GufiQueryResult:
+    """Create the gufi_vt table with create, then return the rows of select over it.
+
+    gufi_vt runs gufi_query here or, with GUFI_REMOTE_CMD, on the remote host.
+    Callers must resolve indexes before calling: queries hold a non-reentrant lock.
+    """
     with _gufi_vt_watchdog():
         conn = _connect_gufi_vt()
         try:
-            logger.debug("Creating aggregate table: %s", create)
+            logger.debug("Creating gufi_vt table: %s", create)
             try:
                 conn.execute(create)
             except sqlite3.Error as e:
-                raise GufiError(f"gufi_vt rejected the aggregate pipeline: {e}") from e
-            return _fetch(conn, query.final_query_string(), drain=True)
+                raise GufiError(f"gufi_vt rejected the {what}: {e}") from e
+            try:
+                return _fetch(conn, select, drain=True)
+            except GufiError as e:
+                if not REMOTE_CMD:
+                    raise
+                # A failed connection reaches SQLite only as a generic read error.
+                raise GufiError(f"{e} (gufi_query runs {_where()}; check that the connection works "
+                                "and that gufi_query is on the remote PATH)") from e
         finally:
             conn.close()
+
+
+def run_aggregate(query: GufiAggregateQuery) -> GufiQueryResult:
+    return run_gufi_vt(query.build_query_string(), query.final_query_string(), "aggregate pipeline")

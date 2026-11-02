@@ -304,7 +304,7 @@ def test_schema_hides_rollup_internals_and_lists_path_columns(monkeypatch: pytes
     monkeypatch.setattr(util, "GUFI_SOURCE_ROOT", None)
     monkeypatch.setattr(util, "list_schema_objects", lambda: {"vrpentries": "view", "entries": "table"})
     rows = [["dname", "TEXT"], ["sname", "TEXT"], ["sroll", "INT64"], ["srollsubdirs", "INT64"], ["name", "TEXT"]]
-    monkeypatch.setattr(util, "run_db_sql", lambda *a: util.GufiQueryResult(columns=["name", "type"], rows=rows, row_count=len(rows)))
+    monkeypatch.setattr(util, "table_columns", lambda name: rows)
     assert list(util.describe_schema_object("vrpentries")) == ["path", "dirpath", "dname", "name"]
     assert "path" not in util.describe_schema_object("entries")
     assert util.schema_columns("vrpentries") >= {"path", "dirpath"}

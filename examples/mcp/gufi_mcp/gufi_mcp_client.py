@@ -59,186 +59,150 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+"""Demo client: start the GUFI MCP server twice over stdio, once running gufi_query on this
+host and once on a remote host through gufi_vt + ssh, and use the same resources and
+aggregate queries with each.
 
+    uv run python3 gufi_mcp_client.py [--index vault] [--remote-args 127.0.0.1]
 
+The remote run defaults to ssh 127.0.0.1, which needs key-based ssh to this host and
+gufi_query on the PATH of a non-interactive login.
+"""
+
+import argparse
 import asyncio
-from mcp import Client
-from mcp.server import MCPServer
-import sys
-import os
-from dotenv import load_dotenv
 import json
+import os
+import sys
+from pathlib import Path
+from typing import Any, Optional
 
-load_dotenv()
+from dotenv import load_dotenv
+from mcp import Client
+from mcp.client.stdio import StdioServerParameters
 
-MCPSRVHOST = os.getenv('MCPSRVHOST')
-MCPSRVPORT = os.getenv('MCPSRVPORT')
-MCP_SERVER=f'http://{MCPSRVHOST}:{MCPSRVPORT}/mcp'
-LOCALSELECT='select path,name,size from vrpentries where size > 1048576'
-LOCALSEARCHPATH='vault'
-REMOTESELECT='select path,name,size from gufi_vt_pentries'
-REMOTEWHERE='where name like \'%.log%\''
-REMOTESEARCHPATH='/home/raykprid/search/vault/'
+HERE = Path(__file__).resolve().parent
+SERVER = HERE / "gufi_mcp_server.py"
 
-async def main():
-    # Connect to FastMCP server
-    client = Client(MCP_SERVER)
-
-    async with client:
-
-        print(f"Connected to Server: {client.server_info.name}")
-        print(f"Connected to Server")
-        print("-" * 20)
-
-        ''' List available resources '''
-
-        avail_resources = await client.list_resources()
-        print("Resources Available")
-        for resource in avail_resources.resources:
-            print("-" * 20)
-            print(f"Resource Name: {resource.name}")
-            print(f"Description: {resource.description}")
-
-        # get available indexes
-        print("read gufi_indexes")
-        result = await client.read_resource("gufi://indexes")
-        print(f"Result: {result.contents[0].text}")
-        print("-" * 20)
-
-        # get schema
-        print("read all schemas")
-        result = await client.read_resource("gufi://schemas/all")
-        schema = result.contents[0].text.replace("],[", "|")[2:-2]
-        print(schema)
-
-        # get schema
-        print("read one schema's columns")
-        result = await client.read_resource("gufi://schemas/vrsummary")
-        schema = result.contents[0].text.replace("],[", "|")[2:-2]
-        print(schema)
-
-        ''' List available tools '''
-
-        avail_tools = await client.list_tools()
-        print("Tools Available")
-        for tool in avail_tools.tools:
-            print("-" * 20)
-            print(f"Tool Name: {tool.name}")
-            print(f"Description: {tool.description}")
-
-        # locate gufi_query
-        print("run locate gufi_query")
-        result = await client.call_tool("gufi_location", {"a": "gufi_query location please"})
-        print(f"Result: {result.content[0].text}")
-        print("-" * 20)
-
-        # locate gufi_query
-        print("run gufi_query version")
-        result = await client.call_tool("gufi_version", {"a": "gufi_query version please"})
-        print(f"Result: {result.content[0].text}")
-        print("-" * 20)
-
-        # gufi local query
-        print(f"query local gufi index")
-        result_stream= await client.call_tool("sql_file_index", {"sqlin": LOCALSELECT, "index": LOCALSEARCHPATH})
-        res = json.loads(result_stream.content[0].text)
-        print(res["columns"])
-        for row in range(res["row_count"]):
-            print (res["rows"][row])
-
-        # aggregate query: total size
-        print("Use aggregate query tool for total size")
-        total_size_query = {
-            "index": "Downloads",
-            "config": ["threads=32"],
-            "sql_options": [
-                {"option": "-I", "sql": "CREATE TABLE intermediate(size INT64)"},
-                {"option": "-E", "sql": "INSERT INTO intermediate SELECT size FROM entries WHERE type='f'"},
-                {"option": "-K", "sql": "CREATE TABLE aggregate(total INT64)"},
-                {"option": "-J", "sql": "INSERT INTO aggregate SELECT SUM(size) FROM intermediate"},
-                {"option": "-G", "sql": "SELECT SUM(total) FROM aggregate"},
-            ],
-        }
-        result_stream = await client.call_tool("aggregate_sql_query", {"query": total_size_query})
-        res = json.loads(result_stream.content[0].text)
-        print(f"Total size columns: {res['columns']}")
-        for row in range(res["row_count"]):
-            print(res["rows"][row])
-
-        # gufi_ls
-        print(f"use gufi_ls tool")
-        result_stream = await client.call_tool(
-            "gufi_ls",
-            {"index": "personal_data", "long_format": True, "human_readable": True},
-        )
-        res = json.loads(result_stream.content[0].text)
-        for row in range(res["row_count"]):
-            print(res["rows"][row])
-
-        # gufi_du
-        print(f"use gufi_du tool")
-        result_stream = await client.call_tool("gufi_du", {"index": "personal_data", "human_readable": True})
-        res = json.loads(result_stream.content[0].text)
-        for row in range(res["row_count"]):
-            print(res["rows"][row])
-
-        # gufi_find
-        print(f"use gufi_find tool")
-        result_stream = await client.call_tool(
-            "gufi_find",
-            {"index": "personal_data", "name": "organizer*", "type": "f", "limit": 10},
-        )
-        res = json.loads(result_stream.content[0].text)
-        for row in range(res["row_count"]):
-            print(res["rows"][row])
-
-        # gufi_stat
-        print(f"use gufi_stat tool")
-        result_stream = await client.call_tool("gufi_stat", {"index": "vault", "file": "."})
-        res = json.loads(result_stream.content[0].text)
-        for row in range(res["row_count"]):
-            print(res["rows"][row])
-
-        # gufi_stats
-        print(f"use gufi_stats tool")
-        result_stream = await client.call_tool(
-            "gufi_stats",
-            {"index": "personal_data", "stat": "leaf-dirs", "recursive": True, "num_results": 10},
-        )
-        res = json.loads(result_stream.content[0].text)
-        for row in range(res["row_count"]):
-            print(res["rows"][row])
-
-        # gufi_getfattr
-        print(f"use gufi_getfattr tool")
-        result_stream = await client.call_tool(
-            "gufi_getfattr",
-            {"index": "personal_data", "path": ".", "recursive": True},
-        )
-        res = json.loads(result_stream.content[0].text)
-        for row in range(res["row_count"]):
-            print(res["rows"][row])
+load_dotenv(HERE / ".env")
 
 
+def total_size_query(index: str) -> dict[str, Any]:
+    """Number of files and their total size."""
+    return {
+        "index": index,
+        "per_directory_shape": "size INT64",
+        "per_directory_sql": ["SELECT size FROM vrpentries WHERE type = 'f'"],
+        "partial_shape": "files INT64, bytes INT64",
+        "partial_sql": "SELECT COUNT(*), SUM(size) FROM per_directory",
+        "final_sql": "SELECT SUM(files) AS files, SUM(bytes) AS bytes FROM partial",
+    }
 
-        # grouped aggregate example (uid totals)
-        print("Use aggregate query tool for grouped uid totals")
-        uid_totals_query = {
-            "index": "personal_data",
-            "config": ["threads=12"],
-            "sql_options": [
-                {"option": "-I", "sql": "CREATE TABLE intermediate(uid INT64, total_bytes INT64)"},
-                {"option": "-E", "sql": "INSERT INTO intermediate SELECT uid, size FROM vrpentries WHERE type = 'f'"},
-                {"option": "-K", "sql": "CREATE TABLE aggregate(uid INT64, total_bytes INT64)"},
-                {"option": "-J", "sql": "INSERT INTO aggregate SELECT uid, SUM(total_bytes) FROM intermediate GROUP BY uid"},
-                {"option": "-G", "sql": "SELECT uid, total_bytes FROM aggregate ORDER BY total_bytes DESC LIMIT 10"},
-            ],
-        }
-        result_stream = await client.call_tool("aggregate_sql_query", {"query": uid_totals_query})
-        res = json.loads(result_stream.content[0].text)
-        print(f"UID totals columns: {res['columns']}")
-        for row in range(min(res["row_count"], 5)):
-            print(res["rows"][row])
+
+def largest_files_query(index: str, limit: int = 5) -> dict[str, Any]:
+    """Paths and sizes of the largest files."""
+    return {
+        "index": index,
+        "per_directory_shape": "path TEXT, size INT64",
+        "per_directory_sql": ["SELECT path, size FROM vrpentries WHERE type = 'f'"],
+        "partial_shape": "path TEXT, size INT64",
+        "partial_sql": "SELECT path, size FROM per_directory",
+        "final_sql": f"SELECT path, size FROM partial ORDER BY size DESC, path LIMIT {limit}",
+    }
+
+
+def section(title: str) -> None:
+    print(f"\n--- {title}")
+
+
+async def read_json(client: Client, uri: str) -> Any:
+    result = await client.read_resource(uri)
+    return json.loads(result.contents[0].text)
+
+
+async def call(client: Client, tool: str, arguments: dict[str, Any]) -> Any:
+    result = await client.call_tool(tool, arguments)
+    text = "\n".join(getattr(item, "text", "") or "" for item in result.content)
+    if result.is_error:
+        raise RuntimeError(f"{tool} failed: {text}")
+    structured = result.structured_content
+    if structured is None:
+        return text
+    return structured.get("result", structured) if set(structured) == {"result"} else structured
+
+
+async def run(label: str, index: str, remote_cmd: Optional[str], remote_args: str, index_root: Optional[str]) -> list:
+    env = {**os.environ, "MCPTRANSPORT": "stdio"}
+    env.pop("GUFI_REMOTE_CMD", None)
+    env.pop("GUFI_REMOTE_ARGS", None)
+    if remote_cmd:
+        env.update(GUFI_REMOTE_CMD=remote_cmd, GUFI_REMOTE_ARGS=remote_args)
+    if index_root:
+        env["GUFI_INDEX_ROOT"] = index_root
+    params = StdioServerParameters(command=sys.executable, args=[str(SERVER)], env=env, cwd=str(HERE))
+
+    print(f"\n===== {label}: gufi_query runs "
+          f"{f'through {remote_cmd} {remote_args}' if remote_cmd else 'on this host'}")
+    async with Client(params, read_timeout_seconds=600) as client:
+        section("resources")
+        resources = (await client.list_resources()).resources
+        templates = (await client.list_resource_templates()).resource_templates
+        for uri in [str(r.uri) for r in resources] + [t.uri_template for t in templates]:
+            print(uri)
+
+        section("gufi_query")
+        print(await call(client, "gufi_location", {}))
+        print(await call(client, "gufi_version", {}))
+
+        section("gufi://indexes")
+        indexes = await read_json(client, "gufi://indexes")
+        for entry in indexes:
+            print(f"{entry['index']:20} treesummary={entry['treesummary']}")
+        if index not in {entry["index"] for entry in indexes}:
+            raise SystemExit(f"index {index!r} is not listed; pass --index with one of the names above")
+
+        section("gufi://schemas/all")
+        objects = await read_json(client, "gufi://schemas/all")
+        print(", ".join(f"{name} ({kind})" for name, kind in objects.items()))
+
+        section("gufi://schemas/vrpentries")
+        columns = await read_json(client, "gufi://schemas/vrpentries")
+        print(f"{len(columns)} columns: {', '.join(columns)}")
+        for column in ("path", "size"):
+            print(f"{column}: {columns[column]['type']}, {columns[column]['hint']}")
+
+        section("gufi://functions")
+        print(", ".join(await read_json(client, "gufi://functions")))
+
+        results = []
+        for title, query in (("total size of files", total_size_query(index)),
+                             ("largest files", largest_files_query(index))):
+            section(f"aggregate_sql_query: {title} in {index}")
+            result = await call(client, "aggregate_sql_query", {"query": query})
+            print(result["columns"])
+            for row in result["rows"]:
+                print(row)
+            results.append(result["rows"])
+        return results
+
+
+async def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--index", default=os.getenv("DEFAULT_INDEX") or "vault", help="index to query")
+    parser.add_argument("--remote-cmd", default="ssh", help="command that reaches the GUFI host (default: ssh)")
+    parser.add_argument("--remote-args", default="127.0.0.1",
+                        help="arguments for --remote-cmd, shell-quoted (default: 127.0.0.1)")
+    parser.add_argument("--remote-index-root", help="GUFI_INDEX_ROOT on the GUFI host (default: GUFI_INDEX_ROOT)")
+    parser.add_argument("--skip-remote", action="store_true", help="only run the local server")
+    args = parser.parse_args()
+
+    local = await run("local", args.index, None, "", None)
+    if args.skip_remote:
+        return
+    remote = await run("remote", args.index, args.remote_cmd, args.remote_args, args.remote_index_root)
+    print("\n===== local and remote aggregate results "
+          f"{'match' if local == remote else 'DIFFER (expected only if the hosts hold different indexes)'}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
