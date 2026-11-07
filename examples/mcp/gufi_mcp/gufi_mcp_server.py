@@ -82,8 +82,8 @@ tree into per-directory SQLite databases so metadata questions (sizes, owners,
 times, names) are answered from the index instead of walking the file system.
 
 Before the first query
-- Read gufi://indexes for index names and whether each has treesummary data.
-- Read gufi://schemas/all for table and view names, then gufi://schemas/<table>
+- Read gufi_indexes for index names and whether each has treesummary data.
+- Read gufi_schemas/all for table and view names, then gufi_schemas/<table>
   for its columns. Column names are checked before any query runs; do not guess.
 - GUFI adds SQL functions; column hints name the ones that apply. Read
   gufi://functions/<name> for details, or gufi://functions for the list.
@@ -95,7 +95,7 @@ Tables and views (prefix and letter meanings)
 - summary / vrsummary: one row per directory (the directory's own metadata plus
   totals such as totfiles, totsize). Prefer vrsummary. Directories are not in entries.
 - treesummary: precomputed totals for a whole subtree. Only present when the
-  index has treesummary (see gufi://indexes).
+  index has treesummary (see gufi_indexes).
 
 How aggregate_sql_query works (per_directory, partial, final)
 - GUFI walks the index with many threads. Per-directory: each per_directory_sql
@@ -152,8 +152,8 @@ def aggregate_sql_query(
     """Run a GUFI per_directory / partial / final pipeline over an index and return the rows of final_sql.
 
     per_directory_sql runs once per directory, partial_sql merges each thread's rows into the partial table,
-    and final_sql combines those partial results once. Read gufi://indexes for the index name and
-    gufi://schemas/<table> for column names before writing the pipeline.
+    and final_sql combines those partial results once. Use gufi_indexes for the index name and
+    gufi_schemas with table name for column names before writing the pipeline.
     """
     return util.run_aggregate(query)
 

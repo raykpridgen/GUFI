@@ -257,7 +257,7 @@ def get_gufi_indexes() -> list[str]:
 
 
 def resolve_index(index: str) -> PurePosixPath:
-    """Resolve an index name from gufi://indexes to its absolute path on the host that runs gufi_query."""
+    """Resolve an index name from gufi_indexes to its absolute path on the host that runs gufi_query."""
     indexes = get_gufi_indexes()
     if index not in indexes:
         raise GufiError(f"Unknown index {index!r}. Available indexes: {', '.join(indexes) or 'none'}")
@@ -322,7 +322,7 @@ def describe_schema_object(name: str) -> dict[str, dict[str, str]]:
     """Columns of one table or view, with types and hints from the schema file."""
     objects = list_schema_objects()
     if name not in objects:
-        raise GufiError(f"Unknown table or view {name!r}. Read gufi://schemas/all for valid names")
+        raise GufiError(f"Unknown table or view {name!r}. Read gufi_schemas/all for valid names")
     rows = table_columns(name)
     paths = {column: {"type": "TEXT", "hint": hint} for column, hint in path_columns(name.lower()).items()}
     described = {**paths, **load_schema_hints(name, [row for row in rows if row[0].lower() not in HIDDEN_COLUMNS])}
@@ -682,8 +682,8 @@ class GufiAggregateQuery(BaseModel):
 
     index: str = Field(
         description=(
-            "Name of the index to query, exactly as listed by the gufi://indexes resource. "
-            "per_directory_sql that reads treesummary tables requires an index whose gufi://indexes entry has treesummary true."
+            "Name of the index to query, exactly as listed by the gufi_indexes resource. "
+            "per_directory_sql that reads treesummary tables requires an index whose gufi_indexes entry has treesummary true."
         ),
     )
 
@@ -698,7 +698,7 @@ class GufiAggregateQuery(BaseModel):
             "phase. Each must return exactly the columns of per_directory_shape, in order. ORDER BY, LIMIT and OFFSET are "
             "rejected anywhere here (subqueries and windows included): they would apply per directory only. "
             f"Full paths are the path columns of {PATH_TABLES_TEXT}; this is the only stage that can read them. "
-            "Read gufi://schemas/all for table names and gufi://schemas/<table> for column names before writing it. "
+            "Read gufi_schemas/all for table names and gufi_schemas/<table> for column names before writing it. "
             "Example: SELECT gid, size FROM vrpentries WHERE type = 'l'"
         ),
     )
