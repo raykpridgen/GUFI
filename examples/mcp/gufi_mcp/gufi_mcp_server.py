@@ -145,19 +145,6 @@ Results
 
 mcp = MCPServer(name="gufi-mcp", instructions=PRIMER)
 
-
-@mcp.tool()
-def gufi_version() -> str:
-    """Version of the gufi_query binary the server uses (on the GUFI host when queries run remotely)."""
-    return util.gufi_query_version()
-
-
-@mcp.tool()
-def gufi_location() -> str:
-    """Absolute path of the gufi_query binary the server uses (on the GUFI host when queries run remotely)."""
-    return util.gufi_query_path()
-
-
 @mcp.tool()
 def aggregate_sql_query(
         query: Annotated[GufiAggregateQuery, Field(description="The aggregate pipeline to run.")],
@@ -171,7 +158,7 @@ def aggregate_sql_query(
     return util.run_aggregate(query)
 
 
-@mcp.resource("gufi://indexes")
+@mcp.tool()
 def gufi_indexes() -> list[dict[str, Any]]:
     """Available GUFI indexes and whether each has treesummary data."""
     try:
@@ -180,8 +167,10 @@ def gufi_indexes() -> list[dict[str, Any]]:
         raise ResourceError(str(e)) from e
 
 
-@mcp.resource("gufi://schemas/{schema}")
-def gufi_schemas(schema: str) -> dict[str, Any]:
+@mcp.tool()
+def gufi_schemas(
+        schema: Annotated[str, Field(description="'all' for schemas, enter schema for details.")],
+) -> dict[str, Any]:
     """Use 'all' for every table and view name with its type, or a table/view name for its columns, types, and hints."""
     try:
         if schema == "all":
@@ -191,13 +180,13 @@ def gufi_schemas(schema: str) -> dict[str, Any]:
         raise ResourceError(str(e)) from e
 
 
-@mcp.resource("gufi://functions")
+@mcp.tool()
 def gufi_functions() -> dict[str, str]:
     """GUFI SQL functions usable in every aggregate stage, with their signatures."""
     return util.list_functions()
 
 
-@mcp.resource("gufi://functions/{name}")
+@mcp.tool()
 def gufi_function(name: str) -> dict[str, Any]:
     """One GUFI SQL function: signature, behavior, columns it applies to, and an example."""
     try:
