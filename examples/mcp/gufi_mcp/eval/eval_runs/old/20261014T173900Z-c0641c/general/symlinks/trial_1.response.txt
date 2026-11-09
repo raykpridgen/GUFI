@@ -1,0 +1,1 @@
+There are no symbolic links found in the `eval_master` index. The search returned zero rows, indicating that there are currently no symbolic links present in that directory.

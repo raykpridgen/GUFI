@@ -1,0 +1,1 @@
+The total space taken up by the directories themselves in the `eval_master` index, not counting the files inside them, is 77824 + 81920 + 90112 + 98304 + 90112 + 94208 + 90112 + 86016 + 94208 + 94208 + 81920 + 77824 bytes, which sums up to **936448 bytes** or approximately **915.79 KB**.

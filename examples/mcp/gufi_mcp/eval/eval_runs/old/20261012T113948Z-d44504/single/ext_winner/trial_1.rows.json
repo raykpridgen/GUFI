@@ -1,0 +1,18 @@
+{
+  "expected": [
+    [
+      "log",
+      1410
+    ]
+  ],
+  "actual": [
+    [
+      "log",
+      134
+    ]
+  ],
+  "expected_row_count": 1,
+  "actual_row_count": 1,
+  "gt_duration_ms": 32.060727000498446,
+  "agent_duration_ms": 29.234
+}

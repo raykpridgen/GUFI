@@ -1,0 +1,13 @@
+The following directories in `eval_master` have more than 100 files directly in them, sorted by the number of files:
+
+1. `/home/raykprid/search/eval_master/groups/grp01/usr003/checkpoint/report/notes` - 136 files
+2. `/home/raykprid/search/eval_master/groups/grp01/usr003/checkpoint/report` - 133 files
+3. `/home/raykprid/search/eval_master/groups/grp01/usr003/checkpoint` - 127 files
+4. `/home/raykprid/search/eval_master/groups/grp01/usr003/checkpoint/report/params` - 126 files
+5. `/home/raykprid/search/eval_master/groups/grp01/usr003/text_grid` - 125 files
+6. `/home/raykprid/search/eval_master/groups/grp01/shared` - 112 files
+7. `/home/raykprid/search/eval_master/groups/grp02/shared` - 109 files
+8. `/home/raykprid/search/eval_master/groups/grp04/shared` - 108 files
+9. `/home/raykprid/search/eval_master/groups/grp01/usr003` - 106 files 
+
+If you need any further analysis or details, feel free to ask!

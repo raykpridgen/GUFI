@@ -1,0 +1,3 @@
+The 9,989 regular files in **eval_master** add up to **8,797,702,315 bytes**, about 8.8 GB (8.19 GiB).
+
+The index also has 300 symbolic links. They take up 8,271 bytes, which brings the total to 8,797,710,586 bytes if you count them. These numbers come from adding up each file's apparent size in the index, not the disk blocks it actually uses.

@@ -1,0 +1,50 @@
+{
+  "ordered_compare": false,
+  "row_order": "compared order (both sides sorted)",
+  "expected": [
+    [
+      "Days",
+      30
+    ],
+    [
+      "Mos",
+      3088
+    ],
+    [
+      "Wks",
+      204
+    ],
+    [
+      "Yrs",
+      6667
+    ]
+  ],
+  "actual": [
+    [
+      "30 to 60 days ago",
+      275,
+      66035236
+    ],
+    [
+      "60 to 90 days ago",
+      296,
+      1186414780
+    ],
+    [
+      "Less than 30 days ago",
+      261,
+      66830885
+    ],
+    [
+      "More than 90 days ago",
+      9157,
+      7478421414
+    ]
+  ],
+  "missing_from_actual": [],
+  "unexpected_in_actual": [],
+  "expected_row_count": 4,
+  "actual_row_count": 4,
+  "gt_duration_ms": 31.891110998913064,
+  "agent_duration_ms": 30.467
+}

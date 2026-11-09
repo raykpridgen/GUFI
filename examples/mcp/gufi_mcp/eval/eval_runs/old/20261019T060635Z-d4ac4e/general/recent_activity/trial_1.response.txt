@@ -1,0 +1,20 @@
+**335 regular files** in eval_master were read in the past 7 days but haven't been modified in that time. That means their last access time is between 2026-10-05 00:00 and now (2026-10-12 00:00 UTC), and their last modification time is before 2026-10-05.
+
+I read "changed" as modified, meaning the file's contents (its mtime). Going by the metadata-change time (ctime) instead isn't possible here. Every one of these files has the same ctime, 2026-10-12 08:36:43, which is a few hours *after* the current time. That looks like the time the files were copied or the index was built, not real activity. By ctime, none of the 335 would count as unchanged.
+
+The 10 most recently read examples:
+
+| File | Size (bytes) | Last read | Last modified |
+|---|---|---|---|
+| groups/grp01/usr003/text_grid/build_figures | 55 | 2026-10-11 23:37 | 2026-08-10 |
+| groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/train_ocean-267.c | 26 | 2026-10-11 23:36 | 2026-08-24 |
+| groups/grp05/shared/plots_code.log | 770,683 | 2026-10-11 22:20 | 2024-08-16 |
+| groups/grp03/usr004/stage/field_tests.dat | 1 | 2026-10-11 22:20 | 2026-07-29 |
+| groups/grp01/usr014/clean/step/figures_build.json | 72 | 2026-10-11 22:19 | 2026-08-15 |
+| groups/grp01/usr003/checkpoint/node.dat | 2,577 | 2026-10-11 20:36 | 2026-09-01 |
+| groups/grp05/usr012/output/weights/grid_final/audio_part/protein/trace_draft-776.dat | 54,573 | 2026-10-11 20:33 | 2026-09-23 |
+| groups/grp02/usr007/sim_cluster/protein_image-802.json | 39,635 | 2026-10-11 20:24 | 2026-09-22 |
+| groups/grp03/usr001/train/figures_slice-026.json | 152 | 2026-10-11 19:57 | 2023-11-12 |
+| groups/grp05/usr012/output/weights/grid_final/signal/backup_cluster.csv | 413 | 2026-10-11 19:54 | 2026-09-03 |
+
+All paths start with `eval_master/`. Some of these files had gone a long time without being modified before this week's reads, such as `plots_code.log` (since 2024) and `figures_slice-026.json` (since 2023).

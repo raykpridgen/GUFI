@@ -1,0 +1,8 @@
+The files over 1 GB in the `eval_master` index are owned by the following user IDs along with their total sizes:
+
+1. **UID 3008**: 1 file, Total Size: 1,113,310,933 bytes
+2. **UID 3012**: 1 file, Total Size: 1,261,921,083 bytes
+3. **UID 3001**: 1 file, Total Size: 1,123,091,592 bytes
+4. **UID 3014**: 1 file, Total Size: 1,228,550,276 bytes
+
+These results do not provide the paths, unfortunately. Would you like me to attempt fetching the paths for these files?

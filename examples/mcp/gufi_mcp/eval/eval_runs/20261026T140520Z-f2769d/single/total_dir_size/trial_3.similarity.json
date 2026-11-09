@@ -1,0 +1,72 @@
+{
+  "scenario": "total_dir_size",
+  "trial": 3,
+  "pass": true,
+  "passed_on_attempt": 2,
+  "aggregate_revision_count": 1,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "size INT64",
+    "per_directory_sql": [
+      "SELECT size FROM summary WHERE isroot = 1"
+    ],
+    "partial_shape": "total INT64",
+    "partial_sql": "SELECT SUM(size) FROM per_directory",
+    "final_sql": "SELECT SUM(total) AS total FROM partial"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT size FROM vrsummary"
+    ],
+    "per_directory_shape": "size INT64",
+    "partial_sql": "SELECT SUM(size) AS total_size FROM per_directory",
+    "partial_shape": "total_size INT64",
+    "final_sql": "SELECT SUM(total_size) AS total_size FROM partial"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT size FROM vrsummary"
+      ],
+      "per_directory_shape": "size INT64",
+      "partial_sql": "SELECT 0 AS total_size, SUM(size) FROM per_directory",
+      "partial_shape": "total_size INT64",
+      "final_sql": "SELECT SUM(total_size) AS total_size FROM partial"
+    },
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT size FROM vrsummary"
+      ],
+      "per_directory_shape": "size INT64",
+      "partial_sql": "SELECT SUM(size) AS total_size FROM per_directory",
+      "partial_shape": "total_size INT64",
+      "final_sql": "SELECT SUM(total_size) AS total_size FROM partial"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": false,
+      "passed": false,
+      "row_count": 0,
+      "reason": "call failed: Error executing tool aggregate_sql_query: 1 validation error for aggregate_sql_queryArguments\nquery\n  Value error, partial_sql: SELECT returns 2 column(s) but partial_shape has 1 [type=value_error, input_value={'index': 'eval_master', ...otal_size FROM partial'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+    },
+    {
+      "attempt": 2,
+      "ok": true,
+      "passed": true,
+      "row_count": 1,
+      "reason": "match"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 1,
+  "ordered_compare": false,
+  "column_permutation": [
+    0
+  ],
+  "reason": "match (attempt 2 of 2)"
+}

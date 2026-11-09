@@ -1,0 +1,55 @@
+{
+  "scenario": "count_over_1gib",
+  "trial": 3,
+  "pass": true,
+  "passed_on_attempt": 1,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "size INT64",
+    "per_directory_sql": [
+      "SELECT size FROM vrpentries WHERE type = 'f' AND size > 1073741824"
+    ],
+    "partial_shape": "n INT64",
+    "partial_sql": "SELECT COUNT(*) FROM per_directory",
+    "final_sql": "SELECT SUM(n) AS n FROM partial"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT size FROM vrpentries WHERE size > 1073741824"
+    ],
+    "per_directory_shape": "size INT64",
+    "partial_sql": "SELECT COUNT(*) FROM per_directory",
+    "partial_shape": "count INT64",
+    "final_sql": "SELECT SUM(count) AS count FROM partial"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT size FROM vrpentries WHERE size > 1073741824"
+      ],
+      "per_directory_shape": "size INT64",
+      "partial_sql": "SELECT COUNT(*) FROM per_directory",
+      "partial_shape": "count INT64",
+      "final_sql": "SELECT SUM(count) AS count FROM partial"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": true,
+      "passed": true,
+      "row_count": 1,
+      "reason": "match"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 1,
+  "ordered_compare": false,
+  "column_permutation": [
+    0
+  ],
+  "reason": "match (attempt 1 of 1)"
+}

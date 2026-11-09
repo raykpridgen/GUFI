@@ -1,0 +1,38 @@
+The files in the `eval_master` index that cannot be read by other users at all have been identified. Here are these files:
+
+- `eval_master/groups/grp04`
+- `eval_master/groups/grp05/shared`
+- `eval_master/groups/grp05/shared/analysis_survey.csv`
+- `eval_master/groups/grp05/shared/analysis_tests-108`
+- `eval_master/groups/grp05/shared/audio.h5`
+- `eval_master/groups/grp05/shared/audio.log`
+- `eval_master/groups/grp05/shared/audio_draft-624.py`
+- `eval_master/groups/grp05/shared/batch_tmp.log`
+- `eval_master/groups/grp05/shared/build.txt`
+- `eval_master/groups/grp05/shared/build_data-539.log`
+- `eval_master/groups/grp05/shared/build_src.csv`
+- `eval_master/groups/grp05/shared/cache_field.csv`
+- `eval_master/groups/grp05/shared/checkpoint_notes-568.gz`
+- `eval_master/groups/grp05/shared/chunk-100.log`
+- `eval_master/groups/grp05/shared/chunk.h5`
+- `eval_master/groups/grp05/shared/chunk_draft.log`
+- `eval_master/groups/grp05/shared/clean_field.png`
+- `eval_master/groups/grp05/shared/climate_logs-632.csv`
+- `eval_master/groups/grp05/shared/cluster-100.csv`
+- `eval_master/groups/grp05/shared/config_dataset-866.c`
+- `eval_master/groups/grp05/shared/corpus_report-080`
+- `eval_master/groups/grp05/shared/data-822.png`
+- `eval_master/groups/grp05/shared/dataset-193.txt`
+- `eval_master/groups/grp05/shared/eval-568.log`
+- `eval_master/groups/grp05/shared/eval_sample.json`
+- `eval_master/groups/grp05/shared/eval_src-165.py`
+- `eval_master/groups/grp05/shared/field_cache.json`
+- `eval_master/groups/grp05/shared/field_eval-710.c`
+- `eval_master/groups/grp05/shared/field_phase.json`
+- `eval_master/groups/grp05/shared/figures-960.txt`
+- `eval_master/groups/grp05/shared/genome-209.log`
+- `eval_master/groups/grp05/shared/genome.py`
+- `eval_master/groups/grp05/shared/gpu`
+- `eval_master/groups/grp05/shared/grid_params.gz`
+
+This list includes directories and files that are not accessible for read operations by users other than their owners. If you need further details or specifics about permissions, feel free to ask!

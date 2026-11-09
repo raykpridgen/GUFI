@@ -1,0 +1,23 @@
+I found 15 HDF5 files with "sim" in their names in eval_master. All of them are regular files ending in `.h5`. I also searched for `.hdf5`, `.hdf` and `.he5`, but none matched. Together they come to about 5.66 MB (5,665,018 bytes).
+
+| # | Size (bytes) | Size | Location |
+|---|---:|---:|---|
+| 1 | 3,796,043 | ~3.6 MiB | `eval_master/groups/grp04/usr010/profile/eval/trace_sim.h5` |
+| 2 | 1,133,031 | ~1.1 MiB | `eval_master/groups/grp01/usr003/checkpoint/report/params/sim_climate.h5` |
+| 3 | 335,519 | ~328 KiB | `eval_master/groups/grp05/usr012/output/weights/lib/sample_sim-247.h5` |
+| 4 | 258,045 | ~252 KiB | `eval_master/groups/grp05/usr012/sim_input.h5` |
+| 5 | 106,214 | ~104 KiB | `eval_master/groups/grp03/usr011/lattice/run_protein/archive_params/stage_raw/profile/sim_cache.h5` |
+| 6 | 27,395 | ~27 KiB | `eval_master/groups/grp01/usr014/clean/particle_sim.h5` |
+| 7 | 7,973 | ~7.8 KiB | `eval_master/groups/grp05/usr012/output/weights/grid_final/audio_part/stage/sim.h5` |
+| 8 | 480 | 480 B | `eval_master/groups/grp01/usr009/output_lib/cluster_batch/output/gpu_sim/notes/slice_sim-325.h5` |
+| 9 | 292 | 292 B | `eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/clean_sim.h5` |
+| 10 | 12 | 12 B | `eval_master/groups/grp05/usr015/clean/signal/output/src/phase/report_sim.h5` |
+| 11 | 4 | 4 B | `eval_master/groups/grp02/usr002/src_slice/final/part_sim.h5` |
+| 12 | 3 | 3 B | `eval_master/groups/grp04/usr010/profile/paper/params/sim-704.h5` |
+| 13 | 3 | 3 B | `eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/old/particle_sim-560.h5` |
+| 14 | 2 | 2 B | `eval_master/groups/grp02/shared/sim_lattice.h5` |
+| 15 | 2 | 2 B | `eval_master/groups/grp05/usr012/output/weights/grid_final/backup_sim.h5` |
+
+- **Largest files:** `trace_sim.h5` and `sim_climate.h5` make up about 87% of the total.
+- **Where they are:** grp05/usr012 has the most, with 4 files (#3, #4, #7, #15). grp02 has 4 spread across usr002, usr007 and shared. The rest are in grp01, grp03 and grp04.
+- **Tiny files:** #10–#15 are 12 bytes or smaller. A real HDF5 file can't be that small, so these are probably empty, placeholder or broken files. The 292- and 480-byte files (#8, #9) are also unusually small for HDF5.

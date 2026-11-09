@@ -1,0 +1,19 @@
+In the `eval_master` index, there are 15 owners of empty files, with the following distribution of empty files per owner:
+
+- Owner UID 3001: 40 empty files
+- Owner UID 3002: 32 empty files
+- Owner UID 3003: 36 empty files
+- Owner UID 3004: 22 empty files
+- Owner UID 3005: 18 empty files
+- Owner UID 3006: 41 empty files
+- Owner UID 3007: 32 empty files
+- Owner UID 3008: 42 empty files
+- Owner UID 3009: 29 empty files
+- Owner UID 3010: 41 empty files
+- Owner UID 3011: 37 empty files
+- Owner UID 3012: 36 empty files
+- Owner UID 3013: 48 empty files
+- Owner UID 3014: 19 empty files
+- Owner UID 3015: 30 empty files
+
+Each UID corresponds to a distinct owner of these empty files.

@@ -1,0 +1,26 @@
+Here is a breakdown of the total size of files in the `eval_master` index:
+
+- Total size of all files: **8.2M**
+
+### Breakdown by directory:
+- **eval_master**: 8.2M
+- **eval_master/groups**: 8.2M
+- **eval_master/groups/grp02**: 1.4M
+    - **eval_master/groups/grp02/usr007**: 164K
+        - **metrics_image**: 61.8K
+            - **gpu_raw**: 22.2K
+    - **eval_master/groups/grp02/usr013/chunk**: 40.3K
+    - **eval_master/groups/grp02/usr007/sim_cluster/eval**: 19.1K
+    - **eval_master/groups/grp02/usr007/audio_archive**: 19.6K
+        - **grid**: 11.5K
+    - **eval_master/groups/grp02/usr002/src_slice/checkpoint**: 994K
+    - **eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron**: 987K
+    - **eval_master/groups/grp02/usr013/batch**: 115K
+    - Other directories and sizes under `eval_master/groups/grp02` contribute to the total size.
+- **eval_master/groups/grp01**: 7.3K
+- **eval_master/groups/grp03**: 1.5M
+- **eval_master/groups/grp04**: 481K
+- **eval_master/groups/grp05**: 3.3M
+- Many more directories and their respective sizes below each group can further attribute to the overall size.
+
+This summary provides a high-level overview of the size distribution across various directories within the `eval_master` index. If you would like specific sizes for more directories, please let me know!

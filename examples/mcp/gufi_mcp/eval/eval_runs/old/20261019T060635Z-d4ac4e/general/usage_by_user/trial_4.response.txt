@@ -1,0 +1,20 @@
+These are the top 5 owners in eval_master by total bytes. The index stores numeric UIDs only, so there are no usernames to show.
+
+| Rank | UID | Total size | Files + links |
+|---|---|---|---|
+| 1 | 3012 | 1,486,219,193 bytes (~1.38 GiB) | 806 |
+| 2 | 3014 | 1,345,751,435 bytes (~1.25 GiB) | 370 |
+| 3 | 3008 | 1,307,552,064 bytes (~1.22 GiB) | 779 |
+| 4 | 3001 | 1,265,869,742 bytes (~1.18 GiB) | 618 |
+| 5 | 3002 | 1,121,612,073 bytes (~1.04 GiB) | 654 |
+
+Symlinks are counted too, but each one only adds the size of the path it stores, so they barely change the totals.
+
+For each of these users, one very large file makes up most of the total:
+- **3012:** `groups/grp05/usr012/output/scratch.c` (~1.26 GB)
+- **3014:** `groups/grp01/usr014/clean/step/old.log` (~1.23 GB)
+- **3008:** `groups/grp05/usr008/.../text_output/text_run.txt` (~1.11 GB)
+- **3001:** `groups/grp03/usr001/chunk/audio/archive/tests_output.py` (~1.12 GB)
+- **3002:** `groups/grp02/usr002/.../results_neuron/final/trace_cluster-666.txt` (~0.96 GB)
+
+None of the other files these users own is bigger than about 4 MB. To free up space, start with those five files.

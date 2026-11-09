@@ -1,0 +1,1 @@
+There are no directories in `eval_master` with the setgid bit set.

@@ -1,0 +1,19 @@
+Here are the users (by UID) who have put files in the "shared" directory of "eval_master", along with the total sizes of the files each user contributed:
+
+- UID 3007: 17,357,473 bytes
+- UID 3011: 16,464,823 bytes
+- UID 3008: 14,052,901 bytes
+- UID 3010: 12,950,463 bytes
+- UID 3013: 11,342,636 bytes
+- UID 3006: 10,290,273 bytes
+- UID 3014: 9,943,087 bytes
+- UID 3003: 9,589,070 bytes
+- UID 3005: 7,228,881 bytes
+- UID 3012: 6,389,573 bytes
+- UID 3002: 5,951,594 bytes
+- UID 3001: 5,905,095 bytes
+- UID 3009: 3,353,299 bytes
+- UID 3015: 2,400,876 bytes
+- UID 3004: 1,321,601 bytes
+
+If you need additional details or analysis, feel free to ask!

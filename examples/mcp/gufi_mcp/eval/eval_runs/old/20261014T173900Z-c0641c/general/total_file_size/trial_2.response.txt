@@ -1,0 +1,1 @@
+The total size of all files in the `eval_master` directory is **8,618,796 bytes**.

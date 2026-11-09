@@ -1,0 +1,3 @@
+It seems that there are no data entries available for directories under `groups/` in the `eval_master` index. Consequently, I'm unable to provide an overview of space usage or the number of files and directories for that path.
+
+If you have a different section of the index you'd like to investigate or further queries in mind, please let me know!

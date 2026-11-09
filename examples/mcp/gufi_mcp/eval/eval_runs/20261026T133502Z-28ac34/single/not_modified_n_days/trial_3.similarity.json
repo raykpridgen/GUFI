@@ -1,0 +1,70 @@
+{
+  "scenario": "not_modified_n_days",
+  "trial": 3,
+  "pass": false,
+  "passed_on_attempt": null,
+  "aggregate_revision_count": 1,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "mtime INT64",
+    "per_directory_sql": [
+      "SELECT mtime FROM vrpentries WHERE type = 'f' AND mtime < 1791763200 - 60 * 86400"
+    ],
+    "partial_shape": "n INT64",
+    "partial_sql": "SELECT COUNT(*) FROM per_directory",
+    "final_sql": "SELECT SUM(n) AS n FROM partial"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT mtime FROM vrpentries"
+    ],
+    "per_directory_shape": "mtime INT64",
+    "partial_sql": "SELECT COUNT(*) FROM per_directory WHERE mtime < (1791763200 - 5184000)",
+    "partial_shape": "count INT64",
+    "final_sql": "SELECT SUM(count) AS total FROM partial"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT last_modified FROM vrpentries"
+      ],
+      "per_directory_shape": "last_modified INT64",
+      "partial_sql": "SELECT COUNT(*) FROM per_directory WHERE last_modified < (1791763200 - 5184000)",
+      "partial_shape": "count INT64",
+      "final_sql": "SELECT SUM(count) AS total FROM partial"
+    },
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT mtime FROM vrpentries"
+      ],
+      "per_directory_shape": "mtime INT64",
+      "partial_sql": "SELECT COUNT(*) FROM per_directory WHERE mtime < (1791763200 - 5184000)",
+      "partial_shape": "count INT64",
+      "final_sql": "SELECT SUM(count) AS total FROM partial"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": false,
+      "passed": false,
+      "row_count": 0,
+      "reason": "call failed: Error executing tool aggregate_sql_query: 1 validation error for aggregate_sql_queryArguments\nquery\n  Value error, per_directory_sql[0]: column(s) last_modified do not exist in vrpentries [type=value_error, input_value={'index': 'eval_master', ... AS total FROM partial'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+    },
+    {
+      "attempt": 2,
+      "ok": true,
+      "passed": false,
+      "row_count": 1,
+      "reason": "values differ: 1 expected row(s) missing, 1 unexpected"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 1,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "values differ: 1 expected row(s) missing, 1 unexpected (attempt 2 of 2)"
+}

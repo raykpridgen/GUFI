@@ -1,0 +1,28 @@
+{
+  "ordered_compare": false,
+  "row_order": "compared order (both sides sorted)",
+  "expected": [
+    [
+      1056768
+    ]
+  ],
+  "actual": [
+    [
+      42143744
+    ]
+  ],
+  "missing_from_actual": [
+    [
+      1056768
+    ]
+  ],
+  "unexpected_in_actual": [
+    [
+      42143744
+    ]
+  ],
+  "expected_row_count": 1,
+  "actual_row_count": 1,
+  "gt_duration_ms": 25.349593997816555,
+  "agent_duration_ms": 89.064
+}

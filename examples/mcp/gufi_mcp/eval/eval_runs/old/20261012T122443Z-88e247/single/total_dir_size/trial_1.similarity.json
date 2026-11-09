@@ -1,0 +1,43 @@
+{
+  "scenario": "total_dir_size",
+  "trial": 1,
+  "pass": false,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "size INT64",
+    "scatter_sql": [
+      "SELECT size FROM summary WHERE isroot = 1"
+    ],
+    "gather_shape": "total INT64",
+    "gather_sql": "SELECT SUM(size) FROM intermediate",
+    "final_sql": "SELECT SUM(total) AS total FROM aggregate"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT size FROM vrsummary"
+    ],
+    "scatter_shape": "size INT64",
+    "gather_sql": "SELECT SUM(size) FROM intermediate",
+    "gather_shape": "total_size INT64",
+    "final_sql": "SELECT total_size FROM aggregate"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT size FROM vrsummary"
+      ],
+      "scatter_shape": "size INT64",
+      "gather_sql": "SELECT SUM(size) FROM intermediate",
+      "gather_shape": "total_size INT64",
+      "final_sql": "SELECT total_size FROM aggregate"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 12,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "row count 12 != expected 1"
+}

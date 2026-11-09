@@ -1,0 +1,88 @@
+{
+  "ordered_compare": false,
+  "row_order": "compared order (both sides sorted)",
+  "expected": [
+    [
+      "B",
+      4359
+    ],
+    [
+      "G",
+      4
+    ],
+    [
+      "K",
+      4286
+    ],
+    [
+      "M",
+      837
+    ],
+    [
+      "Zero",
+      503
+    ]
+  ],
+  "actual": [
+    [
+      "<= 1GB",
+      837
+    ],
+    [
+      "<= 1KB",
+      5163
+    ],
+    [
+      "<= 1MB",
+      4285
+    ],
+    [
+      "> 1GB",
+      4
+    ]
+  ],
+  "missing_from_actual": [
+    [
+      "B",
+      4359
+    ],
+    [
+      "G",
+      4
+    ],
+    [
+      "K",
+      4286
+    ],
+    [
+      "M",
+      837
+    ],
+    [
+      "Zero",
+      503
+    ]
+  ],
+  "unexpected_in_actual": [
+    [
+      "<= 1GB",
+      837
+    ],
+    [
+      "<= 1KB",
+      5163
+    ],
+    [
+      "<= 1MB",
+      4285
+    ],
+    [
+      "> 1GB",
+      4
+    ]
+  ],
+  "expected_row_count": 5,
+  "actual_row_count": 4,
+  "gt_duration_ms": 74.05695600027684,
+  "agent_duration_ms": 47.422
+}

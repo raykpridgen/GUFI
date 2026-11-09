@@ -1,0 +1,19 @@
+There are empty files in the `eval_master` index owned by the following users:
+
+- **User ID 3001**: 40 empty files
+- **User ID 3002**: 32 empty files
+- **User ID 3003**: 36 empty files
+- **User ID 3004**: 22 empty files
+- **User ID 3005**: 18 empty files
+- **User ID 3006**: 41 empty files
+- **User ID 3007**: 32 empty files
+- **User ID 3008**: 42 empty files
+- **User ID 3009**: 29 empty files
+- **User ID 3010**: 41 empty files
+- **User ID 3011**: 37 empty files
+- **User ID 3012**: 36 empty files
+- **User ID 3013**: 48 empty files
+- **User ID 3014**: 19 empty files
+- **User ID 3015**: 30 empty files
+
+If you need more specific information about these users, such as their usernames, please let me know!

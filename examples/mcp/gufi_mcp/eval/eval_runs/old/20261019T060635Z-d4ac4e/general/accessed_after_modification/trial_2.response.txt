@@ -1,0 +1,5 @@
+The answer is **0**. None of the 9,989 regular files in eval_master has been read since it was last changed.
+
+I took "changed" to mean ctime (the last change to a file's metadata, which also updates when the contents change). I counted files whose last-read time (atime) is later than their ctime. No file meets that test, and none has the two times equal. Every file's ctime is later than its last read.
+
+If "changed" means the last time the contents were modified (mtime) instead, the answer flips. All 9,989 files have been read since their contents were last modified. That fits a pattern of metadata changes, such as permission or owner updates, coming after the last read.

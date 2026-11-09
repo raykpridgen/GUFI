@@ -1,0 +1,1 @@
+It appears that there are no files or directories present in the `eval_master/grp03` path, including the shared directory. Therefore, no users have put files in the shared directory.

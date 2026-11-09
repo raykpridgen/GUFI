@@ -1,0 +1,24 @@
+Here is a list of symbolic links in the index `eval_master` along with their target paths:
+
+1. `cluster.lnk` → `text_grid/final_input-479.txt`
+2. `corpus_fluid.lnk` → `../shared/model_metrics.json`
+3. `gpu.lnk` → `params/protein/node_logs/epoch_part-447.json`
+4. `checkpoint_lattice.lnk` → `missing_build`
+5. `climate.lnk` → `clean/survey_lib.txt`
+6. `code_params.lnk` → `output/weights/grid_final/audio_part/stage/.slice_epoch-794.txt`
+7. `protein_data.lnk` → `params/protein/video_checkpoint-933.log`
+8. `code.lnk` → `sample_clean.png`
+9. `sample_stage.lnk` → `missing_logs`
+10. `output.lnk` → `missing_grid`
+11. `config.lnk` → `missing_layer`
+12. `lib.lnk` → `output/params_report`
+13. `text.lnk` → `node_video-843.log`
+14. `job_build.lnk` → `../profile/checkpoint_text-000.csv`
+15. `backup.lnk` → `src_slice/checkpoint/results_neuron/model/cluster_sample/ocean-957.txt`
+16. `trace.lnk` → `params/protein/run_figures.dat`
+17. `mesh_shard.lnk` → `tmp_genome/train/scratch_params.py`
+18. `epoch.lnk` → `missing_trace`
+19. `report.lnk` → `checkpoint/report/notes/ocean-828.txt`
+20. Additional symbolic links continue in a similar pattern...
+
+If you require additional details or a specific number of entries, feel free to ask!

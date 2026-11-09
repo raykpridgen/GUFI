@@ -1,0 +1,44 @@
+**261 files** in eval_master were modified in the past 30 days (September 12 to October 12, 2026). That's out of 9,989 files in total, and together they add up to about 66.8 MB.
+
+**What "changed" means here:** I went by modification time (mtime), the last time a file's contents were written. The other timestamp, "status change" time (ctime), isn't useful in this index: all 9,989 files show the same value, 2026-10-12 08:36:43. That's probably when the files were copied or the index was built, not real activity. Going by ctime, every file would count as changed.
+
+**By group:**
+| Group | Files changed | Size |
+|---|---|---|
+| grp03 | 57 | ~16.6 MB |
+| grp01 | 55 | ~19.1 MB |
+| grp05 | 55 | ~11.5 MB |
+| grp02 | 51 | ~12.0 MB |
+| grp04 | 43 | ~7.6 MB |
+
+**Most recent changes (newest first):**
+- 2026-10-11 – `groups/grp04/usr005/params/audio.py`
+- 2026-10-11 – `groups/grp04/usr005/job_data.txt`
+- 2026-10-11 – `groups/grp04/usr005/params/protein/genome_shard/results_raw/profile.csv`
+- 2026-10-11 – `groups/grp05/usr012/output/weights/grid_final/audio_part/build_video.py`
+- 2026-10-11 – `groups/grp03/usr004/part_epoch/climate_particle.png`
+- 2026-10-11 – `groups/grp03/usr011/lattice/run_protein/notes/stage.png`
+- 2026-10-11 – `groups/grp05/usr008/cache_text/signal_ocean/plots_protein/lib/shard_raw/config_trace.dat`
+- 2026-10-11 – `groups/grp04/usr005/params/corpus_old.json`
+- 2026-10-11 – `groups/grp03/usr004/scratch_stage/run_checkpoint.gz`
+- 2026-10-11 – `groups/grp04/usr006/ocean/corpus_clean-042.txt`
+- 2026-10-11 – `groups/grp05/usr008/.../plots_protein/lib/logs_output-127.dat`
+- 2026-10-11 – `groups/grp05/usr012/.../audio_part/protein/eval_mesh-526.dat` (1.0 MB)
+- 2026-10-11 – `groups/grp05/usr012/.../audio_part/tests_eval-268.txt`
+- 2026-10-11 – `groups/grp05/usr008/.../plots_protein/cluster/clean/survey_batch.csv` (1.3 MB)
+- 2026-10-11 – `groups/grp05/usr015/clean/signal/output/bench-454.txt`
+- 2026-10-10 – `groups/grp03/usr011/lattice/audio_tests/lattice.png`
+- 2026-10-10 – `groups/grp02/usr002/src_slice/checkpoint/results_neuron/model/cluster_sample/data.log`
+- 2026-10-10 – `groups/grp03/usr011/lattice/run_protein/tmp_bench-935.c`
+- 2026-10-10 – `groups/grp03/usr001/trace/scratch_trace.csv`
+- 2026-10-09 – `groups/grp01/usr009/output_lib/cluster_batch/data_archive.txt` (2.3 MB)
+- …and 241 more, back to mid-September.
+
+**Largest recently changed files:**
+- `groups/grp03/usr001/step_image.log`: 3.7 MB (Sep 27)
+- `groups/grp01/usr009/output_lib/cluster_batch/output/slice/report/logs_model-719.dat`: 3.4 MB (Sep 29)
+- `groups/grp05/usr012/output/weights/grid_final/audio_part/stage/backup.png`: 3.4 MB (Sep 30)
+- `groups/grp03/usr011/lattice/shard_lattice/survey_final/.text_audio.log`: 3.2 MB (Sep 30)
+- `groups/grp03/shared/tmp_archive-543.txt`: 2.6 MB (Oct 3)
+
+I can give you the full list of 261 paths, or filter it by group, user, file type or a shorter time window.

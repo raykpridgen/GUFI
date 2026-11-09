@@ -1,0 +1,88 @@
+{
+  "ordered_compare": false,
+  "row_order": "compared order (both sides sorted)",
+  "expected": [
+    [
+      "Mos",
+      3071
+    ],
+    [
+      "Wks",
+      134
+    ],
+    [
+      "Yrs",
+      6784
+    ]
+  ],
+  "actual": [
+    [
+      " Over 1 year ago",
+      6825
+    ],
+    [
+      "1 hour - 1 day ago",
+      14
+    ],
+    [
+      "1 month - 6 months ago",
+      199
+    ],
+    [
+      "1 week - 1 month ago",
+      54
+    ],
+    [
+      "6 months - 1 year ago",
+      3195
+    ],
+    [
+      "Less than 1 hour ago",
+      2
+    ]
+  ],
+  "missing_from_actual": [
+    [
+      "Mos",
+      3071
+    ],
+    [
+      "Wks",
+      134
+    ],
+    [
+      "Yrs",
+      6784
+    ]
+  ],
+  "unexpected_in_actual": [
+    [
+      " Over 1 year ago",
+      6825
+    ],
+    [
+      "1 hour - 1 day ago",
+      14
+    ],
+    [
+      "1 month - 6 months ago",
+      199
+    ],
+    [
+      "1 week - 1 month ago",
+      54
+    ],
+    [
+      "6 months - 1 year ago",
+      3195
+    ],
+    [
+      "Less than 1 hour ago",
+      2
+    ]
+  ],
+  "expected_row_count": 3,
+  "actual_row_count": 6,
+  "gt_duration_ms": 80.338384002971,
+  "agent_duration_ms": 84.707
+}

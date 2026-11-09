@@ -1,0 +1,48 @@
+{
+  "scenario": "top10_size_global",
+  "trial": 1,
+  "stop_reason": "final",
+  "error": null,
+  "started_at": "2026-10-26T14:05:15.263095+00:00",
+  "finished_at": "2026-10-26T14:05:15.330474+00:00",
+  "duration_ms": 67.389,
+  "usage": {},
+  "events": [
+    {
+      "t_ms": 0.005,
+      "kind": "tool",
+      "name": "aggregate_sql_query",
+      "args_summary": "{\"query\": {\"final_sql\": \"SELECT path, size FROM partial ORDER BY size DESC LIMIT 10\", \"index\": \"eval_master\", \"partial_shape\": \"path TEXT, size INT64\", \"partial_sql\": \"SELECT path, size FROM per_directory\", \"per_directory_shape\": \"path TEXT, size INT64\", \"per_directory_sql\": [\"SELECT path, size FROM vrpentries WHERE type = 'f'\"]}}",
+      "ok": true,
+      "duration_ms": 67.332,
+      "error": null,
+      "note": null
+    }
+  ],
+  "aggregate_calls": [
+    {
+      "t_ms": 0.004045003151986748,
+      "query": {
+        "index": "eval_master",
+        "per_directory_shape": "path TEXT, size INT64",
+        "per_directory_sql": [
+          "SELECT path, size FROM vrpentries WHERE type = 'f'"
+        ],
+        "partial_shape": "path TEXT, size INT64",
+        "partial_sql": "SELECT path, size FROM per_directory",
+        "final_sql": "SELECT path, size FROM partial ORDER BY size DESC LIMIT 10"
+      },
+      "ok": true,
+      "duration_ms": 67.332,
+      "columns": [
+        "path",
+        "size"
+      ],
+      "row_count": 10,
+      "truncated": false,
+      "error": null
+    }
+  ],
+  "final_text": "{\n  \"columns\": [\n    \"path\",\n    \"size\"\n  ],\n  \"rows\": [\n    [\n      \"eval_master/groups/grp05/usr012/output/scratch.c\",\n      1261921083\n    ],\n    [\n      \"eval_master/groups/grp01/usr014/clean/step/old.log\",\n      1228550276\n    ],\n    [\n      \"eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py\",\n      1123091592\n    ],\n    [\n      \"eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt\",\n      1113310933\n    ],\n    [\n      \"eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/final/trace_cluster-666.txt\",\n      959252531\n    ],\n    [\n      \"eval_master/groups/grp05/usr015/clean/particle_build/src/train_stage-240.dat\",\n      564253616\n    ],\n    [\n      \"eval_master/groups/grp04/usr006/layer_video-322.h5\",\n      4194001\n    ],\n    [\n      \"eval_master/groups/grp03/usr004/train/model_report/.train.txt\",\n      4186836\n    ],\n    [\n      \"eval_master/groups/grp04/usr006/figures.png\",\n      4177565\n    ],\n    [\n      \"eval_master/groups/grp03/usr011/lattice/shard_lattice/survey_final/src.h5\",\n      4164923\n    ]\n  ],\n  \"row_count\": 10,\n  \"truncated\": false\n}",
+  "transcript": []
+}

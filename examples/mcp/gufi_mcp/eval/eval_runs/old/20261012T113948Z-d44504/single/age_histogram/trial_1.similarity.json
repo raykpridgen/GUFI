@@ -1,0 +1,43 @@
+{
+  "scenario": "age_histogram",
+  "trial": 1,
+  "pass": false,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "cat TEXT",
+    "scatter_sql": [
+      "SELECT agecat(mtime) FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "cat TEXT, count INT64",
+    "gather_sql": "SELECT cat, COUNT(*) FROM intermediate GROUP BY cat",
+    "final_sql": "SELECT cat, SUM(count) AS count FROM aggregate GROUP BY cat"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT agecat(mtime) AS age_category FROM vrpentries WHERE type='f' GROUP BY age_category"
+    ],
+    "scatter_shape": "age_category TEXT",
+    "gather_sql": "SELECT age_category, COUNT(*) AS file_count FROM intermediate GROUP BY age_category",
+    "gather_shape": "age_category TEXT, file_count INT64",
+    "final_sql": "SELECT age_category, SUM(file_count) AS file_count FROM aggregate GROUP BY age_category"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT agecat(mtime) AS age_category FROM vrpentries WHERE type='f' GROUP BY age_category"
+      ],
+      "scatter_shape": "age_category TEXT",
+      "gather_sql": "SELECT age_category, COUNT(*) AS file_count FROM intermediate GROUP BY age_category",
+      "gather_shape": "age_category TEXT, file_count INT64",
+      "final_sql": "SELECT age_category, SUM(file_count) AS file_count FROM aggregate GROUP BY age_category"
+    }
+  ],
+  "gt_row_count": 5,
+  "agent_row_count": 5,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "values differ"
+}

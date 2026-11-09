@@ -1,0 +1,5 @@
+All the regular files in eval_master add up to **8,797,702,315 bytes**, which is about 8.80 GB (8.19 GiB). That covers 9,989 files.
+
+This is the total of each file's logical (apparent) size. Symlinks and directories aren't counted. The actual space used on disk could be a little different because of block allocation and sparse files.
+
+I also tried GUFI's built-in total-filesize statistic as a cross-check, but it failed with an error looking up a user ID, so the figure comes from the index query alone.

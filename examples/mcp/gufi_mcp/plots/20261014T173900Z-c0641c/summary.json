@@ -1,0 +1,35 @@
+{
+  "run": "20261014T173900Z-c0641c",
+  "trials": 200,
+  "graded_trials": 60,
+  "correct": 21,
+  "incorrect": 39,
+  "ungraded": 140,
+  "grade_threshold": 0.9,
+  "correct_by_scenario": {
+    "age_histogram": "0/5",
+    "count_and_size": "1/5",
+    "count_over_1gib": "4/5",
+    "ext_histogram": "5/5",
+    "ext_winner": "0/5",
+    "not_modified_n_days": "0/5",
+    "oldest_k": "4/5",
+    "size_histogram": "0/5",
+    "top10_size_global": "5/5",
+    "top10_size_per_uid": "0/5",
+    "total_dir_size": "2/5",
+    "total_file_size": "0/5"
+  },
+  "error_categories": {
+    "sname/sroll carried in shape": 130,
+    "bare sname/sroll": 110,
+    "rpath outside scatter": 74,
+    "unknown column": 22,
+    "ORDER/LIMIT outside final": 20,
+    "sql_file_index path": 5,
+    "other": 2,
+    "column count mismatch": 2,
+    "unknown tool argument": 1,
+    "SQL parse error": 1
+  }
+}

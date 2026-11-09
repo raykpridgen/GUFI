@@ -1,0 +1,26 @@
+Here are the file names that appear more than once in the `eval_master` index along with their respective counts:
+
+- **batch.csv**: 6
+- **input.png**: 5
+- **weights.txt**: 4
+- **profile.lnk**: 4
+- **input.log**: 4
+- **grid.csv**: 4
+- **genome.log**: 4
+- **fluid.log**: 4
+- **figures.log**: 4
+- **chunk.log**: 4
+- **checkpoint.dat**: 4
+- **bench.py**: 4
+- **weights.dat**: 3
+- **train.dat**: 3
+- **plots.csv**: 3
+- **ocean.txt**: 3
+- **metrics.png**: 3
+- **field.log**: 3
+- **corpus.log**: 3
+- **backup.lnk**: 3
+- **archive.txt**: 3
+- (and many more, totaling 150 unique file names that appear more than once).
+
+If you need the full list or specific details, let me know!

@@ -1,0 +1,64 @@
+{
+  "ordered_compare": false,
+  "row_order": "compared order (both sides sorted)",
+  "expected": [
+    [
+      "Mos",
+      3071
+    ],
+    [
+      "Wks",
+      134
+    ],
+    [
+      "Yrs",
+      6784
+    ]
+  ],
+  "actual": [
+    [
+      "Mos",
+      3170
+    ],
+    [
+      "Wks",
+      138
+    ],
+    [
+      "Yrs",
+      6981
+    ]
+  ],
+  "missing_from_actual": [
+    [
+      "Mos",
+      3071
+    ],
+    [
+      "Wks",
+      134
+    ],
+    [
+      "Yrs",
+      6784
+    ]
+  ],
+  "unexpected_in_actual": [
+    [
+      "Mos",
+      3170
+    ],
+    [
+      "Wks",
+      138
+    ],
+    [
+      "Yrs",
+      6981
+    ]
+  ],
+  "expected_row_count": 3,
+  "actual_row_count": 3,
+  "gt_duration_ms": 31.841618998441845,
+  "agent_duration_ms": 52.995
+}

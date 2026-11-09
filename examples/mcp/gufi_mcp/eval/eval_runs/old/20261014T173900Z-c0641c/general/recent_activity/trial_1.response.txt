@@ -1,0 +1,11 @@
+In the `eval_master` directory, there are a total of **42 files** that have been accessed in the last 7 days but have not changed during that time.
+
+Here are a few examples of files that fit this criterion:
+
+1. `eval_master/groups/grp05/usr012/output/weights/grid_final/audio_part/protein/eval_mesh-526.dat`
+2. `eval_master/groups/grp04/usr005/params/protein/genome_shard/results_raw/profile.csv`
+3. `eval_master/groups/grp02/usr007/sim_cluster/image_eval/neuron_run-157.csv`
+4. `eval_master/groups/grp03/usr011/lattice/run_protein/archive_params/stage_raw/profile/batch.log`
+5. `eval_master/groups/grp01/usr009/output_lib/cluster_batch/output/dataset.lnk`
+
+If you need more details about these files or additional examples, just let me know!

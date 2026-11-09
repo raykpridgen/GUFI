@@ -1,0 +1,20 @@
+eval_master has **9,989 regular files**. Here is how many there are of each extension:
+
+| Extension | Files |
+|---|---|
+| .log | 1,410 |
+| .txt | 1,390 |
+| .csv | 1,130 |
+| .dat | 1,125 |
+| .py | 1,054 |
+| .json | 823 |
+| .h5 | 731 |
+| .png | 708 |
+| .c | 544 |
+| *(no extension)* | 531 |
+| .gz | 525 |
+| Other single files | 18 |
+
+The 18 "other" files each have a one-off extension, such as `weights_field`, `weights-772`, `trace-369`, `text_video-388`, `shard-078`, `run_lib-668`, `run-379`, `plots_config-665`, `ocean_grid-645`, `metrics`, `logs_chunk-014`, `image_paper`, `fluid_epoch`, `figures-206`, `draft`, `chunk_final-439`, `build_field-564` and `audio-855`. These probably aren't real extensions. They look like names that start with a dot (hidden files, e.g. `.draft`) or have a dot in an unusual place, and the extension is just whatever text comes after the last dot.
+
+The built-in extensions statistic returned nothing, so I counted directly from the index. The count covers regular files only, not symlinks or directories.

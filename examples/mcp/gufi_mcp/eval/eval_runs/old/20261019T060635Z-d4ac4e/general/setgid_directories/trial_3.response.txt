@@ -1,0 +1,16 @@
+Ten directories in eval_master have the setgid bit set. They're all in `eval_master/groups/`: each of the five group directories and the `shared` subdirectory inside each one.
+
+| Directory | Owner UID | Group GID | Permissions |
+|---|---|---|---|
+| eval_master/groups/grp01 | 0 (root) | 2001 | drwxrws--- (2770) |
+| eval_master/groups/grp01/shared | 0 (root) | 2001 | drwxrws--- (2770) |
+| eval_master/groups/grp02 | 0 (root) | 2002 | drwxrws--- (2770) |
+| eval_master/groups/grp02/shared | 0 (root) | 2002 | drwxrws--- (2770) |
+| eval_master/groups/grp03 | 0 (root) | 2003 | drwxrws--- (2770) |
+| eval_master/groups/grp03/shared | 0 (root) | 2003 | drwxrws--- (2770) |
+| eval_master/groups/grp04 | 0 (root) | 2004 | drwxrws--- (2770) |
+| eval_master/groups/grp04/shared | 0 (root) | 2004 | drwxrws--- (2770) |
+| eval_master/groups/grp05 | 0 (root) | 2005 | drwxrws--- (2770) |
+| eval_master/groups/grp05/shared | 0 (root) | 2005 | drwxrws--- (2770) |
+
+All ten have the same settings: root owns them, the matching group (GIDs 2001–2005) has full access, and everyone else has none. Because setgid is on, new files and folders created inside get that directory's group instead of the creator's main group. This is the usual setup for shared group workspaces.

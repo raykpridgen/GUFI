@@ -1,0 +1,16 @@
+Here's the breakdown of `eval_master/groups/`. Sizes are apparent sizes, meaning the sum of the file sizes. The directory count includes each group's own top directory.
+
+| Group | Space used | Directories | Files | Symlinks |
+|---|---|---|---|---|
+| grp05 | 3.26 GiB (3,497,973,533 B) | 52 | 2,100 | 63 |
+| grp01 | 1.61 GiB (1,730,852,644 B) | 39 | 1,838 | 56 |
+| grp03 | 1.45 GiB (1,560,356,675 B) | 65 | 1,879 | 56 |
+| grp02 | 1.41 GiB (1,510,437,987 B) | 52 | 2,175 | 65 |
+| grp04 | 0.46 GiB (498,081,476 B) | 48 | 1,997 | 60 |
+| **Total** | **8.20 GiB (8,797,702,315 B)** | **256** | **9,989** | **300** |
+
+- **grp05 uses the most space:** about 40% of the total, roughly double the next group.
+- **grp04 uses the least space** but holds about as many files as the others. Its files are small, averaging about 250 KB each, while grp05's average about 1.7 MB.
+- **grp02 has the most files** (2,175) and **grp03 has the most directories** (65). grp01 has the fewest of both.
+
+I got these numbers by adding up the directory summaries in the index for everything under each group. `gufi_du` gives the same sizes.

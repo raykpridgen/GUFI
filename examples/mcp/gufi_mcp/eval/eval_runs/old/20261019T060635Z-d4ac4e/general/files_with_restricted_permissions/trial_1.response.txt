@@ -1,0 +1,43 @@
+**3,993 of the 9,989 regular files in eval_master (about 40%) give other users no read access.** That means the "other" read bit is off. The full list is too long to show here, but these figures cover all of them.
+
+**By permission mode** (there are only two):
+
+| Mode | Who can read | Files | Total size |
+|---|---|---|---|
+| `640` (rw-r-----) | Owner and the file's group, not others | 2,973 | ~2.28 GB |
+| `600` (rw-------) | Owner only | 1,020 | ~1.35 GB |
+
+So the 1,020 files with mode 600 are the ones only their owner can read. The 2,973 with mode 640 can still be read by members of the file's group.
+
+**Where they are:** every one of these files is under `eval_master/groups/`:
+- grp02: 862
+- grp05: 826
+- grp04: 800
+- grp01: 754
+- grp03: 751
+
+For example, `eval_master/groups/grp01/shared/` contains many of them, such as `backup.log` (640) and `batch_node-829.dat` (600).
+
+**By owner (uid / gid):**
+
+| uid | gid | Files | Size |
+|---|---|---|---|
+| 3003 | 2001 | 325 | 91 MB |
+| 3013 | 2002 | 309 | 95 MB |
+| 3007 | 2002 | 308 | 74 MB |
+| 3012 | 2005 | 304 | 92 MB |
+| 3008 | 2005 | 301 | 1.20 GB |
+| 3006 | 2004 | 300 | 70 MB |
+| 3011 | 2003 | 291 | 68 MB |
+| 3009 | 2001 | 288 | 60 MB |
+| 3010 | 2004 | 270 | 70 MB |
+| 3002 | 2002 | 245 | 1.02 GB |
+| 3001 | 2003 | 242 | 53 MB |
+| 3005 | 2004 | 230 | 52 MB |
+| 3015 | 2005 | 221 | 617 MB |
+| 3004 | 2003 | 218 | 49 MB |
+| 3014 | 2001 | 141 | 31 MB |
+
+I only checked each file's own permissions. A file could also be unreadable because its parent directory is locked down, and those files aren't counted here.
+
+I can give you the full path list for a specific group, owner, or mode (for example, only the owner-only `600` files).

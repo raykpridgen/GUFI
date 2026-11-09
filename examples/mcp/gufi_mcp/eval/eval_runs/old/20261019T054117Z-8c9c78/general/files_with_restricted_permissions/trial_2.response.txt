@@ -1,0 +1,24 @@
+The files in the `eval_master` index that cannot be read by other users at all are located in the shared directories of various groups. Here’s a list of those files:
+
+1. `eval_master/groups/grp02/shared/.code_checkpoint.png`
+2. `eval_master/groups/grp02/shared/.paper-676.dat`
+3. `eval_master/groups/grp02/shared/archive.json`
+4. `eval_master/groups/grp02/shared/archive.py`
+5. `eval_master/groups/grp02/shared/audio-566.log`
+6. `eval_master/groups/grp02/shared/backup_model-920.h5`
+7. `eval_master/groups/grp02/shared/backup_protein-771.txt`
+8. `eval_master/groups/grp02/shared/backup_tmp-522.c`
+9. `eval_master/groups/grp02/shared/checkpoint_signal-160.log`
+10. `eval_master/groups/grp02/shared/corpus.log`
+11. `eval_master/groups/grp02/shared/climate_trace-731.log`
+12. `eval_master/groups/grp05/usr015/audio-573.dat`
+13. `eval_master/groups/grp05/usr015/backup-822.h5`
+14. `eval_master/groups/grp05/usr015/batch_clean-991.log`
+15. `eval_master/groups/grp05/usr015/batch_final.log`
+16. `eval_master/groups/grp05/usr015/checkpoint_batch.json`
+17. `eval_master/groups/grp03/shared/figures_bench-485.txt`
+18. `eval_master/groups/grp03/shared/particle_tmp-428.dat`
+19. `eval_master/groups/grp03/usr011/phase_chunk.txt`
+20. `eval_master/groups/grp04/shared/fluid_gpu-197.dat`
+
+This list may be truncated; however, it includes files across different groups, indicating a restriction on read access for those users not belonging to the respective groups.

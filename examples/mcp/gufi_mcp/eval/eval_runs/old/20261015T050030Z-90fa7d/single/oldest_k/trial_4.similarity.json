@@ -1,0 +1,56 @@
+{
+  "scenario": "oldest_k",
+  "trial": 4,
+  "pass": true,
+  "aggregate_revision_count": 1,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "path TEXT, mtime INT64",
+    "scatter_sql": [
+      "SELECT path, mtime FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "path TEXT, mtime INT64",
+    "gather_sql": "SELECT path, mtime FROM intermediate",
+    "final_sql": "SELECT path, mtime FROM aggregate ORDER BY mtime ASC LIMIT 5"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT path, mtime FROM vrpentries WHERE type = 'f'"
+    ],
+    "scatter_shape": "path TEXT, mtime INT64",
+    "gather_sql": "SELECT path, mtime FROM intermediate",
+    "gather_shape": "path TEXT, mtime INT64",
+    "final_sql": "SELECT path, mtime FROM aggregate ORDER BY mtime ASC LIMIT 5"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT path, mtime FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "path TEXT, mtime INT64",
+      "gather_sql": "SELECT path, mtime FROM intermediate ORDER BY mtime ASC",
+      "gather_shape": "path TEXT, mtime INT64",
+      "final_sql": "SELECT path, mtime FROM aggregate ORDER BY mtime ASC LIMIT 5"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT path, mtime FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "path TEXT, mtime INT64",
+      "gather_sql": "SELECT path, mtime FROM intermediate",
+      "gather_shape": "path TEXT, mtime INT64",
+      "final_sql": "SELECT path, mtime FROM aggregate ORDER BY mtime ASC LIMIT 5"
+    }
+  ],
+  "gt_row_count": 5,
+  "agent_row_count": 5,
+  "ordered_compare": true,
+  "column_permutation": [
+    0,
+    1
+  ],
+  "reason": "match"
+}

@@ -1,0 +1,11 @@
+The directories in the `eval_master` index that hold the most data directly inside them are as follows, each with a total size of 4096 bytes:
+
+1. **eval_master**
+2. **eval_master/groups**
+3. **eval_master/groups/grp01**
+4. **eval_master/groups/grp02**
+5. **eval_master/groups/grp03**
+6. **eval_master/groups/grp04**
+7. **eval_master/groups/grp05**
+
+Each of these top-level directories has a total size of 4096 bytes directly contained within them. If you are looking for specific subdirectories or a detailed breakdown, please let me know!

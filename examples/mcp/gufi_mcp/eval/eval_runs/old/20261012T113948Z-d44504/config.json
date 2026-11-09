@@ -1,0 +1,48 @@
+{
+  "run_id": "20261012T113948Z-d44504",
+  "mode": "both",
+  "trials": 1,
+  "agent": {
+    "agent": "openrouter",
+    "model": "openai/gpt-4o-mini",
+    "temperature": null,
+    "max_completion_tokens": 4096,
+    "base_url": "https://openrouter.ai/api/v1",
+    "tool_result_chars": 20000
+  },
+  "openrouter_model": "openai/gpt-4o-mini",
+  "concurrency": 4,
+  "max_tool_calls": 15,
+  "timeout_s": 180.0,
+  "scenario_filter": [
+    "total_file_size",
+    "total_dir_size",
+    "ext_histogram",
+    "size_histogram",
+    "age_histogram",
+    "top10_size_global",
+    "top10_size_per_uid",
+    "ext_winner",
+    "count_over_1gib",
+    "oldest_k",
+    "not_modified_n_days",
+    "count_and_size",
+    "largest_files",
+    "files_per_group",
+    "recent_activity",
+    "tree_overview"
+  ],
+  "scenario_files": {
+    "single": "/home/raykprid/omniverse/work/mcp/stripped/examples/mcp/gufi_mcp/scenarios.single.yaml",
+    "general": "/home/raykprid/omniverse/work/mcp/stripped/examples/mcp/gufi_mcp/scenarios.general.yaml"
+  },
+  "indexes": {
+    "eval_master": {
+      "index_name": "eval_master",
+      "seed": 476442330,
+      "fixed_now": 1791763200,
+      "fixed_now_iso": "2026-10-12T00:00:00+00:00",
+      "manifest": "/home/raykprid/search/eval_master.manifest.json"
+    }
+  }
+}

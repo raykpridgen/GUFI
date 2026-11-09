@@ -1,0 +1,20 @@
+Group **2005** uses the most storage in eval_master by a wide margin: about 3.50 GB, roughly twice as much as any other group.
+
+Totals for regular files, grouped by numeric GID (largest first):
+
+| Rank | GID | Files | Total size |
+|---|---|---|---|
+| 1 | 2005 | 2,100 | 3,497,973,533 B (~3.50 GB / 3.26 GiB) |
+| 2 | 2001 | 1,838 | 1,730,852,644 B (~1.73 GB / 1.61 GiB) |
+| 3 | 2003 | 1,879 | 1,560,356,675 B (~1.56 GB / 1.45 GiB) |
+| 4 | 2002 | 2,175 | 1,510,437,987 B (~1.51 GB / 1.41 GiB) |
+| 5 | 2004 | 1,997 | 498,081,476 B (~0.50 GB / 0.46 GiB) |
+
+- **Total:** about 8.80 GB across 9,989 files. Group 2005 holds about 40% of it.
+- **File count vs. size:** group 2002 has the most files (2,175) but ranks only 4th by size. Group 2004 holds the least data.
+- **Group 2001:** one file, `groups/grp01/usr014/clean/step/old.log`, is about 1.23 GB. That's roughly 71% of the group's total.
+
+**Caveats:**
+- These are apparent file sizes (bytes), not blocks used on disk.
+- Symlinks and directories aren't counted.
+- The index only stores numeric GIDs. GID 2001 owns files under `groups/grp01`, so the GIDs probably map to `grp01`–`grp05`, but I haven't checked the others.

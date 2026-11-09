@@ -1,0 +1,10 @@
+Here are the files in `eval_master` that can't be read by other users at all:
+
+1. `eval_master/groups/grp01`
+2. `eval_master/groups/grp03/shared`
+3. `eval_master/groups/grp03/usr004`
+4. `eval_master/groups/grp01/usr003`
+5. `eval_master/groups/grp03/usr011`
+6. `eval_master/groups/grp05/usr012`
+
+These directories and their contents are restricted in terms of read permissions for users other than the owner. If you need a more detailed list of specific files within these directories, please let me know!

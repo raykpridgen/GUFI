@@ -1,0 +1,40 @@
+User 3007 owns **794 entries** in `eval_master`: **770 regular files** (186,898,619 bytes, about 187 MB) and **24 symlinks**. That's too many to show one by one here, so below is a count per directory, with the file names I did see as examples.
+
+**Where they are**
+
+They're all under `eval_master/groups/grp02/`, in two places:
+- `shared/`: 48 files, about 17.4 MB.
+- `usr007/` and everything below it: 722 files and 24 symlinks, about 169.5 MB.
+
+| Directory (under `groups/grp02/`) | Files | File bytes | Symlinks |
+|---|---|---|---|
+| shared | 48 | 17,357,473 | 0 |
+| usr007 | 29 | 3,933,647 | 0 |
+| usr007/audio_archive | 36 | 8,388,328 | 2 |
+| usr007/audio_archive/grid | 33 | 11,942,198 | 3 |
+| usr007/metrics_image | 31 | 7,706,329 | 1 |
+| usr007/metrics_image/checkpoint_report | 31 | 9,153,535 | 3 |
+| usr007/metrics_image/checkpoint_report/final | 40 | 7,750,607 | 1 |
+| usr007/metrics_image/gpu_raw | 32 | 9,037,725 | 1 |
+| usr007/metrics_image/gpu_raw/neuron_dataset | 33 | 12,016,285 | 0 |
+| usr007/metrics_image/gpu_raw/stage_metrics | 33 | 2,013,270 | 0 |
+| usr007/metrics_image/image | 43 | 8,850,473 | 1 |
+| usr007/metrics_image/run_archive | 29 | 828,455 | 1 |
+| usr007/metrics_image/run_archive/archive | 29 | 6,623,533 | 1 |
+| usr007/sim_cluster | 33 | 6,430,421 | 1 |
+| usr007/sim_cluster/eval | 36 | 5,701,019 | 0 |
+| usr007/sim_cluster/eval/tests | 33 | 14,116,458 | 2 |
+| usr007/sim_cluster/image_eval | 29 | 4,321,061 | 1 |
+| usr007/sim_cluster/metrics | 31 | 3,561,203 | 0 |
+| usr007/sim_cluster/metrics/eval | 29 | 9,905,787 | 0 |
+| usr007/sim_cluster/metrics/stage | 34 | 16,148,044 | 0 |
+| usr007/sim_cluster/metrics/stage/genome | 32 | 4,253,275 | 2 |
+| usr007/sim_cluster/metrics/stage/old | 36 | 11,180,908 | 0 |
+| usr007/sim_cluster/metrics/stage/train | 30 | 5,678,585 | 3 |
+
+**Example files**
+- **In `shared/`:** `neuron.py` (3.65 MB), `cluster_epoch-264.h5` (3.5 MB), `slice_output-661.csv` (2.9 MB), `lib_logs.py` (1.56 MB), `logs_metrics.json`, `field.log`, `step_slice.h5`, and a hidden file `.code_checkpoint.png`.
+- **In `usr007/`:** `audio_archive/grid_scratch.txt` (3.1 MB), `audio_archive/corpus_metrics-029.log` (2.5 MB), `audio_archive/grid/climate_mesh.csv` (2.3 MB), `audio_archive/grid/layer_cluster.py` (2.2 MB), `metrics_image/checkpoint_report/final/shard_audio.py` (2.3 MB), `.../final/old_video.dat` (2.1 MB), `metrics_image/checkpoint_report/corpus.json` (1.4 MB).
+- **Symlinks:** these include `audio_archive/batch.lnk`, `audio_archive/field.lnk`, `audio_archive/grid/image.lnk` and `.../final/signal.lnk`.
+
+If you want the full list of paths, I can give it one directory at a time or filtered by size, file type or extension.

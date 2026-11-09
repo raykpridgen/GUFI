@@ -1,0 +1,6 @@
+In the `eval_master` index, the file types that take up the most space are as follows:
+
+1. **Regular Files (type 'f')**: Total size is approximately 8,797,702,315 bytes.
+2. **Symlinks (type 'l')**: Total size is 8,271 bytes.
+
+Regular files significantly dominate the space usage compared to symlinks.

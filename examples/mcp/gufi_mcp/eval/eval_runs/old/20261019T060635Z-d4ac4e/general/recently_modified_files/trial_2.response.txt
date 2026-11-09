@@ -1,0 +1,29 @@
+**261 regular files** in eval_master were changed in the past month (modified since 2026-09-12), totalling about **66.8 MB** (66,830,885 bytes). That's out of 9,989 files in the index.
+
+**How I measured "changed":** I used the modification time (mtime). The status-change time (ctime) can't help here: every file has the same ctime, 2026-10-12 08:36:43 UTC, which is just after "now" and is probably when the files were copied or indexed. Going by ctime would count all 9,989 files as changed.
+
+**By group:**
+
+| Group | Files | Bytes |
+|---|---|---|
+| grp03 | 57 | 16,616,334 |
+| grp01 | 55 | 19,087,621 |
+| grp05 | 55 | 11,527,940 |
+| grp02 | 51 | 11,976,027 |
+| grp04 | 43 | 7,622,963 |
+
+**Most recently modified (newest first):**
+1. groups/grp04/usr005/params/audio.py (2026-10-11 23:05)
+2. groups/grp04/usr005/job_data.txt (2026-10-11 22:29)
+3. groups/grp04/usr005/params/protein/genome_shard/results_raw/profile.csv (2026-10-11 21:34)
+4. groups/grp05/usr012/output/weights/grid_final/audio_part/build_video.py (2026-10-11 20:20)
+5. groups/grp03/usr004/part_epoch/climate_particle.png (2026-10-11 18:22)
+6. groups/grp03/usr011/lattice/run_protein/notes/stage.png (2026-10-11 17:36)
+7. groups/grp05/usr008/cache_text/signal_ocean/plots_protein/lib/shard_raw/config_trace.dat (2026-10-11 12:40)
+8. groups/grp04/usr005/params/corpus_old.json (2026-10-11 12:23)
+9. groups/grp03/usr004/scratch_stage/run_checkpoint.gz (2026-10-11 05:37)
+10. groups/grp04/usr006/ocean/corpus_clean-042.txt (2026-10-11 03:47)
+
+All of these paths start with `eval_master/`. The rest of the 261 run back to mid-September. Some of the larger recent ones are groups/grp03/shared/tmp_archive-543.txt (2.6 MB), groups/grp01/usr009/results/draft_sample-478.log (2.3 MB) and groups/grp01/usr009/output_lib/cluster_batch/data_archive.txt (2.3 MB).
+
+I can give you the full list of all 261, filtered to one group or user, or sorted by size.

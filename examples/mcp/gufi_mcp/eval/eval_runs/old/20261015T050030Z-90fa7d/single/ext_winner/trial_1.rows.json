@@ -1,0 +1,32 @@
+{
+  "ordered_compare": true,
+  "row_order": "compared order (as returned)",
+  "expected": [
+    [
+      "log",
+      1410
+    ]
+  ],
+  "actual": [
+    [
+      "txt",
+      159
+    ]
+  ],
+  "missing_from_actual": [
+    [
+      "log",
+      1410
+    ]
+  ],
+  "unexpected_in_actual": [
+    [
+      "txt",
+      159
+    ]
+  ],
+  "expected_row_count": 1,
+  "actual_row_count": 1,
+  "gt_duration_ms": 31.034157998874434,
+  "agent_duration_ms": 30.134
+}

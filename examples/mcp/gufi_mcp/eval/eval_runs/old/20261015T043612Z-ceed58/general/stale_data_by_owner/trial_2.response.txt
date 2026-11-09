@@ -1,0 +1,21 @@
+The following table summarizes the total amount of data for each user in the `eval_master` index that has not been modified in over 90 days:
+
+| User ID | File Count | Total Size (bytes) |
+|---------|------------|---------------------|
+| 3001    | 568        | 130,383,073         |
+| 3002    | 600        | 1,115,271,498       |
+| 3003    | 740        | 211,616,117         |
+| 3004    | 538        | 121,896,535         |
+| 3005    | 548        | 129,455,541         |
+| 3006    | 692        | 164,559,554         |
+| 3007    | 726        | 172,097,835         |
+| 3008    | 706        | 1,297,790,299       |
+| 3009    | 648        | 135,386,976         |
+| 3010    | 664        | 176,247,414         |
+| 3011    | 660        | 135,119,814         |
+| 3012    | 731        | 1,470,506,902       |
+| 3013    | 738        | 187,044,355         |
+| 3014    | 340        | 1,336,528,954       |
+| 3015    | 531        | 694,524,185         |
+
+This data includes the count of files and the cumulative size for each user that have not been modified in the last 90 days.

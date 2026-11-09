@@ -1,0 +1,43 @@
+{
+  "scenario": "not_modified_n_days",
+  "trial": 1,
+  "pass": false,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "mtime INT64",
+    "scatter_sql": [
+      "SELECT mtime FROM vrpentries WHERE type = 'f' AND mtime < 1791763200 - 60 * 86400"
+    ],
+    "gather_shape": "n INT64",
+    "gather_sql": "SELECT COUNT(*) FROM intermediate",
+    "final_sql": "SELECT SUM(n) AS n FROM aggregate"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT COUNT(*) FROM vrpentries WHERE type = 'f' AND mtime < 1697068800"
+    ],
+    "scatter_shape": "count INT64",
+    "gather_sql": "SELECT SUM(count) FROM intermediate",
+    "gather_shape": "total INT64",
+    "final_sql": "SELECT total FROM aggregate"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT COUNT(*) FROM vrpentries WHERE type = 'f' AND mtime < 1697068800"
+      ],
+      "scatter_shape": "count INT64",
+      "gather_sql": "SELECT SUM(count) FROM intermediate",
+      "gather_shape": "total INT64",
+      "final_sql": "SELECT total FROM aggregate"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 12,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "row count 12 != expected 1"
+}

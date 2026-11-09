@@ -1,0 +1,12 @@
+All **9,989** regular files in eval_master have been read since their contents were last changed. Every file's last access time (atime) is later than its last modification time (mtime).
+
+How you read "changed" matters, though:
+
+| Meaning of "changed" | Files read since then |
+|---|---|
+| Contents last modified (mtime) | **9,989** of 9,989 (all of them) |
+| Status last changed (ctime: permissions, owner, renames and so on) | **0** of 9,989 |
+
+For every file, the status-change time is later than the last access time, by between about 8.6 hours and about 365 days. One likely cause is that the files had their status changed after they were last read, for example by a copy or restore that set the access and modification times.
+
+Symlinks and directories aren't counted.

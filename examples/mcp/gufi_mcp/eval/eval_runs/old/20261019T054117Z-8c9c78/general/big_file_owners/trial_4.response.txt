@@ -1,0 +1,15 @@
+Here are the owners and paths of files over 1 GB in the `eval_master` index:
+
+1. **Owner UID 3008**
+   - **File Path:** `eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt`
+   
+2. **Owner UID 3014**
+   - **File Path:** `eval_master/groups/grp01/usr014/clean/step/old.log`
+   
+3. **Owner UID 3001**
+   - **File Path:** `eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py`
+   
+4. **Owner UID 3012**
+   - **File Path:** `eval_master/groups/grp05/usr012/output/scratch.c`
+
+Each owner has one file exceeding 1 GB.

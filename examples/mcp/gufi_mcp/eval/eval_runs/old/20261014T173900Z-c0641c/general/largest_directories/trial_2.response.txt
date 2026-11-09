@@ -1,0 +1,16 @@
+The directories in `eval_master` that hold the most data directly inside them, along with their total sizes in bytes, are as follows:
+
+1. **Directory 1:** 2,266,517,017 bytes
+2. **Directory 2:** 1,866,298,781 bytes
+3. **Directory 3:** 1,484,828,749 bytes
+4. **Directory 4:** 1,455,040,392 bytes
+5. **Directory 5:** 255,745,930 bytes
+6. **Directory 6:** 222,405,438 bytes
+7. **Directory 7:** 218,507,115 bytes
+8. **Directory 8:** 216,507,255 bytes
+9. **Directory 9:** 214,559,077 bytes
+10. **Directory 10:** 206,072,718 bytes
+11. **Directory 11:** 203,795,534 bytes
+12. **Directory 12:** 187,424,309 bytes
+
+These sizes indicate the total logical file size contained within each of these directories directly.

@@ -1,0 +1,20 @@
+There are five group directories under `eval_master/groups/`, and together they hold **8.19 GiB in 9,989 files and 256 directories**. grp05 is the largest by far at about 40% of the total.
+
+| Group | Space used (apparent size) | Bytes | Directories* | Files | Symlinks |
+|---|---|---|---|---|---|
+| grp05 | 3.26 GiB | 3,497,973,533 | 52 | 2,100 | 63 |
+| grp01 | 1.61 GiB | 1,730,852,644 | 39 | 1,838 | 56 |
+| grp03 | 1.45 GiB | 1,560,356,675 | 65 | 1,879 | 56 |
+| grp02 | 1.41 GiB | 1,510,437,987 | 52 | 2,175 | 65 |
+| grp04 | 475 MiB | 498,081,476 | 48 | 1,997 | 60 |
+| **Total** | **8.19 GiB** | **8,797,702,315** | **256** | **9,989** | **300** |
+
+\*The directory count includes the group directory itself, so grp01 has 38 subdirectories under it.
+
+**What stands out:**
+- **grp05** uses about twice the space of any other group, but its file count is about the same as the others.
+- **grp02** has the most files (2,175) but ranks fourth for space, so its files tend to be smaller.
+- **grp03** has the deepest or widest directory tree (65 directories), even though its file count is average.
+- **grp04** uses the least space by a wide margin (under 0.5 GiB), yet it still has close to 2,000 files. Its files are small on average, around 250 KB each.
+
+The sizes are the total logical (apparent) bytes of the files, not the disk blocks they actually take up. I checked them a second way with `gufi_du --apparent-size`, and the per-group totals matched.

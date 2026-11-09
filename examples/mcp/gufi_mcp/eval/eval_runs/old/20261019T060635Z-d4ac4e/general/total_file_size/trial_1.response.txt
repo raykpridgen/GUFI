@@ -1,0 +1,3 @@
+The regular files in eval_master add up to **8,797,702,315 bytes** (about 8.8 GB, or 8.19 GiB). There are 9,989 of them.
+
+This figure is the total of the files' logical sizes. It leaves out symlinks and the directories themselves. I also tried GUFI's built-in total-filesize statistic as a cross-check, but it failed with a user-lookup (`getpwuid`) error, so I couldn't confirm the number that way.

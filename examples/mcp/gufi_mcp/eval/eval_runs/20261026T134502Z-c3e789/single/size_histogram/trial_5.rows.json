@@ -1,0 +1,88 @@
+{
+  "ordered_compare": false,
+  "row_order": "compared order (both sides sorted)",
+  "expected": [
+    [
+      "B",
+      4359
+    ],
+    [
+      "G",
+      4
+    ],
+    [
+      "K",
+      4286
+    ],
+    [
+      "M",
+      837
+    ],
+    [
+      "Zero",
+      503
+    ]
+  ],
+  "actual": [
+    [
+      "<= 1G",
+      837
+    ],
+    [
+      "<= 1K",
+      5163
+    ],
+    [
+      "<= 1M",
+      4285
+    ],
+    [
+      "> 1G",
+      4
+    ]
+  ],
+  "missing_from_actual": [
+    [
+      "B",
+      4359
+    ],
+    [
+      "G",
+      4
+    ],
+    [
+      "K",
+      4286
+    ],
+    [
+      "M",
+      837
+    ],
+    [
+      "Zero",
+      503
+    ]
+  ],
+  "unexpected_in_actual": [
+    [
+      "<= 1G",
+      837
+    ],
+    [
+      "<= 1K",
+      5163
+    ],
+    [
+      "<= 1M",
+      4285
+    ],
+    [
+      "> 1G",
+      4
+    ]
+  ],
+  "expected_row_count": 5,
+  "actual_row_count": 4,
+  "gt_duration_ms": 86.11215999553679,
+  "agent_duration_ms": 46.665
+}

@@ -1,0 +1,163 @@
+{
+  "scenario": "top10_size_global",
+  "trial": 1,
+  "pass": false,
+  "aggregate_revision_count": 12,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "path TEXT, size INT64",
+    "scatter_sql": [
+      "SELECT rpath(sname, sroll, name), size FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "path TEXT, size INT64",
+    "gather_sql": "SELECT path, size FROM intermediate",
+    "final_sql": "SELECT path, size FROM aggregate ORDER BY size DESC LIMIT 10"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT gid, size FROM vrpentries WHERE type = 'f'"
+    ],
+    "scatter_shape": "gid INT64, size INT64",
+    "gather_sql": "SELECT gid, SUM(size) AS total_size FROM intermediate GROUP BY gid",
+    "gather_shape": "gid INT64, total_size INT64",
+    "final_sql": "SELECT total_size FROM aggregate ORDER BY total_size DESC"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT gid, size, sname, sroll FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "gid INT64, size INT64, sname TEXT, sroll INT64",
+      "gather_sql": "SELECT gid, SUM(size) AS total_size FROM intermediate GROUP BY gid",
+      "gather_shape": "gid INT64, total_size INT64",
+      "final_sql": "SELECT rpath(sname, sroll) AS full_path, total_size FROM aggregate ORDER BY total_size DESC LIMIT 10"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT gid, size, sname, sroll FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "gid INT64, size INT64, sname TEXT, sroll INT64",
+      "gather_sql": "SELECT gid, SUM(size) AS total_size FROM intermediate GROUP BY gid",
+      "gather_shape": "gid INT64, total_size INT64",
+      "final_sql": "SELECT SUM(total_size) AS total_size FROM aggregate"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT gid, name, size, sroll, sname FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "gid INT64, name TEXT, size INT64, sroll INT64, sname TEXT",
+      "gather_sql": "SELECT gid, SUM(size) AS total_size FROM intermediate GROUP BY gid",
+      "gather_shape": "gid INT64, total_size INT64",
+      "final_sql": "SELECT rpath(sname, sroll) AS full_path, total_size FROM aggregate ORDER BY total_size DESC LIMIT 10"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT gid, size FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "gid INT64, size INT64",
+      "gather_sql": "SELECT gid, SUM(size) AS total_size FROM intermediate GROUP BY gid",
+      "gather_shape": "gid INT64, total_size INT64",
+      "final_sql": "SELECT SUM(total_size) AS total_size FROM aggregate"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT gid, size, sname, sroll FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "gid INT64, size INT64, sname TEXT, sroll INT64",
+      "gather_sql": "SELECT gid, SUM(size) AS total_size FROM intermediate GROUP BY gid",
+      "gather_shape": "gid INT64, total_size INT64",
+      "final_sql": "SELECT rpath(sname, sroll) AS full_path, total_size FROM aggregate ORDER BY total_size DESC LIMIT 10"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT gid, size FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "gid INT64, size INT64",
+      "gather_sql": "SELECT gid, SUM(size) AS total_size FROM intermediate GROUP BY gid",
+      "gather_shape": "gid INT64, total_size INT64",
+      "final_sql": "SELECT gid, total_size FROM aggregate ORDER BY total_size DESC LIMIT 10"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT gid, size, sname, sroll FROM vrpentries WHERE type = 'f' AND gid IN (2005, 2001, 2003, 2002)"
+      ],
+      "scatter_shape": "gid INT64, size INT64, sname TEXT, sroll INT64",
+      "gather_sql": "SELECT gid, SUM(size) AS total_size FROM intermediate GROUP BY gid",
+      "gather_shape": "gid INT64, total_size INT64",
+      "final_sql": "SELECT rpath(sname, sroll) AS full_path, total_size FROM aggregate ORDER BY total_size DESC LIMIT 10"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT gid, name, size, sroll, sname FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "gid INT64, name TEXT, size INT64, sroll INT64, sname TEXT",
+      "gather_sql": "SELECT gid, SUM(size) AS total_size FROM intermediate GROUP BY gid",
+      "gather_shape": "gid INT64, total_size INT64",
+      "final_sql": "SELECT rpath(sname, sroll) AS full_path, total_size FROM aggregate ORDER BY total_size DESC LIMIT 10"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT gid, size FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "gid INT64, size INT64",
+      "gather_sql": "SELECT gid, SUM(size) AS total_size FROM intermediate GROUP BY gid",
+      "gather_shape": "gid INT64, total_size INT64",
+      "final_sql": "SELECT gid, total_size FROM aggregate ORDER BY total_size DESC LIMIT 10"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT gid, name, size, sroll, sname FROM vrpentries WHERE type = 'f' AND gid IN (2005, 2001, 2003, 2002)"
+      ],
+      "scatter_shape": "gid INT64, name TEXT, size INT64, sroll INT64, sname TEXT",
+      "gather_sql": "SELECT gid, SUM(size) AS total_size FROM intermediate GROUP BY gid",
+      "gather_shape": "gid INT64, total_size INT64",
+      "final_sql": "SELECT rpath(sname, sroll) AS full_path, total_size FROM aggregate ORDER BY total_size DESC LIMIT 10"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT gid, name, size FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "gid INT64, name TEXT, size INT64",
+      "gather_sql": "SELECT gid, SUM(size) AS total_size FROM intermediate GROUP BY gid",
+      "gather_shape": "gid INT64, total_size INT64",
+      "final_sql": "SELECT total_size FROM aggregate ORDER BY total_size DESC LIMIT 10"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT gid, name, size, sroll, sname FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "gid INT64, name TEXT, size INT64, sroll INT64, sname TEXT",
+      "gather_sql": "SELECT gid, SUM(size) AS total_size FROM intermediate GROUP BY gid",
+      "gather_shape": "gid INT64, total_size INT64",
+      "final_sql": "SELECT rpath(sname, sroll) AS full_path, total_size FROM aggregate ORDER BY total_size DESC LIMIT 10"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT gid, size FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "gid INT64, size INT64",
+      "gather_sql": "SELECT gid, SUM(size) AS total_size FROM intermediate GROUP BY gid",
+      "gather_shape": "gid INT64, total_size INT64",
+      "final_sql": "SELECT total_size FROM aggregate ORDER BY total_size DESC"
+    }
+  ],
+  "gt_row_count": 10,
+  "agent_row_count": 58,
+  "ordered_compare": true,
+  "column_permutation": null,
+  "reason": "row count 58 != expected 10"
+}

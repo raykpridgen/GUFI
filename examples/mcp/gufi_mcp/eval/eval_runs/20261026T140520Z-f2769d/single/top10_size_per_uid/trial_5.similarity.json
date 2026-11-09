@@ -1,0 +1,57 @@
+{
+  "scenario": "top10_size_per_uid",
+  "trial": 5,
+  "pass": true,
+  "passed_on_attempt": 1,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "uid INT64, path TEXT, size INT64",
+    "per_directory_sql": [
+      "SELECT uid, path, size FROM vrpentries WHERE type = 'f'"
+    ],
+    "partial_shape": "uid INT64, path TEXT, size INT64",
+    "partial_sql": "SELECT uid, path, size FROM per_directory",
+    "final_sql": "SELECT uid, path, size FROM (SELECT uid, path, size, ROW_NUMBER() OVER (PARTITION BY uid ORDER BY size DESC) AS rn FROM partial) WHERE rn <= 10"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT uid, path, size FROM vrpentries WHERE type = 'f'"
+    ],
+    "per_directory_shape": "uid INT64, path TEXT, size INT64",
+    "partial_sql": "SELECT uid, path, size FROM per_directory",
+    "partial_shape": "uid INT64, path TEXT, size INT64",
+    "final_sql": "SELECT uid, path, size FROM (SELECT uid, path, size, ROW_NUMBER() OVER (PARTITION BY uid ORDER BY size DESC) AS rn FROM partial) WHERE rn <= 10;"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT uid, path, size FROM vrpentries WHERE type = 'f'"
+      ],
+      "per_directory_shape": "uid INT64, path TEXT, size INT64",
+      "partial_sql": "SELECT uid, path, size FROM per_directory",
+      "partial_shape": "uid INT64, path TEXT, size INT64",
+      "final_sql": "SELECT uid, path, size FROM (SELECT uid, path, size, ROW_NUMBER() OVER (PARTITION BY uid ORDER BY size DESC) AS rn FROM partial) WHERE rn <= 10;"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": true,
+      "passed": true,
+      "row_count": 150,
+      "reason": "match"
+    }
+  ],
+  "gt_row_count": 150,
+  "agent_row_count": 150,
+  "ordered_compare": false,
+  "column_permutation": [
+    0,
+    1,
+    2
+  ],
+  "reason": "match (attempt 1 of 1)"
+}

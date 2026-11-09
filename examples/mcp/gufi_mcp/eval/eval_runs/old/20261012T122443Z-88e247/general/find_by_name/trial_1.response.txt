@@ -1,0 +1,21 @@
+Here are the HDF5 files (.h5) under the `eval_master` index whose names contain 'sim', along with their sizes:
+
+| Path                                                                           | Size (bytes) |
+|--------------------------------------------------------------------------------|--------------|
+| `eval_master/groups/grp02/shared/sim_lattice.h5`                            | 2            |
+| `eval_master/groups/grp05/usr012/sim_input.h5`                              | 258045       |
+| `eval_master/groups/grp01/usr014/clean/particle_sim.h5`                     | 27395        |
+| `eval_master/groups/grp04/usr010/profile/eval/trace_sim.h5`                 | 3796043      |
+| `eval_master/groups/grp02/usr002/src_slice/final/part_sim.h5`               | 4            |
+| `eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/clean_sim.h5` | 292          |
+| `eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/old/particle_sim-560.h5` | 3            |
+| `eval_master/groups/grp01/usr003/checkpoint/report/params/sim_climate.h5`   | 1133031      |
+| `eval_master/groups/grp04/usr010/profile/paper/params/sim-704.h5`           | 3            |
+| `eval_master/groups/grp05/usr015/clean/signal/output/src/phase/report_sim.h5` | 12          |
+| `eval_master/groups/grp05/usr05/usr012/output/weights/lib/sample_sim-247.h5` | 335519      |
+| `eval_master/groups/grp01/usr009/output_lib/cluster_batch/output/gpu_sim/notes/slice_sim-325.h5` | 480           |
+| `eval_master/groups/grp05/usr012/output/weights/grid_final/backup_sim.h5`   | 2            |
+| `eval_master/groups/grp03/usr011/lattice/run_protein/archive_params/stage_raw/profile/sim_cache.h5` | 106214       |
+| `eval_master/groups/grp05/usr012/output/weights/grid_final/audio_part/stage/sim.h5` | 7973        |
+
+This list indicates the locations and sizes of each matching file.

@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent
 os.environ.setdefault("SCHEMAFILE", str(ROOT / "schema_hints.json"))
 os.environ.setdefault("GUFIVTLIB", "gufi_vt")
 os.environ.setdefault("GUFI_INDEX_ROOT", str(ROOT))
@@ -175,9 +175,9 @@ def test_per_directory_must_not_be_empty() -> None:
     ("SELECT size FROM entries ORDER BY size", "ORDER"),
     ("SELECT size FROM entries LIMIT 3", "LIMIT"),
     ("SELECT size FROM entries LIMIT 3 OFFSET 2", "LIMIT"),
-    ("SELECT ROW_NUMBER() OVER (ORDER BY size) FROM entries", "ORDER BY is not allowed in subqueries or window"),
+    ("SELECT ROW_NUMBER() OVER (ORDER BY size) FROM entries", "ORDER BY is only allowed in final_sql"),
     ("SELECT size FROM vrpentries WHERE size IN (SELECT size FROM vrpentries ORDER BY size LIMIT 5)",
-     "not allowed in subqueries or window"),
+     "only allowed in final_sql"),
     ("SELECT sname FROM vrpentries", "sname is internal rollup bookkeeping"),
     ("SELECT size FROM vrpentries WHERE sroll = 0", "sroll is internal rollup bookkeeping"),
     ("SELECT rpath(sname, sroll, name) FROM vrpentries", "sname is internal rollup bookkeeping"),
@@ -259,7 +259,13 @@ def _top_n(per_directory: str = "SELECT path, size FROM vrpentries WHERE type = 
     {"per_directory_sql": ["SELECT path, size FROM vrpentries ORDER BY size LIMIT 10",
                            "SELECT path, totsize FROM vrsummary"],
      "final_sql": "SELECT path, size FROM partial ORDER BY size LIMIT 10"},
+@pytest.mark.parametrize("partial_sql", [
+    "SELECT SUM(size) FROM per_directory ORDER BY 1",
+    "SELECT SUM(size) FROM per_directory LIMIT 1",
+    "SELECT SUM(size) FROM (SELECT size FROM per_directory ORDER BY size DESC LIMIT 10)",
 ])
+def test_gather_rejects_ordering(partial_sql: str) -> None:
+    _invalid("only allowed in final_sql", partial_sql=partial_sql)
 def test_top_n_prefilter_is_allowed(overrides: dict) -> None:
     util.GufiAggregateQuery.model_validate(_payload(**_top_n(**overrides)))
 

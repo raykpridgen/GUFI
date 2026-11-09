@@ -1,0 +1,7 @@
+The number of files owned by each group in the `eval_master` index is as follows:
+
+- Group 2001: 12 files
+- Group 2002: 12 files
+- Group 2003: 12 files
+- Group 2004: 12 files
+- Group 2005: 12 files

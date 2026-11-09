@@ -1,0 +1,18 @@
+The directories in the `eval_master` index that hold the most data directly inside them are as follows:
+
+1. **eval_master/groups**
+   - Size: **8.2M**
+
+2. **eval_master/groups/grp05**
+   - Size: **3.3M**
+
+3. **eval_master/groups/grp02**
+   - Size: **1.4M**
+
+4. **eval_master/groups/grp03**
+   - Size: **1.5M**
+
+5. **eval_master/groups/grp01**
+   - Size: **1.6M**
+
+These directories contain the largest amounts of data directly.

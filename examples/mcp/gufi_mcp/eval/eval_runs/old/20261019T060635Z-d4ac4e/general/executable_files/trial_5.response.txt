@@ -1,0 +1,38 @@
+eval_master has **1,005 executable regular files**, about **281 MB** (281,230,598 bytes) in total. That's roughly 10% of the 9,989 regular files in the index.
+
+**How I found them:** I counted a regular file (`type = 'f'`) as executable if any of its owner, group or other execute bits is set. All 1,005 matches have the same mode, **0755** (`-rwxr-xr-x`), so anyone can run them. Every other file is 0644, 0640 or 0600, with no execute bits at all. Symlinks aren't included.
+
+**What they look like:** Most of them aren't programs. Only a few are scripts or source (`.py`, `.c`). The rest are data files like `.csv`, `.txt`, `.log`, `.json`, `.h5`, `.png`, `.gz` and `.dat`, plus some with no extension. This looks like permissions set too broadly (for example, a umask or copy that kept 0755), not real executables. Some examples:
+- `eval_master/groups/grp01/shared/analysis.csv`
+- `eval_master/groups/grp01/usr003/checkpoint/build`
+- `eval_master/groups/grp01/usr003/checkpoint/protein_output.py`
+- `eval_master/groups/grp01/usr009/output_lib/cluster_batch/paper_ocean-411.py` (2.9 MB)
+- `eval_master/groups/grp01/usr009/output_lib/cluster_batch/output/train/input-624.log` (3.4 MB)
+
+**By owner (uid / gid → files, size):**
+| uid | gid | files | size |
+|---|---|---|---|
+| 3003 | 2001 | 86 | 14.3 MB |
+| 3013 | 2002 | 77 | 12.9 MB |
+| 3012 | 2005 | 74 | 27.0 MB |
+| 3008 | 2005 | 73 | 22.9 MB |
+| 3009 | 2001 | 73 | 20.6 MB |
+| 3011 | 2003 | 73 | 11.8 MB |
+| 3001 | 2003 | 72 | 19.2 MB |
+| 3007 | 2002 | 71 | 14.4 MB |
+| 3002 | 2002 | 70 | 18.6 MB |
+| 3006 | 2004 | 70 | 16.4 MB |
+| 3010 | 2004 | 62 | 21.2 MB |
+| 3015 | 2005 | 59 | 16.9 MB |
+| 3004 | 2003 | 58 | 18.9 MB |
+| 3005 | 2004 | 58 | 23.9 MB |
+| 3014 | 2001 | 29 | 22.2 MB |
+
+**Directories with the most of them:**
+- `groups/grp01/usr003/checkpoint/report/notes`: 19
+- `groups/grp01/usr003/checkpoint/report/params`: 15
+- `groups/grp01/usr003/text_grid`: 14
+- `groups/grp04/usr005/params`, `groups/grp02/shared`, `groups/grp01/usr003/checkpoint`: 12 each
+- `groups/grp04/shared`, `groups/grp02/usr013/chunk`, `groups/grp01/usr003/checkpoint/report`: 11 each
+
+The full list of 1,005 paths is too long to show here (my listing query got cut off). I can give you the complete list filtered to one user, group or directory, or only the files that look like scripts.

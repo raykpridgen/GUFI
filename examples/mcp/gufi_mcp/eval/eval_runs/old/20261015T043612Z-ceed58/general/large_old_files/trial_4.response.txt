@@ -1,0 +1,19 @@
+Here are the files in the `eval_master` index that are over 500 MB and haven't been modified in more than a year, listed from biggest to smallest:
+
+1. **Path:** `eval_master/groups/grp05/usr012/output/scratch.c`  
+   **Size:** 1,261,921,083 bytes  
+   **Last Modified:** 2025-05-18 (Epoch: 1755978725)
+
+2. **Path:** `eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt`  
+   **Size:** 1,113,310,933 bytes  
+   **Last Modified:** 2024-07-22 (Epoch: 1726774637)
+
+3. **Path:** `eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/final/trace_cluster-666.txt`  
+   **Size:** 959,252,531 bytes  
+   **Last Modified:** 2025-08-20 (Epoch: 1734745504)
+
+4. **Path:** `eval_master/groups/grp05/usr015/clean/particle_build/src/train_stage-240.dat`  
+   **Size:** 564,253,616 bytes  
+   **Last Modified:** 2025-05-02 (Epoch: 1738453342)
+
+If you need any further information, feel free to ask!

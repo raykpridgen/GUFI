@@ -1,0 +1,9 @@
+Here’s the breakdown of files in the `eval_master` index by how long ago they were last modified:
+
+- **> 1 year ago**: 6825 files
+- **> 30 days ago**: 3195 files
+- **> 7 days ago**: 199 files
+- **> 24 hours ago**: 54 files
+- **< 24 hours ago**: 16 files
+
+This categorization gives a clear view of the file age distribution in the index.

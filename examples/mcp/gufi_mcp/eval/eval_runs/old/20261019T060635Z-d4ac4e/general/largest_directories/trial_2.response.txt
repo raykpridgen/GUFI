@@ -1,0 +1,20 @@
+These are the directories in **eval_master** with the most data stored directly in them. Files in their subdirectories are not counted.
+
+| # | Directory | Data directly inside | Files | Links | Largest single file |
+|---|---|---|---|---|---|
+| 1 | `groups/grp05/usr012/output` | 1.28 GB (1,276,200,080 B) | 69 | 4 | 1.26 GB |
+| 2 | `groups/grp01/usr014/clean/step` | 1.25 GB (1,247,319,382 B) | 45 | 2 | 1.23 GB |
+| 3 | `groups/grp03/usr001/chunk/audio/archive` | 1.13 GB (1,127,052,361 B) | 31 | 1 | 1.12 GB |
+| 4 | `groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output` | 1.12 GB (1,123,410,269 B) | 46 | 0 | 1.11 GB |
+| 5 | `groups/grp02/usr002/src_slice/checkpoint/results_neuron/final` | 977 MB (977,072,363 B) | 53 | 1 | 959 MB |
+| 6 | `groups/grp05/usr015/clean/particle_build/src` | 565 MB (564,835,884 B) | 17 | 0 | 564 MB |
+| 7 | `groups/grp01/usr003/checkpoint/report/params` | 48.7 MB | 126 | 2 | 4.2 MB |
+| 8 | `groups/grp01/usr003/checkpoint` | 42.5 MB | 127 | 3 | 3.8 MB |
+| 9 | `groups/grp01/usr003/text_grid` | 38.8 MB | 125 | 6 | 3.7 MB |
+| 10 | `groups/grp01/usr003/checkpoint/report` | 37.2 MB | 133 | 6 | 3.5 MB |
+
+Sizes are in decimal units (1 GB = 10⁹ bytes).
+
+- **Six directories hold almost all the data.** Each holds between 0.56 and 1.28 GB. The next directory down holds less than 50 MB.
+- **In each of those six, one file makes up nearly all of it.** For example, in `grp05/usr012/output` a single 1.26 GB file accounts for about 99% of the 1.28 GB. If you're trying to free up space, those six files are the place to start.
+- **Below the top six, `grp01/usr003` stands out.** Several of its directories each hold 30–50 MB spread over 125 or more smaller files. `groups/grp02/shared` (34.7 MB) and `groups/grp04/shared` (30.5 MB) come next.

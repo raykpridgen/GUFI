@@ -1,0 +1,19 @@
+Here's the breakdown for the five group directories under `eval_master/groups/`, sorted by space used:
+
+| Group | Space used | Directories | Files | Symlinks |
+|---|---|---|---|---|
+| grp05 | 3.26 GiB (3,497,973,533 bytes) | 52 | 2,100 | 63 |
+| grp01 | 1.61 GiB (1,730,852,644 bytes) | 39 | 1,838 | 56 |
+| grp03 | 1.45 GiB (1,560,356,675 bytes) | 65 | 1,879 | 56 |
+| grp02 | 1.41 GiB (1,510,437,987 bytes) | 52 | 2,175 | 65 |
+| grp04 | 0.46 GiB (498,081,476 bytes) | 48 | 1,997 | 60 |
+| **Total** | **8.21 GiB (8,797,702,315 bytes)** | **256** | **9,989** | **300** |
+
+- **grp05 uses the most space:** about 40% of the total, roughly twice as much as any other group.
+- **grp04 uses the least space** (under 0.5 GiB) even though it has about as many files as the others, so its files are much smaller on average.
+- **grp02 has the most files** (2,175). **grp03 has the most directories** (65). grp01 has the fewest of both.
+
+Notes:
+- **Space** is the total logical size of the files. A disk-usage check gave the same numbers (to within rounding), so the totals are consistent.
+- **Directory counts** include the group directory itself, so grp01 has 38 subdirectories plus itself.
+- **Files** means regular files only. Symlinks are counted separately.

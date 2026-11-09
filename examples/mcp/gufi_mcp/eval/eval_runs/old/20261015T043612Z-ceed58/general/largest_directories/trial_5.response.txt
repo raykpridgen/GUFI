@@ -1,0 +1,14 @@
+Here are the directories in `eval_master` that hold the most data directly inside them, listed by their total sizes:
+
+1. **Path**: `eval_master/groups/grp05/usr012/output` - **Total Size**: 1,276,200,080 bytes
+2. **Path**: `eval_master/groups/grp01/usr014/clean/step` - **Total Size**: 1,247,319,382 bytes
+3. **Path**: `eval_master/groups/grp03/usr001/chunk/audio/archive` - **Total Size**: 1,127,052,361 bytes
+4. **Path**: `eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output` - **Total Size**: 1,123,410,269 bytes
+5. **Path**: `eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/final` - **Total Size**: 977,072,363 bytes
+6. **Path**: `eval_master/groups/grp05/usr015/clean/particle_build/src` - **Total Size**: 564,835,884 bytes
+7. **Path**: `eval_master/groups/grp01/usr003/checkpoint/report/params` - **Total Size**: 48,707,332 bytes
+8. **Path**: `eval_master/groups/grp01/usr003/checkpoint` - **Total Size**: 42,501,701 bytes
+9. **Path**: `eval_master/groups/grp01/usr003/text_grid` - **Total Size**: 38,777,367 bytes
+10. **Path**: `eval_master/groups/grp01/usr003/checkpoint/report` - **Total Size**: 37,241,938 bytes
+
+These directories are ranked by their total size, showcasing where the majority of data is stored within `eval_master`.

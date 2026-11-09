@@ -1,0 +1,43 @@
+{
+  "scenario": "age_histogram",
+  "trial": 2,
+  "pass": false,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "cat TEXT",
+    "scatter_sql": [
+      "SELECT agecat(mtime) FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "cat TEXT, count INT64",
+    "gather_sql": "SELECT cat, COUNT(*) FROM intermediate GROUP BY cat",
+    "final_sql": "SELECT cat, SUM(count) AS count FROM aggregate GROUP BY cat"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT mtime FROM vrpentries"
+    ],
+    "scatter_shape": "mtime INT64",
+    "gather_sql": "SELECT CASE \n        WHEN mtime >= 1791763200 - 0 * 86400 THEN 'Modified in last 0 days' \n        WHEN mtime >= 1791763200 - 7 * 86400 THEN 'Modified in last 7 days' \n        WHEN mtime >= 1791763200 - 30 * 86400 THEN 'Modified in last 30 days' \n        WHEN mtime >= 1791763200 - 90 * 86400 THEN 'Modified in last 90 days' \n        ELSE 'Older than 90 days' \n    END AS modification_period, COUNT(*) AS file_count \n    FROM intermediate \n    GROUP BY modification_period",
+    "gather_shape": "modification_period TEXT, file_count INT64",
+    "final_sql": "SELECT modification_period, SUM(file_count) AS total_files \n    FROM aggregate \n    GROUP BY modification_period"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT mtime FROM vrpentries"
+      ],
+      "scatter_shape": "mtime INT64",
+      "gather_sql": "SELECT CASE \n        WHEN mtime >= 1791763200 - 0 * 86400 THEN 'Modified in last 0 days' \n        WHEN mtime >= 1791763200 - 7 * 86400 THEN 'Modified in last 7 days' \n        WHEN mtime >= 1791763200 - 30 * 86400 THEN 'Modified in last 30 days' \n        WHEN mtime >= 1791763200 - 90 * 86400 THEN 'Modified in last 90 days' \n        ELSE 'Older than 90 days' \n    END AS modification_period, COUNT(*) AS file_count \n    FROM intermediate \n    GROUP BY modification_period",
+      "gather_shape": "modification_period TEXT, file_count INT64",
+      "final_sql": "SELECT modification_period, SUM(file_count) AS total_files \n    FROM aggregate \n    GROUP BY modification_period"
+    }
+  ],
+  "gt_row_count": 4,
+  "agent_row_count": 4,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "values differ: 4 expected row(s) missing, 4 unexpected"
+}

@@ -1,0 +1,38 @@
+{
+  "ordered_compare": false,
+  "row_order": "compared order (both sides sorted)",
+  "expected": [
+    [
+      "Mos",
+      3071
+    ],
+    [
+      "Wks",
+      134
+    ],
+    [
+      "Yrs",
+      6784
+    ]
+  ],
+  "actual": [
+    [
+      "Mos",
+      3071
+    ],
+    [
+      "Wks",
+      134
+    ],
+    [
+      "Yrs",
+      6784
+    ]
+  ],
+  "missing_from_actual": [],
+  "unexpected_in_actual": [],
+  "expected_row_count": 3,
+  "actual_row_count": 3,
+  "gt_duration_ms": 92.21373400214361,
+  "agent_duration_ms": 41.43
+}

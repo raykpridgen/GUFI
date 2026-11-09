@@ -1,0 +1,31 @@
+I found **602 file names that appear more than once** in eval_master, covering 1,819 entries in total. I counted files and symlinks. Directories aren't included, and a name only counts as a repeat if it's exactly the same, including the extension (e.g. `cache.txt` and `cache.py` are separate names).
+
+**How many names repeat how often**
+| Times it appears | Number of names |
+|---|---|
+| 9 | 2 |
+| 8 | 4 |
+| 7 | 11 |
+| 6 | 23 |
+| 5 | 40 |
+| 4 | 83 |
+| 3 | 144 |
+| 2 | 295 |
+
+**9 times:** batch.csv, figures.log
+
+**8 times:** cache.txt, config.log, plots.csv, sweep.log
+
+**7 times:** cluster.txt, corpus.log, grid.csv, input.png, lib.py, mesh.txt, neuron.log, old.txt, report.csv, shard.log, weights.txt
+
+**6 times:** archive.txt, backup.dat, backup.lnk, bench.py, build.txt, cache.py, chunk.log, clean.dat, clean.log, config.py, final.dat, genome.log, gpu.csv, metrics.png, notes.log, ocean.txt, output.lnk, params.csv, results.log, run.txt, scratch.dat, src.log, train.dat
+
+**5 times:** audio.csv, audio.h5, backup.log, batch.txt, checkpoint.dat, chunk.lnk, climate.txt, corpus.txt, data.log, dataset.dat, eval.csv, field.log, fluid.png, genome.py, input.log, lib.json, neuron.png, node.lnk, notes.txt, old.py, params.json, part.txt, particle.log, phase.json, profile.lnk, report.txt, results.h5, results.lnk, scratch.log, signal.h5, signal.lnk, slice.py, src.py, stage, step.dat, step.log, step.png, survey.log, text.txt, tmp.py
+
+**4 times:** analysis.log, audio.py, backup.txt, batch.lnk, bench.dat, build.dat, build.log, checkpoint.csv, clean.csv, climate.lnk, climate.log, cluster.h5, cluster.log, cluster.py, code.txt, config, corpus, corpus.dat, data.h5, dataset.txt, draft.csv, draft.py, epoch.png, eval.txt, field.csv, field.h5, field.txt, figures.py, figures.txt, fluid.log, genome.csv, genome.png, gpu.json, gpu.lnk, gpu.txt, input.c, job.dat, job.h5, job.json, lattice.json, lattice.txt, layer.csv, layer.dat, lib.lnk, logs.csv, logs.py, mesh.json, metrics.lnk, model.log, node.csv, old.log, output.log, paper.csv, paper.h5, paper.png, paper.py, params.lnk, part.dat, phase.csv, phase.log, plots.dat, profile.log, profile.png, protein.json, raw.dat, raw.txt, results.txt, sample.dat, scratch.lnk, scratch.png, shard.dat, signal.csv, signal.json, sim.dat, sim.log, stage.csv, step.lnk, survey.dat, survey.py, text.log, tmp.h5, trace.lnk, video.lnk
+
+**3 times (144 names):** analysis.csv, analysis.dat, archive, archive.csv, archive.py, audio.log, audio.png, audio.txt, backup.csv, batch.png, batch.py, bench.json, bench.lnk, build.csv, cache.gz, cache.lnk, checkpoint.json, checkpoint.png, checkpoint.py, checkpoint.txt, chunk.csv, chunk.json, chunk.py, clean.txt, climate.csv, climate.py, cluster.c, cluster.json, cluster.lnk, code.json, code_node.txt, config.dat, config.h5, config.json, config.lnk, config.txt, corpus.lnk, data.lnk, data.py, dataset.h5, dataset.log, epoch.lnk, eval.gz, eval.json, field.lnk, figures.json, final.h5, final.log, final.py, genome.c, genome.lnk, gpu.h5, gpu_neuron.txt, grid.log, grid.png, grid.py, grid.txt, image.csv, image.py, input, job.py, job.txt, lattice.dat, layer.json, lib.log, lib.txt, logs.gz, mesh.csv, mesh.dat, metrics.dat, metrics.py, model.dat, model.lnk, model.txt, neuron.txt, node.json, node.png, node.py, notes.csv, notes.h5, notes.json, notes.lnk, ocean.dat, output.py, params.dat, params.txt, part.lnk, part.png, part.py, particle.csv, particle.h5, particle.lnk, particle.txt, phase.lnk, phase.txt, plots.gz, plots.json, plots.log, plots.txt, profile.csv, profile.h5, protein.csv, protein.lnk, protein.txt, raw, raw.json, report.log, report.png, results, run.c, run.gz, run.h5, run.lnk, run.log, run.py, sample.log, scratch.txt, signal.c, signal.log, signal.txt, slice.lnk, slice.log, src.h5, stage.txt, step, step.json, survey.c, survey.gz, survey.txt, sweep.dat, sweep.txt, tests.c, tests.py, text.csv, text.lnk, tmp.csv, trace.txt, trace_code.csv, train.lnk, train.txt, video.log, video.png, video.txt, weights.dat
+
+**2 times:** There are 295 of these, which is too many to list here. Some examples are .build.txt, .particle.py, analysis.c, archive_cache.py, backup_sweep.dat, chunk-691.log, config_signal.h5, epoch_neuron.c, layer_sample, params.h5, profile_output.c, shard_model.gz, tests.lnk, video_bench, weights_metrics.py and weights.py. I can give you the complete list or narrow it to one type (for example `.log` or `.h5`) if that helps.
+
+To see where any of these names are located, I can look up their full paths.

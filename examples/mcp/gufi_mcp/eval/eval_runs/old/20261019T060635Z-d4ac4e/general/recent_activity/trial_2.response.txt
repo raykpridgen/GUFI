@@ -1,0 +1,17 @@
+**335 regular files** in eval_master were read (accessed) in the past 7 days but haven't been modified in that time.
+
+I counted files whose last access (atime) was on or after 2026-10-05 00:00 UTC and whose last modification (mtime) was before then. I used the modification time because the status-change time (ctime) can't tell the files apart. All the files I sampled have the same ctime, 2026-10-12 08:36:43, and none of the 335 has a ctime older than 7 days. That timestamp is about 8.5 hours after "now," so it was probably set when the files were copied or the index was built, not by real changes. If you require ctime to be older than 7 days as well, the count is 0.
+
+Examples, most recently read first:
+
+| File | Size | Last read | Last modified |
+|---|---|---|---|
+| eval_master/groups/grp01/usr003/text_grid/build_figures | 55 B | 2026-10-11 23:37 | 2026-08-10 |
+| eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/train_ocean-267.c | 26 B | 2026-10-11 23:36 | 2026-08-24 |
+| eval_master/groups/grp05/shared/plots_code.log | 770,683 B | 2026-10-11 22:20 | 2024-08-16 |
+| eval_master/groups/grp03/usr004/stage/field_tests.dat | 1 B | 2026-10-11 22:20 | 2026-07-29 |
+| eval_master/groups/grp01/usr014/clean/step/figures_build.json | 72 B | 2026-10-11 22:19 | 2026-08-15 |
+| eval_master/groups/grp01/usr003/checkpoint/node.dat | 2,577 B | 2026-10-11 20:36 | 2026-09-01 |
+| eval_master/groups/grp02/usr007/sim_cluster/protein_image-802.json | 39,635 B | 2026-10-11 20:24 | 2026-09-22 |
+
+`plots_code.log` in grp05/shared stands out: it was read yesterday but hasn't been modified for over two years.

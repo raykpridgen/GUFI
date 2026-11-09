@@ -1,0 +1,26 @@
+There are **503 empty (0-byte) regular files** in eval_master. They're spread across 15 owners, all numeric UIDs from 3001 to 3015:
+
+| UID | Empty files |
+|---|---|
+| 3013 | 48 |
+| 3008 | 42 |
+| 3006 | 41 |
+| 3010 | 41 |
+| 3001 | 40 |
+| 3011 | 37 |
+| 3003 | 36 |
+| 3012 | 36 |
+| 3002 | 32 |
+| 3007 | 32 |
+| 3015 | 30 |
+| 3009 | 29 |
+| 3004 | 22 |
+| 3014 | 19 |
+| 3005 | 18 |
+| **Total** | **503** |
+
+No single owner stands out. UID 3013 has the most, at about 10% of the total, and the rest each have between 18 and 42.
+
+I can only give UIDs, not usernames. These UIDs aren't in the account database on the system that holds the index, so the lookup fails. The directories are named like `usr001` to `usr015`, which suggests UID 3001 is `usr001` and so on, but I haven't confirmed that.
+
+I counted regular files only (type `f`) with size 0, so symlinks and directories aren't included.

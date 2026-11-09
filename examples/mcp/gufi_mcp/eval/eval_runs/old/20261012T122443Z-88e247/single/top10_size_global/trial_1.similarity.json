@@ -1,0 +1,86 @@
+{
+  "scenario": "top10_size_global",
+  "trial": 1,
+  "pass": true,
+  "aggregate_revision_count": 4,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "path TEXT, size INT64",
+    "scatter_sql": [
+      "SELECT rpath(sname, sroll, name), size FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "path TEXT, size INT64",
+    "gather_sql": "SELECT path, size FROM intermediate",
+    "final_sql": "SELECT path, size FROM aggregate ORDER BY size DESC LIMIT 10"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT size, rpath(sname, sroll, name) AS full_path FROM vrpentries WHERE type = 'f'"
+    ],
+    "scatter_shape": "size INT64, full_path TEXT",
+    "gather_sql": "SELECT size, full_path FROM intermediate",
+    "gather_shape": "size INT64, full_path TEXT",
+    "final_sql": "SELECT full_path, size FROM aggregate ORDER BY size DESC LIMIT 10"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT size, sname, sroll FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "size INT64, sname TEXT, sroll TEXT",
+      "gather_sql": "SELECT size, COUNT(*) as count FROM intermediate GROUP BY size",
+      "gather_shape": "size INT64, count INT64",
+      "final_sql": "SELECT rpath(sname, sroll, size) AS full_path, size FROM aggregate ORDER BY size DESC LIMIT 10"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT size, rpath(sname, sroll, name) FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "size INT64, full_path TEXT",
+      "gather_sql": "SELECT size, COUNT(*) as count FROM intermediate GROUP BY size",
+      "gather_shape": "size INT64, count INT64",
+      "final_sql": "SELECT full_path, size FROM aggregate ORDER BY size DESC LIMIT 10"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT size, rpath(sname, sroll, name) FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "size INT64, full_path TEXT",
+      "gather_sql": "SELECT size, COUNT(*) as count FROM intermediate GROUP BY size",
+      "gather_shape": "size INT64, count INT64",
+      "final_sql": "SELECT full_path, size FROM aggregate ORDER BY size DESC LIMIT 10"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT size, rpath(sname, sroll, name) FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "size INT64, full_path TEXT",
+      "gather_sql": "SELECT size FROM intermediate",
+      "gather_shape": "size INT64",
+      "final_sql": "SELECT full_path, size FROM aggregate ORDER BY size DESC LIMIT 10"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT size, rpath(sname, sroll, name) AS full_path FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "size INT64, full_path TEXT",
+      "gather_sql": "SELECT size, full_path FROM intermediate",
+      "gather_shape": "size INT64, full_path TEXT",
+      "final_sql": "SELECT full_path, size FROM aggregate ORDER BY size DESC LIMIT 10"
+    }
+  ],
+  "gt_row_count": 10,
+  "agent_row_count": 10,
+  "ordered_compare": true,
+  "column_permutation": [
+    0,
+    1
+  ],
+  "reason": "match"
+}

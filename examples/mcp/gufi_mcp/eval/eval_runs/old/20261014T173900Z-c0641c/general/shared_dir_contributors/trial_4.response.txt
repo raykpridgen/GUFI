@@ -1,0 +1,34 @@
+The following users have put files in the `grp03's` shared directory in the `eval_master` index, along with the total size of the files they contributed:
+
+| User ID | Number of Files | Total Size (Bytes) |
+|---------|----------------|---------------------|
+| 3012    | 148            | 1,288,813,376       |
+| 3014    | 45             | 1,247,319,382       |
+| 3008    | 91             | 1,136,479,934       |
+| 3001    | 31             | 1,127,052,361       |
+| 3002    | 53             | 977,072,363         |
+| 3015    | 41             | 567,236,760         |
+| 3003    | 239            | 59,378,347          |
+| 3013    | 183            | 56,553,084          |
+| 3003    | 168            | 52,090,771          |
+| 3014    | 124            | 51,031,331          |
+| 3012    | 139            | 50,515,870          |
+| 3012    | 143            | 48,801,033          |
+| 3003    | 126            | 48,707,332          |
+| 3001    | 179            | 46,538,909          |
+| 3012    | 140            | 42,167,457          |
+| 3005    | 152            | 40,657,311          |
+| 3003    | 125            | 38,777,367          |
+| 3005    | 155            | 38,552,353          |
+| 3011    | 103            | 37,773,442          |
+| 3010    | 102            | 35,122,005          |
+| 3006    | 129            | 33,918,311          |
+| 3004    | 96             | 33,836,502          |
+| 3013    | 101            | 33,240,152          |
+| 3007    | 98             | 32,410,573          |
+| 3007    | 109            | 32,189,593          |
+| 3002    | 104            | 31,347,551          |
+| 3009    | 86             | 31,304,061          |
+| ...     | ...            | ...                 |
+
+This list continues, and the total number of entries is 141. The data reflects the contributions of various users identified by their user IDs, showcasing the number of files and the respective sizes they have added to the shared directory. If you need more detailed results or specific user contributions beyond this scope, let me know!

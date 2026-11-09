@@ -1,0 +1,9 @@
+Three users own files in group 2003 in `eval_master`. The index only stores numeric IDs, so I can't give user names.
+
+| UID  | Regular files | Symlinks | Total entries |
+|------|---------------|----------|---------------|
+| 3001 | 600           | 18       | 618           |
+| 3004 | 567           | 17       | 584           |
+| 3011 | 712           | 21       | 733           |
+
+That's 1,879 regular files in all, or 1,935 if you also count the 56 symlinks. UID 3011 has the most files in the group.

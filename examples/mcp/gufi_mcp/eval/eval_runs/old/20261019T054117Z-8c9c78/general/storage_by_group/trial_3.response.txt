@@ -1,0 +1,10 @@
+The groups using the most storage in the `eval_master` index are as follows:
+
+1. **Group ID 2003**: 266,240 bytes
+2. **Group ID 2005**: 212,992 bytes
+3. **Group ID 2002**: 212,992 bytes
+4. **Group ID 2004**: 196,608 bytes
+5. **Group ID 2001**: 159,744 bytes
+6. **Group ID 0**: 8,192 bytes
+
+These values represent the total storage used by each group.

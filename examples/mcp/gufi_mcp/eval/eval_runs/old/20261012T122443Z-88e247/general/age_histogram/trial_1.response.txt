@@ -1,0 +1,9 @@
+Here are the grouped regular files by GUFI's age category of their modification time:
+
+| Age Category | File Count |
+|--------------|------------|
+| Days         | 12         |
+| Hrs          | 6          |
+| Mos          | 12         |
+| Wks          | 12         |
+| Yrs          | 12         |

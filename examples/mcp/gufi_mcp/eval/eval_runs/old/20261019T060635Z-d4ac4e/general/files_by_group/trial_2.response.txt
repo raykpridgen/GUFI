@@ -1,0 +1,9 @@
+Three users own regular files in group 2003 in eval_master. The index only stores numeric user IDs, so these are UIDs rather than usernames.
+
+| UID | Regular files | Symlinks |
+|-----|---------------|----------|
+| 3011 | 712 | 21 |
+| 3001 | 600 | 18 |
+| 3004 | 567 | 17 |
+
+That's 1,879 regular files in total. If you also count the 56 symlinks, it comes to 1,935 entries.

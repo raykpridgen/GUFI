@@ -1,0 +1,19 @@
+I counted regular files in eval_master by the text after the last dot in each file name. Symlinks are not included. There are **9,989 regular files**:
+
+| Extension | Files |
+|---|---|
+| .log | 1,410 |
+| .txt | 1,390 |
+| .csv | 1,130 |
+| .dat | 1,125 |
+| .py | 1,054 |
+| .json | 823 |
+| .h5 | 731 |
+| .png | 708 |
+| .c | 544 |
+| *(no extension)* | 531 |
+| .gz | 525 |
+
+**18 other files** each have a one-off "extension." These look like names with a dot in an unusual place rather than real file types: weights_field, weights-772, trace-369, text_video-388, shard-078, run_lib-668, run-379, plots_config-665, ocean_grid-645, metrics, logs_chunk-014, image_paper, fluid_epoch, figures-206, draft, chunk_final-439, build_field-564 and audio-855.
+
+The built-in "extensions" statistic came back empty, so I got these counts with a direct query on the index.

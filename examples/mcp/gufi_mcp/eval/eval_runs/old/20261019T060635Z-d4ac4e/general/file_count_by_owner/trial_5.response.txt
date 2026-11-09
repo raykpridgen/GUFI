@@ -1,0 +1,16 @@
+These are the 10 users with the most regular files in eval_master. The index only stores numeric user IDs, so I can't give usernames.
+
+| Rank | UID | Files |
+|---|---|---|
+| 1 | 3003 | 794 |
+| 2 | 3012 | 783 |
+| 3 (tie) | 3013 | 770 |
+| 3 (tie) | 3007 | 770 |
+| 5 | 3008 | 756 |
+| 6 | 3006 | 729 |
+| 7 | 3011 | 712 |
+| 8 | 3010 | 694 |
+| 9 | 3009 | 685 |
+| 10 | 3002 | 635 |
+
+The counts include only regular files. Symlinks and directories aren't counted.

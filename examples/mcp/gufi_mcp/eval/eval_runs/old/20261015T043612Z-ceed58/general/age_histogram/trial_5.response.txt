@@ -1,0 +1,17 @@
+Here’s a breakdown of the files in the `eval_master` index by their last modified time, displaying the count of files and their total size for each unique modification time:
+
+| Last Modified (timestamp) | Count of Files | Total Size (bytes) |
+|--------------------------|----------------|---------------------|
+| 1697173111               | 1              | 7866                |
+| 1697173501               | 1              | 4                   |
+| 1697186752               | 1              | 507546              |
+| 1697191898               | 1              | 71                  |
+| 1697225264               | 1              | 17418               |
+| 1697234120               | 1              | 124831              |
+| 1697235282               | 1              | 4061                |
+| ...                      | ...            | ...                 |
+| (continues for many entries) |
+
+**Note:** This table includes only a few entries due to the high number of unique modification timestamps in the dataset. Each row counts files modified at a distinct time along with their cumulative sizes.
+
+Let me know if you need further analysis or a specific filter applied!

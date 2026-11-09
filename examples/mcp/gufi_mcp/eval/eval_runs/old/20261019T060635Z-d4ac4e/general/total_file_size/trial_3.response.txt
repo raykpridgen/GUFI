@@ -1,0 +1,5 @@
+All the regular files in **eval_master** add up to **8,797,702,315 bytes**. That's about 8.80 GB, or 8.19 GiB, across 9,989 files.
+
+This is the apparent (logical) size of each file added together. Disk usage measured in allocated blocks could be a little different, for example if some files are sparse. Symlinks aren't counted.
+
+I also tried GUFI's built-in `total-filesize` statistic to cross-check the number, but it failed with a user-lookup error (`getpwuid`), so this total comes from the SQL query alone.

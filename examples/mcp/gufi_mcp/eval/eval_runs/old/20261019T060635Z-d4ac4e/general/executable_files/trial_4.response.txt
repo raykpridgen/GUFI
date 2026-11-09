@@ -1,0 +1,41 @@
+eval_master has **1,005 executable files** out of 9,989 regular files (about 10%). Together they take up 281,230,598 bytes (~268 MiB). I counted a file as executable if any execute bit (owner, group or other) is set. Every one of the 1,005 has mode `755` (`-rwxr-xr-x`).
+
+**By group directory:**
+
+| Directory | Executable files | All files | Executable bytes |
+|---|---|---|---|
+| eval_master/groups/grp01 | 188 | 1,838 | 57,116,372 |
+| eval_master/groups/grp02 | 218 | 2,175 | 45,846,190 |
+| eval_master/groups/grp03 | 203 | 1,879 | 49,961,355 |
+| eval_master/groups/grp04 | 190 | 1,997 | 61,474,972 |
+| eval_master/groups/grp05 | 206 | 2,100 | 66,831,709 |
+
+**By owner (UID):**
+
+| UID | Files | Bytes |
+|---|---|---|
+| 3003 | 86 | 14,258,443 |
+| 3013 | 77 | 12,877,879 |
+| 3012 | 74 | 27,026,160 |
+| 3008 | 73 | 22,892,914 |
+| 3009 | 73 | 20,644,097 |
+| 3011 | 73 | 11,846,892 |
+| 3001 | 72 | 19,173,446 |
+| 3007 | 71 | 14,362,112 |
+| 3002 | 70 | 18,606,199 |
+| 3006 | 70 | 16,384,466 |
+| 3010 | 62 | 21,235,894 |
+| 3015 | 59 | 16,912,635 |
+| 3004 | 58 | 18,941,017 |
+| 3005 | 58 | 23,854,612 |
+| 3014 | 29 | 22,213,832 |
+
+Most of these are data files with the execute bit set, not programs: `.csv`, `.json`, `.log`, `.txt`, `.h5`, `.png` and `.gz`. Some examples:
+- `eval_master/groups/grp01/shared/analysis.csv`
+- `eval_master/groups/grp01/usr003/checkpoint/build`
+- `eval_master/groups/grp01/usr003/checkpoint/protein_output.py`
+- `eval_master/groups/grp01/usr009/output_lib/cluster_batch/paper_ocean-411.py`
+
+So many of them probably don't need to be executable.
+
+The full list is too long to show here, and the listing I pulled was cut off partway through. I can give you the complete list for a single directory, owner or file type if you want one.

@@ -1,0 +1,13 @@
+Here is an overview of the space usage, along with the number of directories and files for each group directory under `eval_master/groups/`:
+
+| Group Directory                                        | Number of Files | Total Size (Bytes)  |
+|-------------------------------------------------------|-----------------|----------------------|
+| `eval_master/groups/grp05/usr012/output`              | 69              | 1,276,200,080        |
+| `eval_master/groups/grp01/usr014/clean/step`         | 45              | 1,247,319,382        |
+| `eval_master/groups/grp03/usr001/chunk/audio/archive` | 31              | 1,127,052,361        |
+| `eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output` | 46              | 1,123,410,269        |
+| `eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/final`  | 53              | 977,072,363          |
+| `eval_master/groups/grp05/usr015/clean/particle_build/src` | 17           | 564,835,884          |
+| ... (additional entries omitted for brevity)                          |
+
+This data shows how much space each group directory uses along with the count of files within. If you need further details or insights on specific directories, let me know!

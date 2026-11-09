@@ -1,0 +1,16 @@
+Here are the 5 regular files (type 'f') in the 'eval_master' index with the oldest modification times:
+
+1. **Full Path**: `/usr010/notes.log`
+   - **Modification Time (mtime)**: 1697173111
+   
+2. **Full Path**: `/trace_plots/text_metrics.txt`
+   - **Modification Time (mtime)**: 1697173501
+   
+3. **Full Path**: `/params/report_draft-782.log`
+   - **Modification Time (mtime)**: 1697186752
+   
+4. **Full Path**: `/tmp/tmp.py`
+   - **Modification Time (mtime)**: 1697191898
+   
+5. **Full Path**: `/eval/tests-591.log`
+   - **Modification Time (mtime)**: 1697225264

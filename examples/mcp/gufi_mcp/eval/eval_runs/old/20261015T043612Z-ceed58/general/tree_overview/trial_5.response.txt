@@ -1,0 +1,18 @@
+Here's an overview of the space usage and file counts for the directories under `eval_master/groups/`:
+
+| Group Directory                                    | Total Size (Bytes) | Total Files |
+|---------------------------------------------------|---------------------|-------------|
+| eval_master/groups/grp05/usr012/output            | 1,276,200,177       | 73          |
+| eval_master/groups/grp01/usr014/clean/step       | 1,247,319,412       | 47          |
+| eval_master/groups/grp03/usr001/chunk/audio/archive| 1,127,052,387      | 32          |
+| eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output | 1,123,410,269       | 46          |
+| eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/final | 977,072,385         | 54          |
+| eval_master/groups/grp05/usr015/clean/particle_build/src | 564,835,884       | 17          |
+| eval_master/groups/grp01/usr003/checkpoint/report/params | 48,707,381   | 128         |
+| eval_master/groups/grp01/usr003/checkpoint        | 42,501,755          | 130         |
+| eval_master/groups/grp01/usr003/text_grid         | 38,777,580          | 131         |
+| eval_master/groups/grp01/usr003/checkpoint/report | 37,242,059          | 139         |
+
+This table shows some of the directories, their total size in bytes, and the number of files they contain. The sizes and counts indicate that folder `grp05/usr012/output` has the largest size, while `grp01/usr003/text_grid` has the highest number of files among the listed directories. 
+
+If you need information on additional directories or further details, please let me know!

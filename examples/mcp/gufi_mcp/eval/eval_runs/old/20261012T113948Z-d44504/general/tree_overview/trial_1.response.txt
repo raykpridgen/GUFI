@@ -1,0 +1,3 @@
+It appears that there are no entries or data available for the top-level group directories under `groups/` in the `eval_master` index. All queries related to this dataset returned empty results, indicating that either the relevant directories do not exist in the index, or that the data has not been indexed for those paths. 
+
+If you need further assistance or a different inquiry, feel free to ask!

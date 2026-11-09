@@ -1,0 +1,17 @@
+**335 regular files** in eval_master were read in the past 7 days (accessed since 2026-10-05 00:00 UTC) but haven't had their contents modified in that time.
+
+**How I defined "changed":** I used modification time (mtime) rather than status-change time (ctime). Every file in the index has the same ctime, 2026-10-12 08:36:43, which is a few hours after "now". That probably means the files were copied or touched when the index was built, so ctime doesn't show real change history. If you go by ctime, no file qualifies, because they all look changed.
+
+**Examples (most recently read first):**
+
+| File | Size | Last read (atime) | Last modified (mtime) |
+|---|---|---|---|
+| groups/grp01/usr003/text_grid/build_figures | 55 B | 2026-10-11 23:37 | 2026-08-10 |
+| groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/train_ocean-267.c | 26 B | 2026-10-11 23:36 | 2026-08-24 |
+| groups/grp05/shared/plots_code.log | 770,683 B | 2026-10-11 22:20 | 2024-08-16 |
+| groups/grp03/usr004/stage/field_tests.dat | 1 B | 2026-10-11 22:20 | 2026-07-29 |
+| groups/grp01/usr014/clean/step/figures_build.json | 72 B | 2026-10-11 22:19 | 2026-08-15 |
+| groups/grp01/usr003/checkpoint/node.dat | 2,577 B | 2026-10-11 20:36 | 2026-09-01 |
+| groups/grp03/usr001/train/figures_slice-026.json | 152 B | 2026-10-11 19:57 | 2023-11-12 |
+
+All paths start with `eval_master/`. Some of these files are quite old but still being read, such as `plots_code.log` (last modified in 2024) and `figures_slice-026.json` (last modified in 2023).

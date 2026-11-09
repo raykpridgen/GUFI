@@ -1,0 +1,55 @@
+Here are the files in the `eval_master` index that are buried at least 5 directories deep:
+
+1. `eval_master/groups/grp03/usr004/sim_gpu/audio_metrics-721.json`
+2. `eval_master/groups/grp03/usr004/sim_gpu/bench_field.dat`
+3. `eval_master/groups/grp03/usr004/sim_gpu/bench_text.c`
+4. `eval_master/groups/grp03/usr004/sim_gpu/clean_epoch-470.h5`
+5. `eval_master/groups/grp03/usr004/sim_gpu/climate.csv`
+6. `eval_master/groups/grp03/usr004/sim_gpu/code-626.gz`
+7. `eval_master/groups/grp03/usr004/sim_gpu/corpus_particle.h5`
+8. `eval_master/groups/grp03/usr004/sim_gpu/epoch_node-484.csv`
+9. `eval_master/groups/grp03/usr004/sim_gpu/figures-633.json`
+10. `eval_master/groups/grp03/usr004/sim_gpu/fluid_sim-378.log`
+11. `eval_master/groups/grp03/usr004/sim_gpu/genome_particle-164.gz`
+12. `eval_master/groups/grp03/usr004/sim_gpu/gpu_sweep`
+13. `eval_master/groups/grp03/usr004/sim_gpu/grid.csv`
+14. `eval_master/groups/grp03/usr004/sim_gpu/mesh_final-514.txt`
+15. `eval_master/groups/grp03/usr004/sim_gpu/neuron.gz`
+16. `eval_master/groups/grp03/usr004/sim_gpu/old_checkpoint-362.txt`
+17. `eval_master/groups/grp03/usr004/sim_gpu/output_trace-705.h5`
+18. `eval_master/groups/grp03/usr004/sim_gpu/phase_epoch-124.py`
+19. `eval_master/groups/grp03/usr004/sim_gpu/raw_code.dat`
+20. `eval_master/groups/grp03/usr004/sim_gpu/raw_node.dat`
+21. `eval_master/groups/grp03/usr004/sim_gpu/results_lib-709.c`
+22. `eval_master/groups/grp03/usr004/sim_gpu/run.dat`
+23. `eval_master/groups/grp03/usr004/sim_gpu/shard_analysis-778.log`
+24. `eval_master/groups/grp03/usr004/sim_gpu/src_results-507`
+25. `eval_master/groups/grp03/usr004/sim_gpu/tests_image.c`
+26. `eval_master/groups/grp03/usr004/sim_gpu/train_checkpoint-431.csv`
+27. `eval_master/groups/grp03/usr004/sim_gpu/video_train-298.csv`
+28. `eval_master/groups/grp02/usr013/chunk/.paper.dat`
+29. `eval_master/groups/grp02/usr013/chunk/analysis_tests-505.dat`
+30. `eval_master/groups/grp02/usr013/chunk/audio_gpu.csv`
+31. `eval_master/groups/grp02/usr013/chunk/backup.csv`
+32. `eval_master/groups/grp02/usr013/chunk/batch_checkpoint-232.h5`
+33. `eval_master/groups/grp02/usr013/chunk/build.dat`
+34. `eval_master/groups/grp02/usr013/chunk/cache_figures.json`
+35. `eval_master/groups/grp02/usr013/chunk/cache_video.py`
+36. `eval_master/groups/grp02/usr013/chunk/checkpoint_final-313.log`
+37. `eval_master/groups/grp02/usr013/chunk/clean_gpu.py`
+38. `eval_master/groups/grp02/usr013/chunk/config_phase-424.log`
+39. `eval_master/groups/grp02/usr013/chunk/corpus_sweep.gz`
+40. `eval_master/groups/grp02/usr013/chunk/data_build.json`
+41. `eval_master/groups/grp02/usr013/chunk/epoch_cache.log`
+42. `eval_master/groups/grp02/usr013/chunk/epoch_config-848.c`
+43. `eval_master/groups/grp02/usr013/chunk/figures_backup-866.py`
+44. `eval_master/groups/grp02/usr013/chunk/final.c`
+45. `eval_master/groups/grp02/usr013/chunk/fluid_input.txt`
+46. `eval_master/groups/grp02/usr013/chunk/genome_step-302.log`
+47. `eval_master/groups/grp02/usr013/chunk/image-332.gz`
+48. `eval_master/groups/grp02/usr013/chunk/image_backup.csv`
+49. `eval_master/groups/grp02/usr013/chunk/image_checkpoint.h5`
+50. `eval_master/groups/grp02/usr013/chunk/image_fluid.py`
+... and many more files list follows.
+
+The output has been cut for brevity. If you need more entries or further details, please let me know!

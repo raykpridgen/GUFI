@@ -1,0 +1,9 @@
+Three users own files in group 2003 in eval_master. I counted regular files and symbolic links separately:
+
+| User (UID) | Regular files | Symlinks | Total |
+|---|---|---|---|
+| 3011 | 712 | 21 | 733 |
+| 3001 | 600 | 18 | 618 |
+| 3004 | 567 | 17 | 584 |
+
+That makes 1,879 regular files in group 2003, or 1,935 entries if you count the symlinks too. The index stores users as numeric IDs, so I can't give their usernames.

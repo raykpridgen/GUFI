@@ -1,0 +1,54 @@
+{
+  "ordered_compare": true,
+  "row_order": "compared order (as returned)",
+  "expected": [
+    [
+      "eval_master/groups/grp04/usr010/notes.log",
+      1697173111
+    ],
+    [
+      "eval_master/groups/grp04/usr006/ocean/trace_plots/text_metrics.txt",
+      1697173501
+    ],
+    [
+      "eval_master/groups/grp04/usr005/params/report_draft-782.log",
+      1697186752
+    ],
+    [
+      "eval_master/groups/grp03/usr001/chunk/audio/archive/gpu_neuron/tmp/tmp.py",
+      1697191898
+    ],
+    [
+      "eval_master/groups/grp02/usr007/sim_cluster/metrics/eval/tests-591.log",
+      1697225264
+    ]
+  ],
+  "actual": [
+    [
+      "eval_master/groups/grp04/usr010/notes.log",
+      1697173111
+    ],
+    [
+      "eval_master/groups/grp04/usr006/ocean/trace_plots/text_metrics.txt",
+      1697173501
+    ],
+    [
+      "eval_master/groups/grp04/usr005/params/report_draft-782.log",
+      1697186752
+    ],
+    [
+      "eval_master/groups/grp03/usr001/chunk/audio/archive/gpu_neuron/tmp/tmp.py",
+      1697191898
+    ],
+    [
+      "eval_master/groups/grp02/usr007/sim_cluster/metrics/eval/tests-591.log",
+      1697225264
+    ]
+  ],
+  "missing_from_actual": [],
+  "unexpected_in_actual": [],
+  "expected_row_count": 5,
+  "actual_row_count": 5,
+  "gt_duration_ms": 56.138841006031726,
+  "agent_duration_ms": 122.265
+}

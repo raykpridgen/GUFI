@@ -1,0 +1,14 @@
+Four files in eval_master are over 1 GB. Each one has a different owner. All four are also over 1 GiB (1,073,741,824 bytes), so the result is the same with either definition of "1 GB".
+
+| # | Size (bytes) | ≈ Size | Owner UID | GID | Path |
+|---|---|---|---|---|---|
+| 1 | 1,261,921,083 | 1.18 GiB | 3012 | 2005 | eval_master/groups/grp05/usr012/output/scratch.c |
+| 2 | 1,228,550,276 | 1.14 GiB | 3014 | 2001 | eval_master/groups/grp01/usr014/clean/step/old.log |
+| 3 | 1,123,091,592 | 1.05 GiB | 3001 | 2003 | eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py |
+| 4 | 1,113,310,933 | 1.04 GiB | 3008 | 2005 | eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt |
+
+**Owners:** The index only stores numeric IDs, not user or group names. Each file sits in a folder that matches its owner: UID 3012 in `usr012`, 3014 in `usr014`, 3001 in `usr001` and 3008 in `usr008`.
+
+**Locations:** All four are under `eval_master/groups/`. Two are in `grp05` and one each is in `grp01` and `grp03`. In every case the GID matches the group folder (2005 for `grp05`, and so on).
+
+Some of these files are surprisingly large for their type: a 1.2 GB `.c` source file and a 1.05 GB `.py` script. Their names (scratch, old, output) suggest they may be leftover output or temporary files. They could be worth checking if you're trying to free up space.

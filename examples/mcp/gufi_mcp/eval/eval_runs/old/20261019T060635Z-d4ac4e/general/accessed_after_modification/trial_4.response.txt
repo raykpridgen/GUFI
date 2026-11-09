@@ -1,0 +1,12 @@
+**0 files**, if "last changed" means each file's ctime (its status-change time). That's the strict Unix meaning of "changed," but if you meant content modification (mtime), the answer is all 9,989 files.
+
+I checked all 9,989 regular files in eval_master and compared each file's last access time (atime) with two other timestamps:
+
+| Compared with | Files read afterwards |
+|---|---|
+| ctime (metadata or content last changed) | **0** |
+| mtime (content last modified) | 9,989 (all of them) |
+
+No file has an access time equal to or later than its ctime. Every file's access time is later than its last content modification. So every file has been read since it was last written, but its metadata (permissions, owner, links and so on) changed again after that read. That pattern often shows up when files are copied or restored with their original atime and mtime kept, which gives every file a fresh ctime.
+
+Symlinks aren't included in either count.

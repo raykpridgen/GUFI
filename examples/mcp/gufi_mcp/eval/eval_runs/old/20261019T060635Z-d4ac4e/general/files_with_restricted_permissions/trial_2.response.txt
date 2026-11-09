@@ -1,0 +1,36 @@
+I found **3,993 regular files** in eval_master that other users can't read. Together they hold about **3.63 GB** (3,634,805,599 bytes). I counted a file when the "other" read bit is off (`mode & 4 = 0`). The full list is about 4,000 paths, too long to show here, so below is a summary.
+
+**Where they are:** every one of them is under `eval_master/groups/`, in the per-user folders and the `shared` folders.
+
+**Permission patterns:** only two show up, and both give other users no access at all:
+- **640 (rw-r-----):** 2,973 files. The owner can read and write, and the group can read.
+- **600 (rw-------):** 1,020 files. Only the owner can read them.
+
+**By owner:**
+
+| uid | gid | 600 files | 640 files | Total | Size (approx.) |
+|---|---|---|---|---|---|
+| 3001 | 2003 | 70 | 172 | 242 | 52.9 MB |
+| 3002 | 2002 | 49 | 196 | 245 | 1.02 GB |
+| 3003 | 2001 | 84 | 241 | 325 | 90.9 MB |
+| 3004 | 2003 | 61 | 157 | 218 | 49.3 MB |
+| 3005 | 2004 | 56 | 174 | 230 | 51.9 MB |
+| 3006 | 2004 | 79 | 221 | 300 | 69.6 MB |
+| 3007 | 2002 | 82 | 226 | 308 | 74.0 MB |
+| 3008 | 2005 | 81 | 220 | 301 | 1.20 GB |
+| 3009 | 2001 | 68 | 220 | 288 | 60.1 MB |
+| 3010 | 2004 | 70 | 200 | 270 | 69.6 MB |
+| 3011 | 2003 | 74 | 217 | 291 | 68.1 MB |
+| 3012 | 2005 | 72 | 232 | 304 | 92.5 MB |
+| 3013 | 2002 | 78 | 231 | 309 | 94.8 MB |
+| 3014 | 2001 | 43 | 98 | 141 | 31.3 MB |
+| 3015 | 2005 | 53 | 168 | 221 | 616.8 MB |
+
+**By group:** gid 2001 has 754 files, 2002 has 862, 2003 has 751, 2004 has 800 and 2005 has 826. Group 2001 is `groups/grp01` and group 2002 is `groups/grp02`. The other groups probably follow the same pattern, but I didn't check.
+
+**Things to look at:**
+- uid 3008 has about 1.13 GB in owner-only (600) files, which is most of the owner-only data.
+- uid 3002 has about 960 MB in 16 files in `groups/grp02/usr002/src_slice/checkpoint/results_neuron/final`.
+- Many of these files are in `shared` directories, such as `groups/grp01/shared` and `groups/grp02/shared`. About 37 files in those two directories (2 in grp01/shared, plus some of the 600 files in grp02/shared) are owner-only, so even the rest of the group can't read them. That may not be what was intended for shared space.
+
+If you want the actual file paths, I can list them for a particular user, group or directory.

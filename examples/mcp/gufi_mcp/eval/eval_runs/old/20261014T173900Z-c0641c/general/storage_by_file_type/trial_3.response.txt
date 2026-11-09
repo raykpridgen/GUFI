@@ -1,0 +1,31 @@
+The file types that take up the most space in the `eval_master` index are primarily regular files (type 'f') and a few symbolic links (type 'l'). Here are the types along with their corresponding total sizes:
+
+1. **Regular Files (type 'f')**:
+   - Total Size: 2,607,645,424 bytes
+   - Total Size: 1,433,471,949 bytes
+   - Total Size: 1,306,240,257 bytes
+   - Total Size: 1,139,035,807 bytes
+   - Total Size: 802,960,051 bytes
+   - Total Size: 268,987,590 bytes
+   - Total Size: 248,747,667 bytes
+   - Total Size: 235,490,082 bytes
+   - Total Size: 210,818,246 bytes
+   - Total Size: 195,078,768 bytes
+   - Total Size: 194,695,859 bytes
+   - Total Size: 154,530,615 bytes
+
+2. **Symbolic Links (type 'l')**:
+   - Total Size: 899 bytes
+   - Total Size: 779 bytes
+   - Total Size: 771 bytes
+   - Total Size: 762 bytes
+   - Total Size: 757 bytes
+   - Total Size: 700 bytes
+   - Total Size: 693 bytes
+   - Total Size: 681 bytes
+   - Total Size: 610 bytes
+   - Total Size: 586 bytes
+   - Total Size: 568 bytes
+   - Total Size: 465 bytes
+
+In summary, the majority of space is taken up by regular files, while symbolic links consume significantly less space in comparison.

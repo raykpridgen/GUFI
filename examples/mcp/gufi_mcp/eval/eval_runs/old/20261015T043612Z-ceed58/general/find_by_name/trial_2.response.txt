@@ -1,0 +1,19 @@
+Here are the HDF5 files in the `eval_master` index that contain 'sim' in their names, along with their respective sizes:
+
+1. **Path:** eval_master/groups/grp02/shared/sim_lattice.h5 - **Size:** 2 bytes
+2. **Path:** eval_master/groups/grp04/usr010/profile/eval/trace_sim.h5 - **Size:** 3,796,043 bytes
+3. **Path:** eval_master/groups/grp02/usr002/src_slice/final/part_sim.h5 - **Size:** 4 bytes
+4. **Path:** eval_master/groups/grp05/usr012/sim_input.h5 - **Size:** 258,045 bytes
+5. **Path:** eval_master/groups/grp01/usr014/clean/particle_sim.h5 - **Size:** 27,395 bytes
+6. **Path:** eval_master/groups/grp04/usr010/profile/paper/params/sim-704.h5 - **Size:** 3 bytes
+7. **Path:** eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/clean_sim.h5 - **Size:** 292 bytes
+8. **Path:** eval_master/groups/grp05/usr012/output/weights/grid_final/backup_sim.h5 - **Size:** 2 bytes
+9. **Path:** eval_master/groups/grp01/usr009/output_lib/cluster_batch/output/gpu_sim/notes/slice_sim-325.h5 - **Size:** 480 bytes
+10. **Path:** eval_master/groups/grp05/usr012/output/weights/lib/sample_sim-247.h5 - **Size:** 335,519 bytes
+11. **Path:** eval_master/groups/grp01/usr003/checkpoint/report/params/sim_climate.h5 - **Size:** 1,133,031 bytes
+12. **Path:** eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/old/particle_sim-560.h5 - **Size:** 3 bytes
+13. **Path:** eval_master/groups/grp05/usr012/output/weights/grid_final/audio_part/stage/sim.h5 - **Size:** 7,973 bytes
+14. **Path:** eval_master/groups/grp05/usr015/clean/signal/output/src/phase/report_sim.h5 - **Size:** 12 bytes
+15. **Path:** eval_master/groups/grp03/usr011/lattice/run_protein/archive_params/stage_raw/profile/sim_cache.h5 - **Size:** 106,214 bytes
+
+In total, there are 15 HDF5 files matching your criteria.

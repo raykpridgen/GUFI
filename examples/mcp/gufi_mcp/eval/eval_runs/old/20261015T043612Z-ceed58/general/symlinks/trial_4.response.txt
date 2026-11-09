@@ -1,0 +1,33 @@
+Here is a list of some symbolic links in the `eval_master` index and their targets:
+
+1. **Path:** `eval_master/groups/grp02/usr002/backup.lnk`
+   - **Points to:** `src_slice/checkpoint/results_neuron/model/cluster_sample/ocean-957.txt`
+
+2. **Path:** `eval_master/groups/grp01/usr014/checkpoint_lattice.lnk`
+   - **Points to:** `missing_build`
+
+3. **Path:** `eval_master/groups/grp05/usr012/code_params.lnk`
+   - **Points to:** `output/weights/grid_final/audio_part/stage/.slice_epoch-794.txt`
+
+4. **Path:** `eval_master/groups/grp05/usr008/params_config.lnk`
+   - **Points to:** `missing_video`
+
+5. **Path:** `eval_master/groups/grp01/usr014/climate.lnk`
+   - **Points to:** `clean/survey_lib.txt`
+
+6. **Path:** `eval_master/groups/grp03/usr004/scratch_stage/output.lnk`
+   - **Points to:** `../part_epoch/batch-162.py`
+
+7. **Path:** `eval_master/groups/grp05/usr012/lib.lnk`
+   - **Points to:** `output/params_report`
+
+8. **Path:** `eval_master/groups/grp05/usr008/cache_text/node_code.lnk`
+   - **Points to:** `../figures.log`
+
+9. **Path:** `eval_master/groups/grp01/usr003/cluster.lnk`
+   - **Points to:** `text_grid/final_input-479.txt`
+
+10. **Path:** `eval_master/groups/grp01/usr003/checkpoint/cache.lnk`
+    - **Points to:** `missing_protein`
+
+This list includes only a selection from the many symbolic links found in the `eval_master` index. If you need more or specific ones, please let me know!

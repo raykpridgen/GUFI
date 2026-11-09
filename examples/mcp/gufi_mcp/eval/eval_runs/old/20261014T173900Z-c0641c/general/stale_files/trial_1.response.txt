@@ -1,0 +1,1 @@
+The total size of files in the `eval_master` index is 5,594,344,475 bytes. However, the size of files that haven't been modified in over a year is also 5,594,344,475 bytes. Thus, the share of the total space in `eval_master` that is comprised of files nobody has modified in over a year is 100%.

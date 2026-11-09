@@ -1,0 +1,21 @@
+Here are the total sizes and file counts of data that hasn't been modified in over 90 days, grouped by user:
+
+| User ID | File Count | Total Size (Bytes) |
+|---------|------------|---------------------|
+| 3001    | 28         | 6,841,879           |
+| 3002    | 91         | 27,065,360          |
+| 3003    | 130        | 36,178,237          |
+| 3004    | 37         | 12,640,923          |
+| 3005    | 80         | 22,994,265          |
+| 3006    | 36         | 6,491,465           |
+| 3007    | 35         | 8,783,486           |
+| 3008    | 84         | 20,983,791          |
+| 3009    | 27         | 6,134,978           |
+| 3010    | 101        | 28,454,199          |
+| 3011    | 106        | 25,846,287          |
+| 3012    | 55         | 14,661,608          |
+| 3013    | 49         | 14,663,874          |
+| 3014    | 132        | 12,712,992         |
+| 3015    | 25         | 4,162,658           |
+
+This table summarizes the amount of data that hasn't been modified within that time frame for each user, including the count of files and the total size in bytes.

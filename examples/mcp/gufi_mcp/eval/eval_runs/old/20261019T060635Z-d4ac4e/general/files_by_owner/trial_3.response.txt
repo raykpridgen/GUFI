@@ -1,0 +1,33 @@
+User 3007 owns **794 entries** in eval_master: **770 regular files** (186,898,619 bytes, about 187 MB) and **24 symlinks**. That's too many to show one by one here, so below is where they are by directory. All of them are under `eval_master/groups/grp02/`: one directory is `shared/` and the rest are in `usr007/`.
+
+| Directory (under `eval_master/groups/grp02/`) | Files | Bytes | Symlinks |
+|---|---|---|---|
+| shared | 48 | 17,357,473 | – |
+| usr007 | 29 | 3,933,647 | – |
+| usr007/audio_archive | 36 | 8,388,328 | 2 |
+| usr007/audio_archive/grid | 33 | 11,942,198 | 3 |
+| usr007/metrics_image | 31 | 7,706,329 | 1 |
+| usr007/metrics_image/checkpoint_report | 31 | 9,153,535 | 3 |
+| usr007/metrics_image/checkpoint_report/final | 40 | 7,750,607 | 1 |
+| usr007/metrics_image/gpu_raw | 32 | 9,037,725 | 1 |
+| usr007/metrics_image/gpu_raw/neuron_dataset | 33 | 12,016,285 | – |
+| usr007/metrics_image/gpu_raw/stage_metrics | 33 | 2,013,270 | – |
+| usr007/metrics_image/image | 43 | 8,850,473 | 1 |
+| usr007/metrics_image/run_archive | 29 | 828,455 | 1 |
+| usr007/metrics_image/run_archive/archive | 29 | 6,623,533 | 1 |
+| usr007/sim_cluster | 33 | 6,430,421 | 1 |
+| usr007/sim_cluster/eval | 36 | 5,701,019 | – |
+| usr007/sim_cluster/eval/tests | 33 | 14,116,458 | 2 |
+| usr007/sim_cluster/image_eval | 29 | 4,321,061 | 1 |
+| usr007/sim_cluster/metrics | 31 | 3,561,203 | – |
+| usr007/sim_cluster/metrics/eval | 29 | 9,905,787 | – |
+| usr007/sim_cluster/metrics/stage | 34 | 16,148,044 | – |
+| usr007/sim_cluster/metrics/stage/genome | 32 | 4,253,275 | 2 |
+| usr007/sim_cluster/metrics/stage/old | 36 | 11,180,908 | – |
+| usr007/sim_cluster/metrics/stage/train | 30 | 5,678,585 | 3 |
+
+Some examples from the full listing:
+- **Largest files:** `shared/neuron.py` (3.65 MB), `usr007/audio_archive/grid_scratch.txt` (3.10 MB) and `shared/cluster_epoch-264.h5` (3.51 MB).
+- **Symlinks:** `usr007/audio_archive/batch.lnk`, `usr007/audio_archive/field.lnk` and `usr007/audio_archive/grid/image.lnk`.
+
+I can list every file in any of these directories, or filter by size, file type or extension.

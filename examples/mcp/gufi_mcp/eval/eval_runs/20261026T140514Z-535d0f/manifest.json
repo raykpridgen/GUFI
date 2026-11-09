@@ -1,0 +1,73 @@
+{
+  "run_id": "20261026T140514Z-535d0f",
+  "mcp_git": {
+    "rev": "9ed6bc1c6586a8aa924161fa8d063d4fd4315126",
+    "branch": "lateral",
+    "dirty": true
+  },
+  "gufi_version": "86abf601-dirty",
+  "packages": {
+    "python": "3.13.15",
+    "mcp": "2.2.0",
+    "openai": "3.29.0",
+    "pydantic": "2.13.5",
+    "sqlglot": "30.18.0"
+  },
+  "registries": {
+    "single": {
+      "path": "/home/raykprid/omniverse/work/mcp/stripped/examples/mcp/gufi_mcp/scenarios.single.yaml",
+      "sha256": "08a75027c40acf05d45800e6989ba88390fde93dd40f6ef03dcdbf4dec1b0044"
+    }
+  },
+  "index_manifests": {
+    "eval_master": "807f77879b5ad885"
+  },
+  "agent_config": {
+    "agent": "replay"
+  },
+  "agent_config_hash": "05407a7a96647451",
+  "results": {
+    "single_pass_rate": 1.0,
+    "single_one_shot_pass_rate": 1.0,
+    "single_pass_rate_by_attempt": {
+      "1": 1.0,
+      "2": 1.0,
+      "3": 1.0
+    },
+    "single_mean_tool_calls": 1.0,
+    "single_pass_rate_by_scenario": {
+      "total_file_size": 1.0,
+      "total_dir_size": 1.0,
+      "ext_histogram": 1.0,
+      "size_histogram": 1.0,
+      "age_histogram": 1.0,
+      "top10_size_global": 1.0,
+      "top10_size_per_uid": 1.0,
+      "ext_winner": 1.0,
+      "count_over_1gib": 1.0,
+      "oldest_k": 1.0,
+      "not_modified_n_days": 1.0,
+      "count_and_size": 1.0
+    },
+    "single_one_shot_rate_by_scenario": {
+      "total_file_size": 1.0,
+      "total_dir_size": 1.0,
+      "ext_histogram": 1.0,
+      "size_histogram": 1.0,
+      "age_histogram": 1.0,
+      "top10_size_global": 1.0,
+      "top10_size_per_uid": 1.0,
+      "ext_winner": 1.0,
+      "count_over_1gib": 1.0,
+      "oldest_k": 1.0,
+      "not_modified_n_days": 1.0,
+      "count_and_size": 1.0
+    },
+    "trials": 12,
+    "single_trials": 12,
+    "general_trials": 0,
+    "total_cost_usd": 0.0,
+    "total_tokens": 0,
+    "infrastructure_errors": []
+  }
+}

@@ -1,0 +1,9 @@
+The total space in the `eval_master` index is 2,140,436,768 bytes. The space in files that nobody has modified in over a year is 1,294,822,149 bytes.
+
+To find the share of the total space, we can calculate:
+
+\[
+\text{Share} = \frac{\text{Unmodified Files Size}}{\text{Total Size}} \times 100 = \frac{1,294,822,149}{2,140,436,768} \times 100 \approx 60.5\%
+\]
+
+Therefore, approximately **60.5%** of the total space in `eval_master` is in files that nobody has modified in over a year.

@@ -1,0 +1,33 @@
+Here are some files from the `eval_master` directory that have not been accessed in a significant amount of time (not accessed in over 180 days):
+
+1. **File:** `eval_master/groups/grp05/usr008/cache_text/signal_ocean/shard-604.dat`
+   - **Last Accessed:** 14,853,537 seconds (approximately 1760229257 epoch)
+   
+2. **File:** `eval_master/groups/grp02/usr007/sim_cluster/eval/tests/sweep_model-186.h5`
+   - **Last Accessed:** 14,853,501 seconds (approximately 1760231015 epoch)
+   
+3. **File:** `eval_master/groups/grp04/shared/signal_plots.py`
+   - **Last Accessed:** 14,853,697 seconds (approximately 1760238697 epoch)
+   
+4. **File:** `eval_master/groups/grp03/usr011/lattice/shard_lattice/survey_final/scratch_model.json`
+   - **Last Accessed:** 14,853,695 seconds (approximately 1760242695 epoch)
+
+5. **File:** `eval_master/groups/grp01/usr014/clean/stage.h5`
+   - **Last Accessed:** 14,853,653 seconds (approximately 1760243153 epoch)
+
+6. **File:** `eval_master/groups/grp04/usr006/ocean/phase/params/train_part/image-088.txt`
+   - **Last Accessed:** 14,853,378 seconds (approximately 1760245378 epoch)
+
+7. **File:** `eval_master/groups/grp03/usr004/train/model_report/code.log`
+   - **Last Accessed:** 14,853,475 seconds (approximately 1760249475 epoch)
+
+8. **File:** `eval_master/groups/grp04/usr010/mesh/model_clean/slice_corpus-207.py`
+   - **Last Accessed:** 14,853,268 seconds (approximately 1760251268 epoch)
+
+9. **File:** `eval_master/groups/grp02/usr002/clean-925.c`
+   - **Last Accessed:** 14,852,831 seconds (approximately 1760255831 epoch)
+
+10. **File:** `eval_master/groups/grp01/usr003/checkpoint/lib_src.txt`
+    - **Last Accessed:** 14,852,854 seconds (approximately 1760257854 epoch)
+
+This list shows some of the files that are older regarding their last access time. Let me know if you need any further details or additional queries!

@@ -1,0 +1,14 @@
+The largest files in the eval_master index are as follows:
+
+1. `scratch.c` - 1,261,921,083 bytes
+2. `old.log` - 1,228,550,276 bytes
+3. `tests_output.py` - 1,123,091,592 bytes
+4. `text_run.txt` - 1,113,310,933 bytes
+5. `trace_cluster-666.txt` - 959,252,531 bytes
+6. `train_stage-240.dat` - 564,253,616 bytes
+7. `layer_video-322.h5` - 4,194,001 bytes
+8. `.train.txt` - 4,186,836 bytes
+9. `figures.png` - 4,177,565 bytes
+10. `src.h5` - 4,164,923 bytes
+
+These files are ordered by size from largest to smallest.

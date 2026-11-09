@@ -1,0 +1,56 @@
+The following files in the `eval_master` index are executable:
+
+1. `eval_master/groups/grp01/shared`
+2. `eval_master/groups/grp01/shared/analysis-730.json`
+3. `eval_master/groups/grp01/shared/analysis.csv`
+4. `eval_master/groups/grp01/shared/cache_slice-982`
+5. `eval_master/groups/grp01/shared/figures_model.h5`
+6. `eval_master/groups/grp01/shared/final_raw-600`
+7. `eval_master/groups/grp01/shared/logs_batch-655.csv`
+8. `eval_master/groups/grp01/shared/run_dataset.txt`
+9. `eval_master/groups/grp01/shared/step_job.json`
+10. `eval_master/groups/grp02/shared`
+11. `eval_master/groups/grp02/shared/analysis_profile.csv`
+12. `eval_master/groups/grp02/shared/batch-456.png`
+13. `eval_master/groups/grp02/shared/code_signal.csv`
+14. `eval_master/groups/grp02/shared/corpus.log`
+15. `eval_master/groups/grp02/shared/eval_phase-808.log`
+16. `eval_master/groups/grp02/shared/gpu_particle-217.csv`
+17. `eval_master/groups/grp02/shared/notes-444.png`
+18. `eval_master/groups/grp02/shared/ocean_signal.log`
+19. `eval_master/groups/grp02/shared/profile_field.log`
+20. `eval_master/groups/grp02/shared/shard.log`
+21. `eval_master/groups/grp02/shared/train-343.gz`
+22. `eval_master/groups/grp02/shared/weights_run.txt`
+23. `eval_master/groups/grp04/usr005/params`
+24. `eval_master/groups/grp04/usr005/params/analysis.log`
+25. `eval_master/groups/grp04/usr005/params/cache_params.gz`
+26. `eval_master/groups/grp04/usr005/params/climate-2.lnk`
+27. `eval_master/groups/grp04/usr005/params/climate.lnk`
+28. `eval_master/groups/grp04/usr005/params/draft.lnk`
+29. `eval_master/groups/grp04/usr005/params/epoch_params.txt`
+30. `eval_master/groups/grp04/usr005/params/eval-991.py`
+31. `eval_master/groups/grp04/usr005/params/figures_cache-016.txt`
+32. `eval_master/groups/grp04/usr005/params/gpu.c`
+33. `eval_master/groups/grp04/usr005/params/model_cache.dat`
+34. `eval_master/groups/grp04/usr005/params/output_protein.txt`
+35. `eval_master/groups/grp04/usr005/params/particle_survey.dat`
+36. `eval_master/groups/grp04/usr005/params/profile.csv`
+37. `eval_master/groups/grp04/usr005/params/profile.py`
+38. `eval_master/groups/grp04/usr005/params/scratch_layer.log`
+39. `eval_master/groups/grp03/usr011/lattice`
+40. `eval_master/groups/grp03/usr011/lattice/chunk_train.txt`
+41. `eval_master/groups/grp03/usr011/lattice/eval_model-312.json`
+42. `eval_master/groups/grp03/usr011/lattice/notes_video-881.csv`
+43. `eval_master/groups/grp02/usr002/src_slice`
+44. `eval_master/groups/grp02/usr002/src_slice/metrics.lnk`
+45. `eval_master/groups/grp02/usr007/sim_cluster`
+46. `eval_master/groups/grp02/usr007/sim_cluster/neuron-912.py`
+47. `eval_master/groups/grp05/usr008/cache_text/signal_ocean`
+48. `eval_master/groups/grp05/usr012/output`
+49. `eval_master/groups/grp05/usr012/output/model`
+50. `eval_master/groups/grp04/usr010/mesh/tmp_genome`
+51. `eval_master/groups/grp05/usr008/audio_clean-587`
+52. `eval_master/groups/grp03/usr004`
+
+This is a partial list; there are many more executable files in this directory structure. Let me know if you need more information on specific files or further details!

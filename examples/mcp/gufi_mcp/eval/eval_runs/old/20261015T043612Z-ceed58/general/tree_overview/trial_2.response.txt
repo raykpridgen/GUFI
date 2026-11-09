@@ -1,0 +1,31 @@
+Here is an overview of the space usage and file counts for each group directory under `eval_master/groups/`:
+
+### Group Directories Overview
+
+#### Group: `grp01`
+- **Total Directories:** 0
+- **Total Files:** 0
+- **Total Size:** 0 bytes
+
+#### Shared Directory
+- **Total Directories:** 0
+- **Total Files:** 112
+- **Total Size:** 22,885,456 bytes
+
+#### User: `usr003`
+- **Total Directories:** 0
+- **Total Files:** 106
+- **Total Size:** 22,136,409 bytes
+
+#### Checkpoint
+- **Total Directories:** 0
+- **Total Files:** 127
+- **Total Size:** 42,501,701 bytes
+
+Subdirectories continue with additional information, including their respective number of files and sizes.
+
+---
+
+(Please note: Due to the large amount of data returned, this overview contains only a summary for `grp01`. The information for `grp02`, `grp03`, and `grp04` would follow a similar structure.) 
+
+If you need detailed statistics for additional groups or specific subdirectories within these groups, please let me know!

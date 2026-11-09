@@ -1,0 +1,38 @@
+I found 793 entries owned by UID 3007: 770 regular files and 23 symlinks. The files add up to 186,898,619 bytes (about 187 MB). Everything is under `eval_master/groups/grp02/`, in the `shared` directory and in the `usr007` home tree.
+
+There are too many to list one by one here, so this is a count per directory:
+
+| Directory (under `eval_master/groups/grp02/`) | Files | Symlinks | File bytes |
+|---|---|---|---|
+| shared | 48 | – | 17,357,473 |
+| usr007 | 29 | – | 3,933,647 |
+| usr007/audio_archive | 36 | 2 | 8,388,328 |
+| usr007/audio_archive/grid | 33 | 3 | 11,942,198 |
+| usr007/metrics_image | 31 | 1 | 7,706,329 |
+| usr007/metrics_image/checkpoint_report | 31 | 3 | 9,153,535 |
+| usr007/metrics_image/checkpoint_report/final | 40 | 1 | 7,750,607 |
+| usr007/metrics_image/gpu_raw | 32 | 1 | 9,037,725 |
+| usr007/metrics_image/gpu_raw/neuron_dataset | 33 | – | 12,016,285 |
+| usr007/metrics_image/gpu_raw/stage_metrics | 33 | – | 2,013,270 |
+| usr007/metrics_image/image | 43 | 1 | 8,850,473 |
+| usr007/metrics_image/run_archive | 29 | 1 | 828,455 |
+| usr007/metrics_image/run_archive/archive | 29 | 1 | 6,623,533 |
+| usr007/sim_cluster | 33 | 1 | 6,430,421 |
+| usr007/sim_cluster/eval | 36 | – | 5,701,019 |
+| usr007/sim_cluster/eval/tests | 33 | 2 | 14,116,458 |
+| usr007/sim_cluster/image_eval | 29 | 1 | 4,321,061 |
+| usr007/sim_cluster/metrics | 31 | – | 3,561,203 |
+| usr007/sim_cluster/metrics/eval | 29 | – | 9,905,787 |
+| usr007/sim_cluster/metrics/stage | 34 | – | 16,148,044 |
+| usr007/sim_cluster/metrics/stage/genome | 32 | 2 | 4,253,275 |
+| usr007/sim_cluster/metrics/stage/old | 36 | – | 11,180,908 |
+| usr007/sim_cluster/metrics/stage/train | 30 | 3 | 5,678,585 |
+
+Some examples of the files:
+- **In `shared`:** `neuron.py` (3.65 MB), `cluster_epoch-264.h5` (3.5 MB), `slice_output-661.csv` (2.9 MB), `lib_logs.py` (1.56 MB), `logs_metrics.json`, `field.log`, `step_slice.h5`, `train-343.gz`.
+- **In `usr007`:** `archive_final-393.c`, `lib.csv`, `audio-894.gz`, `checkpoint`, `code-877.txt`.
+- **In `usr007/audio_archive`:** `grid_scratch.txt` (3.1 MB), `corpus_metrics-029.log` (2.5 MB), `paper_part.c` (1.06 MB).
+- **In `usr007/audio_archive/grid`:** `climate_mesh.csv` (2.3 MB), `layer_cluster.py` (2.2 MB), `lattice_old-250.png` (2.1 MB), `profile.c` (1.8 MB).
+- **Symlinks** (for example): `audio_archive/batch.lnk`, `audio_archive/field.lnk`, `grid/corpus_batch.lnk`, `grid/image.lnk`, `grid/phase.lnk`.
+
+I can give you the complete file-by-file list for any of these directories, or the whole set filtered by size, age or extension.

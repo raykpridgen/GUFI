@@ -1,0 +1,70 @@
+{
+  "scenario": "size_histogram",
+  "trial": 3,
+  "pass": false,
+  "passed_on_attempt": null,
+  "aggregate_revision_count": 1,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "cat TEXT",
+    "per_directory_sql": [
+      "SELECT bytecat(size) FROM vrpentries WHERE type = 'f'"
+    ],
+    "partial_shape": "cat TEXT, count INT64",
+    "partial_sql": "SELECT cat, COUNT(*) FROM per_directory GROUP BY cat",
+    "final_sql": "SELECT cat, SUM(count) AS count FROM partial GROUP BY cat"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT size FROM vrpentries"
+    ],
+    "per_directory_shape": "size INT64",
+    "partial_sql": "SELECT size, COUNT(*) AS count, SUM(size) AS total_size FROM per_directory GROUP BY size",
+    "partial_shape": "size INT64, count INT64, total_size INT64",
+    "final_sql": "SELECT size, SUM(count) AS count, SUM(total_size) AS total_size FROM partial GROUP BY size ORDER BY size"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT size FROM vrpentries"
+      ],
+      "per_directory_shape": "size INT64",
+      "partial_sql": "SELECT COUNT(*) AS count, SUM(size) AS total_size FROM per_directory GROUP BY size",
+      "partial_shape": "count INT64, total_size INT64",
+      "final_sql": "SELECT size, SUM(count) AS count, SUM(total_size) AS total_size FROM partial GROUP BY size ORDER BY size"
+    },
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT size FROM vrpentries"
+      ],
+      "per_directory_shape": "size INT64",
+      "partial_sql": "SELECT size, COUNT(*) AS count, SUM(size) AS total_size FROM per_directory GROUP BY size",
+      "partial_shape": "size INT64, count INT64, total_size INT64",
+      "final_sql": "SELECT size, SUM(count) AS count, SUM(total_size) AS total_size FROM partial GROUP BY size ORDER BY size"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": false,
+      "passed": false,
+      "row_count": 0,
+      "reason": "call failed: Error executing tool aggregate_sql_query: 1 validation error for aggregate_sql_queryArguments\nquery\n  Value error, final_sql: column(s) size do not exist in partial (partial_shape) [type=value_error, input_value={'index': 'eval_master', ... BY size ORDER BY size'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+    },
+    {
+      "attempt": 2,
+      "ok": true,
+      "passed": false,
+      "row_count": 5000,
+      "reason": "agent result was truncated"
+    }
+  ],
+  "gt_row_count": 5,
+  "agent_row_count": 5000,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "agent result was truncated (attempt 2 of 2)"
+}

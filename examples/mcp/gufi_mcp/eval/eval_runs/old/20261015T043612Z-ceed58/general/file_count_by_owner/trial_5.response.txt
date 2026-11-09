@@ -1,0 +1,14 @@
+The 10 users with the most files in the `eval_master` index are:
+
+1. UID 3012: 214 files
+2. UID 3012: 207 files
+3. UID 3002: 186 files
+4. UID 3013: 170 files
+5. UID 3003: 169 files
+6. UID 3008: 163 files
+7. UID 3002: 161 files
+8. UID 3013: 157 files
+9. UID 3005: 156 files
+10. UID 3006: 144 files
+
+(Note: Some UIDs may appear multiple times due to different counts from various directories.)

@@ -1,0 +1,50 @@
+{
+  "expected": [
+    [
+      "Days",
+      53
+    ],
+    [
+      "Hrs",
+      8
+    ],
+    [
+      "Mos",
+      3093
+    ],
+    [
+      "Wks",
+      197
+    ],
+    [
+      "Yrs",
+      6638
+    ]
+  ],
+  "actual": [
+    [
+      "Days",
+      49
+    ],
+    [
+      "Hrs",
+      7
+    ],
+    [
+      "Mos",
+      250
+    ],
+    [
+      "Wks",
+      131
+    ],
+    [
+      "Yrs",
+      251
+    ]
+  ],
+  "expected_row_count": 5,
+  "actual_row_count": 5,
+  "gt_duration_ms": 32.41290900041349,
+  "agent_duration_ms": 29.794
+}

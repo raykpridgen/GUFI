@@ -1,0 +1,9 @@
+The directories in `eval_master` that hold the most data directly inside them, based on the query results, all have totals of 4096 bytes. Here are some prominent examples:
+
+1. `/home/raykprid/search/eval_master/groups/grp01/usr014/clean`
+2. `/home/raykprid/search/eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron`
+3. `/home/raykprid/search/eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/model/cluster_sample`
+4. `/home/raykprid/search/eval_master/groups/grp02/usr002/src_slice/final/run`
+5. `/home/raykprid/search/eval_master/groups/grp02/usr007/sim_cluster/eval`
+
+All listed directories are at the same size, indicating they contain a similar amount of data directly inside them. If further details or aggregations are needed, please let me know!

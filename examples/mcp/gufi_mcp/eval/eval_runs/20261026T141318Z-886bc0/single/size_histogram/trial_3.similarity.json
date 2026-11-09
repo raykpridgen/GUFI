@@ -1,0 +1,53 @@
+{
+  "scenario": "size_histogram",
+  "trial": 3,
+  "pass": false,
+  "passed_on_attempt": null,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "cat TEXT",
+    "per_directory_sql": [
+      "SELECT bytecat(size) FROM vrpentries WHERE type = 'f'"
+    ],
+    "partial_shape": "cat TEXT, count INT64",
+    "partial_sql": "SELECT cat, COUNT(*) FROM per_directory GROUP BY cat",
+    "final_sql": "SELECT cat, SUM(count) AS count FROM partial GROUP BY cat"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT size FROM vrpentries"
+    ],
+    "per_directory_shape": "size INT64",
+    "partial_sql": "SELECT size, COUNT(*) FROM per_directory GROUP BY size",
+    "partial_shape": "size INT64, count INT64",
+    "final_sql": "SELECT size, SUM(count) AS count FROM partial GROUP BY size ORDER BY size"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT size FROM vrpentries"
+      ],
+      "per_directory_shape": "size INT64",
+      "partial_sql": "SELECT size, COUNT(*) FROM per_directory GROUP BY size",
+      "partial_shape": "size INT64, count INT64",
+      "final_sql": "SELECT size, SUM(count) AS count FROM partial GROUP BY size ORDER BY size"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": true,
+      "passed": false,
+      "row_count": 5000,
+      "reason": "agent result was truncated"
+    }
+  ],
+  "gt_row_count": 5,
+  "agent_row_count": 5000,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "agent result was truncated (attempt 1 of 1)"
+}

@@ -1,0 +1,13 @@
+These are the 5 users who own the most data in eval_master, counting the total size of their regular files:
+
+| Rank | UID | Total size | Files | Largest single file |
+|---|---|---|---|---|
+| 1 | 3012 | 1,486,218,563 B (~1.38 GiB) | 783 | `groups/grp05/usr012/output/scratch.c` (~1.18 GiB) |
+| 2 | 3014 | 1,345,751,245 B (~1.25 GiB) | 359 | `groups/grp01/usr014/clean/step/old.log` (~1.14 GiB) |
+| 3 | 3008 | 1,307,551,424 B (~1.22 GiB) | 756 | `groups/grp05/usr008/.../text_output/text_run.txt` (~1.04 GiB) |
+| 4 | 3001 | 1,265,869,222 B (~1.18 GiB) | 600 | `groups/grp03/usr001/chunk/audio/archive/tests_output.py` (~1.05 GiB) |
+| 5 | 3002 | 1,121,611,465 B (~1.04 GiB) | 635 | `groups/grp02/usr002/.../final/trace_cluster-666.txt` (~0.89 GiB) |
+
+Each of these users has one very large file that accounts for most of their total. Without it, they would be close to everyone else, who each have roughly 190–230 MB. The only other user near the top is UID 3015, in 6th place with about 0.66 GiB, mostly from one 564 MB file.
+
+The index only stores numeric UIDs, so I couldn't look up usernames. Judging by their home directories, the users are probably usr012, usr014, usr008, usr001 and usr002.

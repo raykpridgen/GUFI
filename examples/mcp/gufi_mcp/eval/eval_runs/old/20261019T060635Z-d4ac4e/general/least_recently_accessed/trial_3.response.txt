@@ -1,0 +1,33 @@
+These are the 20 regular files in `eval_master` that have gone longest without being accessed. Each one was last read about 364 days ago, on 2025-10-12 (UTC), the same calendar day one year before now (2026-10-12).
+
+| # | Path | Last accessed (UTC) | Size (bytes) | UID |
+|---|------|---------------------|-------------:|----:|
+| 1 | groups/grp05/usr008/cache_text/signal_ocean/shard-604.dat | 2025-10-12 00:34:17 | 517,341 | 3008 |
+| 2 | groups/grp02/usr007/sim_cluster/eval/tests/sweep_model-186.h5 | 2025-10-12 01:03:35 | 38,965 | 3007 |
+| 3 | groups/grp04/shared/signal_plots.py | 2025-10-12 03:11:37 | 8 | 3010 |
+| 4 | groups/grp03/usr011/lattice/shard_lattice/survey_final/scratch_model.json | 2025-10-12 04:18:15 | 54,555 | 3011 |
+| 5 | groups/grp01/usr014/clean/stage.h5 | 2025-10-12 04:25:53 | 2,553,512 | 3014 |
+| 6 | groups/grp04/usr006/ocean/phase/params/train_part/image-088.txt | 2025-10-12 05:02:58 | 3 | 3006 |
+| 7 | groups/grp03/usr004/train/model_report/code.log | 2025-10-12 06:11:15 | 18 | 3004 |
+| 8 | groups/grp04/usr010/mesh/model_clean/slice_corpus-207.py | 2025-10-12 06:41:08 | 5 | 3010 |
+| 9 | groups/grp02/usr002/clean-925.c | 2025-10-12 07:57:11 | 22,227 | 3002 |
+| 10 | groups/grp01/usr003/checkpoint/lib_src.txt | 2025-10-12 08:30:54 | 6 | 3003 |
+| 11 | groups/grp02/usr002/src_slice/checkpoint/results_neuron/slice/output.py | 2025-10-12 09:20:27 | 5,374 | 3002 |
+| 12 | groups/grp02/usr007/sim_cluster/image_eval/gpu_genome-457.h5 | 2025-10-12 10:52:59 | 15 | 3007 |
+| 13 | groups/grp05/usr012/output/weights/grid_final/cache_text-348.txt | 2025-10-12 13:56:51 | 466,091 | 3012 |
+| 14 | groups/grp02/shared/model_particle-936.py | 2025-10-12 15:29:12 | 1,493 | 3007 |
+| 15 | groups/grp04/usr006/ocean/phase/params/text_build/.results.txt | 2025-10-12 15:44:36 | 489 | 3006 |
+| 16 | groups/grp03/usr011/lattice/run_protein/results/paper.txt | 2025-10-12 15:46:50 | 54 | 3011 |
+| 17 | groups/grp04/usr006/particle.dat | 2025-10-12 16:03:26 | 2 | 3006 |
+| 18 | groups/grp05/shared/lib.py | 2025-10-12 16:45:40 | 30,547 | 3012 |
+| 19 | groups/grp02/usr007/sim_cluster/metrics/stage/step-478.dat | 2025-10-12 19:15:13 | 0 | 3007 |
+| 20 | groups/grp02/usr013/batch/sim/output/code_plots.dat | 2025-10-12 19:22:04 | 8,354 | 3013 |
+
+All paths start with `eval_master/`.
+
+- **Oldest file:** `groups/grp05/usr008/cache_text/signal_ocean/shard-604.dat` (about 517 KB, UID 3008).
+- **Biggest file here:** `groups/grp01/usr014/clean/stage.h5` (about 2.5 MB).
+- **Possible one-year limit:** None of these last-access dates is older than a year. This list was cut off at 20 files, and the oldest dates sit right at one year ago. So the index may only hold about a year of access history, or something may have reset access times to within that window. Treat these as the oldest files the index has recorded, not proof they've never been read since creation.
+- **Unreliable access times:** Many file systems mount with `relatime`/`noatime`, which only updates access times now and then or not at all. Last-access times can therefore make files look older than they really are.
+
+I can widen the list, narrow it by user, group or size, or check the last-modified times instead.

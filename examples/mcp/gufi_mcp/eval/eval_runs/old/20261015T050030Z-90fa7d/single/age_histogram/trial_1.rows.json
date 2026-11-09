@@ -1,0 +1,496 @@
+{
+  "ordered_compare": false,
+  "row_order": "compared order (both sides sorted)",
+  "expected": [
+    [
+      "Days",
+      30
+    ],
+    [
+      "Mos",
+      3088
+    ],
+    [
+      "Wks",
+      204
+    ],
+    [
+      "Yrs",
+      6667
+    ]
+  ],
+  "actual": [
+    [
+      "Less than a day",
+      1
+    ],
+    [
+      "Less than a day",
+      1
+    ],
+    [
+      "Less than a day",
+      1
+    ],
+    [
+      "Less than a day",
+      1
+    ],
+    [
+      "Less than a day",
+      2
+    ],
+    [
+      "Less than a day",
+      3
+    ],
+    [
+      "Less than a day",
+      3
+    ],
+    [
+      "Less than a day",
+      3
+    ],
+    [
+      "Less than a month",
+      7
+    ],
+    [
+      "Less than a month",
+      10
+    ],
+    [
+      "Less than a month",
+      14
+    ],
+    [
+      "Less than a month",
+      16
+    ],
+    [
+      "Less than a month",
+      17
+    ],
+    [
+      "Less than a month",
+      17
+    ],
+    [
+      "Less than a month",
+      17
+    ],
+    [
+      "Less than a month",
+      18
+    ],
+    [
+      "Less than a month",
+      19
+    ],
+    [
+      "Less than a month",
+      19
+    ],
+    [
+      "Less than a month",
+      20
+    ],
+    [
+      "Less than a month",
+      21
+    ],
+    [
+      "Less than a week",
+      1
+    ],
+    [
+      "Less than a week",
+      2
+    ],
+    [
+      "Less than a week",
+      3
+    ],
+    [
+      "Less than a week",
+      4
+    ],
+    [
+      "Less than a week",
+      4
+    ],
+    [
+      "Less than a week",
+      4
+    ],
+    [
+      "Less than a week",
+      5
+    ],
+    [
+      "Less than a week",
+      5
+    ],
+    [
+      "Less than a week",
+      5
+    ],
+    [
+      "Less than a week",
+      5
+    ],
+    [
+      "Less than a week",
+      6
+    ],
+    [
+      "Less than a week",
+      7
+    ],
+    [
+      "Less than a year",
+      214
+    ],
+    [
+      "Less than a year",
+      215
+    ],
+    [
+      "Less than a year",
+      236
+    ],
+    [
+      "Less than a year",
+      249
+    ],
+    [
+      "Less than a year",
+      250
+    ],
+    [
+      "Less than a year",
+      260
+    ],
+    [
+      "Less than a year",
+      262
+    ],
+    [
+      "Less than a year",
+      263
+    ],
+    [
+      "Less than a year",
+      277
+    ],
+    [
+      "Less than a year",
+      277
+    ],
+    [
+      "Less than a year",
+      291
+    ],
+    [
+      "Less than a year",
+      303
+    ],
+    [
+      "More than a year",
+      474
+    ],
+    [
+      "More than a year",
+      478
+    ],
+    [
+      "More than a year",
+      486
+    ],
+    [
+      "More than a year",
+      529
+    ],
+    [
+      "More than a year",
+      531
+    ],
+    [
+      "More than a year",
+      548
+    ],
+    [
+      "More than a year",
+      587
+    ],
+    [
+      "More than a year",
+      587
+    ],
+    [
+      "More than a year",
+      589
+    ],
+    [
+      "More than a year",
+      594
+    ],
+    [
+      "More than a year",
+      599
+    ],
+    [
+      "More than a year",
+      629
+    ]
+  ],
+  "missing_from_actual": [
+    [
+      "Days",
+      30
+    ],
+    [
+      "Mos",
+      3088
+    ],
+    [
+      "Wks",
+      204
+    ],
+    [
+      "Yrs",
+      6667
+    ]
+  ],
+  "unexpected_in_actual": [
+    [
+      "Less than a day",
+      1
+    ],
+    [
+      "Less than a day",
+      1
+    ],
+    [
+      "Less than a day",
+      1
+    ],
+    [
+      "Less than a day",
+      1
+    ],
+    [
+      "Less than a day",
+      2
+    ],
+    [
+      "Less than a day",
+      3
+    ],
+    [
+      "Less than a day",
+      3
+    ],
+    [
+      "Less than a day",
+      3
+    ],
+    [
+      "Less than a month",
+      7
+    ],
+    [
+      "Less than a month",
+      10
+    ],
+    [
+      "Less than a month",
+      14
+    ],
+    [
+      "Less than a month",
+      16
+    ],
+    [
+      "Less than a month",
+      17
+    ],
+    [
+      "Less than a month",
+      17
+    ],
+    [
+      "Less than a month",
+      17
+    ],
+    [
+      "Less than a month",
+      18
+    ],
+    [
+      "Less than a month",
+      19
+    ],
+    [
+      "Less than a month",
+      19
+    ],
+    [
+      "Less than a month",
+      20
+    ],
+    [
+      "Less than a month",
+      21
+    ],
+    [
+      "Less than a week",
+      1
+    ],
+    [
+      "Less than a week",
+      2
+    ],
+    [
+      "Less than a week",
+      3
+    ],
+    [
+      "Less than a week",
+      4
+    ],
+    [
+      "Less than a week",
+      4
+    ],
+    [
+      "Less than a week",
+      4
+    ],
+    [
+      "Less than a week",
+      5
+    ],
+    [
+      "Less than a week",
+      5
+    ],
+    [
+      "Less than a week",
+      5
+    ],
+    [
+      "Less than a week",
+      5
+    ],
+    [
+      "Less than a week",
+      6
+    ],
+    [
+      "Less than a week",
+      7
+    ],
+    [
+      "Less than a year",
+      214
+    ],
+    [
+      "Less than a year",
+      215
+    ],
+    [
+      "Less than a year",
+      236
+    ],
+    [
+      "Less than a year",
+      249
+    ],
+    [
+      "Less than a year",
+      250
+    ],
+    [
+      "Less than a year",
+      260
+    ],
+    [
+      "Less than a year",
+      262
+    ],
+    [
+      "Less than a year",
+      263
+    ],
+    [
+      "Less than a year",
+      277
+    ],
+    [
+      "Less than a year",
+      277
+    ],
+    [
+      "Less than a year",
+      291
+    ],
+    [
+      "Less than a year",
+      303
+    ],
+    [
+      "More than a year",
+      474
+    ],
+    [
+      "More than a year",
+      478
+    ],
+    [
+      "More than a year",
+      486
+    ],
+    [
+      "More than a year",
+      529
+    ],
+    [
+      "More than a year",
+      531
+    ],
+    [
+      "More than a year",
+      548
+    ],
+    [
+      "More than a year",
+      587
+    ],
+    [
+      "More than a year",
+      587
+    ],
+    [
+      "More than a year",
+      589
+    ],
+    [
+      "More than a year",
+      594
+    ],
+    [
+      "More than a year",
+      599
+    ],
+    [
+      "More than a year",
+      629
+    ]
+  ],
+  "expected_row_count": 4,
+  "actual_row_count": 56,
+  "gt_duration_ms": 29.6354700003576,
+  "agent_duration_ms": 30.656
+}

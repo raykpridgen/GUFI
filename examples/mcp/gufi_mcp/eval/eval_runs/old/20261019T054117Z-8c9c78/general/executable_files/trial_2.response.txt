@@ -1,0 +1,45 @@
+Here are the executable files found in the `eval_master` index:
+
+1. `eval_master/groups/grp04`
+2. `eval_master/groups/grp02/usr013`
+3. `eval_master/groups/grp02/usr013/bench_sim-731.log`
+4. `eval_master/groups/grp02/usr013/checkpoint_draft.txt`
+5. `eval_master/groups/grp02/usr013/cluster_final.png`
+6. `eval_master/groups/grp02/usr013/dataset-680.dat`
+7. `eval_master/groups/grp02/usr013/field.lnk`
+8. `eval_master/groups/grp02/usr013/field_notes-086.c`
+9. `eval_master/groups/grp02/usr013/job.h5`
+10. `eval_master/groups/grp02/usr013/lib_image.lnk`
+11. `eval_master/groups/grp02/usr013/results.png`
+12. `eval_master/groups/grp02/usr013/sweep_figures-208.log`
+13. `eval_master/groups/grp03/usr001`
+14. `eval_master/groups/grp03/usr001/checkpoint-588.py`
+15. `eval_master/groups/grp03/usr001/data-369.png`
+16. `eval_master/groups/grp03/usr001/fluid.lnk`
+17. `eval_master/groups/grp05/shared`
+18. `eval_master/groups/grp05/shared/analysis_survey.csv`
+19. `eval_master/groups/grp05/shared/climate_logs-632.csv`
+20. `eval_master/groups/grp05/shared/eval-568.log`
+21. `eval_master/groups/grp05/shared/eval_src-165.py`
+22. `eval_master/groups/grp05/shared/field_phase.json`
+23. `eval_master/groups/grp05/shared/figures-960.txt`
+24. `eval_master/groups/grp05/shared/genome-209.log`
+25. `eval_master/groups/grp05/shared/grid_params.gz`
+26. `eval_master/groups/grp05/shared/params_checkpoint-701`
+27. `eval_master/groups/grp05/shared/src-824.csv`
+28. `eval_master/groups/grp04/usr005`
+29. `eval_master/groups/grp04/usr005/bench.h5`
+30. `eval_master/groups/grp04/usr005/chunk-504.log`
+31. `eval_master/groups/grp04/usr005/corpus_backup-175.py`
+32. `eval_master/groups/grp04/usr005/gpu.lnk`
+33. `eval_master/groups/grp04/usr005/layer-512.json`
+34. `eval_master/groups/grp04/usr005/ocean_epoch.h5`
+35. `eval_master/groups/grp04/usr005/paper_analysis-428.log`
+36. `eval_master/groups/grp04/usr005/part_cluster.c`
+37. `eval_master/groups/grp04/usr005/protein_data.lnk`
+38. `eval_master/groups/grp04/usr005/survey.dat`
+39. `eval_master/groups/grp04/usr005/survey_data-757.py`
+40. `eval_master/groups/grp04/usr005/sweep-947.png`
+41. `eval_master/groups/grp04/usr005/trace.lnk`
+
+This is a partial list, as there are numerous executable files in the index. If you require further details or specific files, please let me know!

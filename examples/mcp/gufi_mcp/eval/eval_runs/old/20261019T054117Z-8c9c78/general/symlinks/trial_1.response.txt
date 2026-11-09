@@ -1,0 +1,24 @@
+Here is a list of symbolic links in the `eval_master` index along with their respective target files:
+
+1. `eval_master/groups/grp02/usr002/backup.lnk` → `src_slice/checkpoint/results_neuron/model/cluster_sample/ocean-957.txt`
+2. `eval_master/groups/grp02/usr013/field.lnk` → `run_plots-058.log`
+3. `eval_master/groups/grp02/usr002/scratch.lnk` → `missing_layer`
+4. `eval_master/groups/grp02/usr013/lib_image.lnk` → `batch/step/tmp_particle/gpu/data.json`
+5. `eval_master/groups/grp05/usr008/params_config.lnk` → `missing_video`
+6. `eval_master/groups/grp02/usr013/chunk/input_neuron.lnk` → `missing_figures`
+7. `eval_master/groups/grp04/usr010/code.lnk` → `sample_clean.png`
+8. `eval_master/groups/grp02/usr013/chunk/profile.lnk` → `missing_archive`
+9. `eval_master/groups/grp04/usr010/config.lnk` → `missing_layer`
+10. `eval_master/groups/grp02/usr007/sim_cluster/stage_paper.lnk` → `metrics/stage/step-478.dat`
+11. `eval_master/groups/grp04/usr010/profile/config.lnk` → `missing_train`
+12. `eval_master/groups/grp04/usr010/mesh/job_build.lnk` → `../profile/checkpoint_text-000.csv`
+13. `eval_master/groups/grp04/usr010/mesh/mesh_shard.lnk` → `tmp_genome/train/scratch_params.py`
+14. `eval_master/groups/grp01/usr014/checkpoint_lattice.lnk` → `missing_build`
+15. `eval_master/groups/grp01/usr014/climate.lnk` → `clean/survey_lib.txt`
+16. `eval_master/groups/grp04/usr010/mesh/old_fluid/output.lnk` → `../tmp_genome/sweep/profile/old/part_lattice-940.json`
+17. `eval_master/groups/grp04/usr010/mesh/old_fluid/params_stage.lnk` → `../../profile/paper/climate_job-043.csv`
+18. `eval_master/groups/grp04/usr010/mesh/cluster_lattice/tmp_epoch.lnk` → `missing_bench`
+19. `eval_master/groups/grp04/usr010/mesh/old_fluid/tests_logs.lnk` → `../code/src_text.json`
+20. `eval_master/groups/grp05/usr008/cache_text/node_code.lnk` → `../figures.log`
+
+(Note: This is a shortened list; there are many more symbolic links in the output. Please let me know if you would like to see additional entries.)

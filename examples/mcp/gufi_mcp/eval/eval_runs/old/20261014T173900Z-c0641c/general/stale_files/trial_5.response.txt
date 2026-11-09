@@ -1,0 +1,9 @@
+The total space in files that have not been modified in over a year is 5,594,344,475 bytes. The total space in all files in the `eval_master` is 8,797,710,586 bytes.
+
+To calculate the share of the total space, we can use the following formula:
+
+\[
+\text{Share} = \frac{\text{Total Space of Unmodified Files}}{\text{Total Space of All Files}} = \frac{5,594,344,475}{8,797,710,586} \approx 0.635
+\]
+
+Thus, approximately 63.5% of the total space in `eval_master` is taken up by files that nobody has modified in over a year.

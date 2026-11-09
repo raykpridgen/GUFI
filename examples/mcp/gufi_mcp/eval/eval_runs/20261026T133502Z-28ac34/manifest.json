@@ -1,0 +1,80 @@
+{
+  "run_id": "20261026T133502Z-28ac34",
+  "mcp_git": {
+    "rev": "9ed6bc1c6586a8aa924161fa8d063d4fd4315126",
+    "branch": "lateral",
+    "dirty": true
+  },
+  "gufi_version": "86abf601-dirty",
+  "packages": {
+    "python": "3.13.15",
+    "mcp": "2.2.0",
+    "openai": "3.29.0",
+    "pydantic": "2.13.5",
+    "sqlglot": "30.18.0"
+  },
+  "registries": {
+    "single": {
+      "path": "/home/raykprid/omniverse/work/mcp/stripped/examples/mcp/gufi_mcp/scenarios.single.yaml",
+      "sha256": "08a75027c40acf05d45800e6989ba88390fde93dd40f6ef03dcdbf4dec1b0044"
+    }
+  },
+  "index_manifests": {
+    "eval_master": "807f77879b5ad885"
+  },
+  "agent_config": {
+    "agent": "openrouter",
+    "model": "openai/gpt-4o-mini",
+    "temperature": null,
+    "max_completion_tokens": 4096,
+    "base_url": "https://openrouter.ai/api/v1",
+    "tool_result_chars": 20000
+  },
+  "agent_config_hash": "52879d198e19eaa6",
+  "results": {
+    "single_pass_rate": 0.45,
+    "single_one_shot_pass_rate": 0.35,
+    "single_pass_rate_by_attempt": {
+      "1": 0.35,
+      "2": 0.45,
+      "3": 0.45,
+      "4": 0.45,
+      "5": 0.45
+    },
+    "single_mean_tool_calls": 1.2,
+    "single_pass_rate_by_scenario": {
+      "total_file_size": 0.0,
+      "total_dir_size": 0.8,
+      "ext_histogram": 0.6,
+      "size_histogram": 0.0,
+      "age_histogram": 0.0,
+      "top10_size_global": 1.0,
+      "top10_size_per_uid": 0.6,
+      "ext_winner": 0.4,
+      "count_over_1gib": 1.0,
+      "oldest_k": 1.0,
+      "not_modified_n_days": 0.0,
+      "count_and_size": 0.0
+    },
+    "single_one_shot_rate_by_scenario": {
+      "total_file_size": 0.0,
+      "total_dir_size": 0.8,
+      "ext_histogram": 0.6,
+      "size_histogram": 0.0,
+      "age_histogram": 0.0,
+      "top10_size_global": 1.0,
+      "top10_size_per_uid": 0.4,
+      "ext_winner": 0.4,
+      "count_over_1gib": 1.0,
+      "oldest_k": 0.0,
+      "not_modified_n_days": 0.0,
+      "count_and_size": 0.0
+    },
+    "trials": 60,
+    "single_trials": 60,
+    "general_trials": 0,
+    "total_cost_usd": 0.093512,
+    "total_tokens": 835013,
+    "infrastructure_errors": []
+  }
+}

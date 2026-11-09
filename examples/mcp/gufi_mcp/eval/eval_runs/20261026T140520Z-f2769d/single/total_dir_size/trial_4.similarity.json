@@ -1,0 +1,53 @@
+{
+  "scenario": "total_dir_size",
+  "trial": 4,
+  "pass": false,
+  "passed_on_attempt": null,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "size INT64",
+    "per_directory_sql": [
+      "SELECT size FROM summary WHERE isroot = 1"
+    ],
+    "partial_shape": "total INT64",
+    "partial_sql": "SELECT SUM(size) FROM per_directory",
+    "final_sql": "SELECT SUM(total) AS total FROM partial"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT size FROM vrsummary"
+    ],
+    "per_directory_shape": "size INT64",
+    "partial_sql": "SELECT SUM(size) AS total_size FROM per_directory",
+    "partial_shape": "total_size INT64",
+    "final_sql": "SELECT total_size FROM partial"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT size FROM vrsummary"
+      ],
+      "per_directory_shape": "size INT64",
+      "partial_sql": "SELECT SUM(size) AS total_size FROM per_directory",
+      "partial_shape": "total_size INT64",
+      "final_sql": "SELECT total_size FROM partial"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": true,
+      "passed": false,
+      "row_count": 12,
+      "reason": "row count 12 != expected 1"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 12,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "row count 12 != expected 1 (attempt 1 of 1)"
+}

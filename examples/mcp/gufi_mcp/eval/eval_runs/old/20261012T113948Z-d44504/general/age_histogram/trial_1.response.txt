@@ -1,0 +1,59 @@
+Here are the grouped counts of regular files by GUFI's age category of their modification time:
+
+| Age Category | File Count |
+|--------------|------------|
+| Yrs          | 652        |
+| Yrs          | 620        |
+| Yrs          | 614        |
+| Yrs          | 607        |
+| Yrs          | 603        |
+| Yrs          | 545        |
+| Yrs          | 527        |
+| Yrs          | 520        |
+| Yrs          | 515        |
+| Yrs          | 497        |
+| Yrs          | 475        |
+| Yrs          | 463        |
+| Mos          | 339        |
+| Mos          | 294        |
+| Mos          | 279        |
+| Mos          | 277        |
+| Mos          | 276        |
+| Mos          | 273        |
+| Mos          | 237        |
+| Mos          | 229        |
+| Mos          | 227        |
+| Mos          | 225        |
+| Mos          | 220        |
+| Mos          | 217        |
+| Wks          | 24         |
+| Wks          | 21         |
+| Wks          | 19         |
+| Wks          | 17         |
+| Wks          | 17         |
+| Wks          | 16         |
+| Wks          | 15         |
+| Wks          | 15         |
+| Wks          | 15         |
+| Wks          | 15         |
+| Wks          | 12         |
+| Wks          | 11         |
+| Days         | 7          |
+| Days         | 6          |
+| Days         | 6          |
+| Days         | 5          |
+| Days         | 5          |
+| Days         | 4          |
+| Days         | 4          |
+| Days         | 4          |
+| Days         | 4          |
+| Days         | 4          |
+| Days         | 3          |
+| Hrs          | 3          |
+| Hrs          | 2          |
+| Hrs          | 1          |
+| Hrs          | 1          |
+| Days         | 1          |
+| Hrs          | 1          |
+
+This result displays one row per category that has at least one file, along with the number of files in that category.

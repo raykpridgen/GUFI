@@ -1,0 +1,24 @@
+Here are some files in the index `eval_master` that are executable:
+
+1. `eval_master/groups/grp01/usr014`
+2. `eval_master/groups/grp01/usr014/checkpoint_lattice.lnk`
+3. `eval_master/groups/grp01/usr014/chunk.log`
+4. `eval_master/groups/grp01/usr014/climate.lnk`
+5. `eval_master/groups/grp01/usr014/data_train-499.py`
+6. `eval_master/groups/grp01/usr014/input_bench.json`
+7. `eval_master/groups/grp01/usr014/paper_text`
+8. `eval_master/groups/grp01/usr014/sample_stage.lnk`
+9. `eval_master/groups/grp01/usr014/text.lnk`
+10. `eval_master/groups/grp04/usr006`
+11. `eval_master/groups/grp04/usr006/.analysis_part.csv`
+12. `eval_master/groups/grp04/usr006/genome-584.py`
+13. `eval_master/groups/grp04/usr006/grid_tests-307.log`
+14. `eval_master/groups/grp04/usr006/mesh_archive-067.py`
+15. `eval_master/groups/grp04/usr006/report.csv`
+16. `eval_master/groups/grp04/usr006/results_figures.c`
+17. `eval_master/groups/grp04/usr006/src_audio-490.png`
+18. `eval_master/groups/grp01/usr003/text_grid`
+19. `eval_master/groups/grp01/usr003/text_grid/batch-418.txt`
+20. `eval_master/groups/grp01/usr003/text_grid/clean_analysis-036.py`
+
+(Note that the list continues with many more files. If you would like the complete list or more details, please let me know!)

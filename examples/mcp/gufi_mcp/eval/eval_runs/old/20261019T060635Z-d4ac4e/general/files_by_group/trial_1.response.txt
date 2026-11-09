@@ -1,0 +1,11 @@
+Three users own regular files in group 2003 in `eval_master`. The index only stores numeric IDs, so I can't give their user names.
+
+| UID  | Regular files in gid 2003 |
+|------|---------------------------|
+| 3011 | 712 |
+| 3001 | 600 |
+| 3004 | 567 |
+
+That's 1,879 regular files in total.
+
+The counts above leave out symlinks. The same users also own symlinks in group 2003: 21 for UID 3011, 18 for UID 3001 and 17 for UID 3004. Counting those, the totals are 733, 618 and 584.

@@ -1,0 +1,3 @@
+It appears that there are no results for the space usage or the count of files and directories under the "groups/" directory in the "eval_master" index. This could mean that the "groups/" directory is empty or does not exist in the index. 
+
+Would you like me to check a different path or look for other directory contents?

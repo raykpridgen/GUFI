@@ -1,0 +1,39 @@
+**269 entries in eval_master were modified in the past month** (from 2026-09-12 to 2026-10-12). That's 261 regular files totalling about 66.8 MB, plus 8 symlinks.
+
+**How I measured "changed":** I used modification time (mtime) because the change time (ctime) can't be used here. Every one of the 10,289 entries has the exact same ctime, 2026-10-12 08:36:43 UTC, which is about 8.6 hours after "now." That looks like the time the index was built or the files were copied, not real changes. If I counted by ctime, every file in the index would show up as changed.
+
+**By group/user (count, size):**
+| Owner path | Files | Bytes |
+|---|---|---|
+| grp03/usr011 | 25 | 6.4 MB |
+| grp01/usr009 | 24 | 10.9 MB |
+| grp01/usr003 | 23 | 3.9 MB |
+| grp05/usr012 | 22 | 8.0 MB |
+| grp02/usr007 | 22 | 6.5 MB |
+| grp04/usr006 | 19 | 51 KB |
+| grp02/usr002 | 19 | 508 KB |
+| grp05/usr008 | 18 | 3.1 MB |
+| grp03/usr004 | 15 | 1.3 MB |
+| grp04/usr010 | 14 | 7.0 MB |
+| grp03/usr001 | 14 | 6.3 MB |
+| grp05/usr015 | 12 | 445 KB |
+| grp04/usr005 | 11 | 24 KB |
+| grp02/usr013 | 10 | 4.9 MB |
+| grp01/usr014 | 8 | 3.3 MB |
+| grp03/shared, grp05/shared, grp01/shared, grp04/shared, grp02/shared | 4, 3, 3, 2, 1 | 2.6 MB, 26 KB, 957 KB, 566 KB, 0 B |
+
+**Most recently modified (all under `eval_master/groups/`):**
+- grp01/usr009/output_lib/cluster_batch/output/dataset.lnk (symlink): 2026-10-11 23:13
+- grp04/usr005/params/audio.py: 2026-10-11 23:05
+- grp04/usr005/job_data.txt: 2026-10-11 22:29
+- grp04/usr005/params/protein/genome_shard/results_raw/profile.csv: 2026-10-11 21:34
+- grp05/usr012/output/weights/grid_final/audio_part/build_video.py: 2026-10-11 20:20
+- grp03/usr004/part_epoch/climate_particle.png: 2026-10-11 18:22
+- grp03/usr011/lattice/run_protein/notes/stage.png: 2026-10-11 17:36
+- grp05/usr008/cache_text/signal_ocean/plots_protein/lib/shard_raw/config_trace.dat: 2026-10-11 12:40
+- grp04/usr005/params/corpus_old.json: 2026-10-11 12:23
+- grp03/usr004/scratch_stage/run_checkpoint.gz: 2026-10-11 05:37
+
+There are 259 more, going back to 2026-09-12. The largest recent ones include grp01/usr009/output_lib/cluster_batch/data_archive.txt (2.3 MB, Oct 9) and grp03/shared/tmp_archive-543.txt (2.6 MB, Oct 3).
+
+I can send the full list of 269 paths as a table or CSV, or narrow it to one group, user or file type.

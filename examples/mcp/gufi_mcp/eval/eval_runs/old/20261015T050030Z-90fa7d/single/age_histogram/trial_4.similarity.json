@@ -1,0 +1,43 @@
+{
+  "scenario": "age_histogram",
+  "trial": 4,
+  "pass": false,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "cat TEXT",
+    "scatter_sql": [
+      "SELECT agecat(mtime) FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "cat TEXT, count INT64",
+    "gather_sql": "SELECT cat, COUNT(*) FROM intermediate GROUP BY cat",
+    "final_sql": "SELECT cat, SUM(count) AS count FROM aggregate GROUP BY cat"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT mtime, size FROM vrpentries WHERE type = 'f'"
+    ],
+    "scatter_shape": "mtime INT64, size INT64",
+    "gather_sql": "SELECT CASE WHEN mtime >= 1791763200 - 86400 * 30 THEN 'Less than 30 days ago' WHEN mtime >= 1791763200 - 86400 * 60 THEN '30 to 60 days ago' WHEN mtime >= 1791763200 - 86400 * 90 THEN '60 to 90 days ago' ELSE 'More than 90 days ago' END AS time_category, COUNT(*) AS file_count, SUM(size) AS total_size FROM intermediate GROUP BY time_category",
+    "gather_shape": "time_category TEXT, file_count INT64, total_size INT64",
+    "final_sql": "SELECT time_category, SUM(file_count) AS total_files, SUM(total_size) AS total_size FROM aggregate GROUP BY time_category"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT mtime, size FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "mtime INT64, size INT64",
+      "gather_sql": "SELECT CASE WHEN mtime >= 1791763200 - 86400 * 30 THEN 'Less than 30 days ago' WHEN mtime >= 1791763200 - 86400 * 60 THEN '30 to 60 days ago' WHEN mtime >= 1791763200 - 86400 * 90 THEN '60 to 90 days ago' ELSE 'More than 90 days ago' END AS time_category, COUNT(*) AS file_count, SUM(size) AS total_size FROM intermediate GROUP BY time_category",
+      "gather_shape": "time_category TEXT, file_count INT64, total_size INT64",
+      "final_sql": "SELECT time_category, SUM(file_count) AS total_files, SUM(total_size) AS total_size FROM aggregate GROUP BY time_category"
+    }
+  ],
+  "gt_row_count": 4,
+  "agent_row_count": 4,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "column counts differ: expected 2, got 3"
+}

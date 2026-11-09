@@ -1,0 +1,21 @@
+Here's the data representing each user in `eval_master`, detailing the files that haven't been modified in over 90 days:
+
+| User ID | File Count | Total Size (bytes) |
+|---------|------------|---------------------|
+| 3001    | 31         | 8535483             |
+| 3002    | 50         | 977071581           |
+| 3003    | 331        | 103888207           |
+| 3004    | 69         | 10541759            |
+| 3005    | 87         | 20328234            |
+| 3006    | 141        | 34525455            |
+| 3007    | 117        | 27791565            |
+| 3008    | 84         | 1136087953          |
+| 3009    | 121        | 41548073            |
+| 3010    | 110        | 30794241            |
+| 3011    | 140        | 25251217            |
+| 3012    | 142        | 34822209            |
+| 3013    | 88         | 28615263            |
+| 3014    | 96         | 37284789            |
+| 3015    | 71         | 19333454            |
+
+This table summarizes how many files and the total size in bytes for each user that have not been modified in over 90 days.

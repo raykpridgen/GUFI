@@ -1,0 +1,1 @@
+The total size in bytes of all regular files in the eval_master index is **8,797,702,315** bytes.

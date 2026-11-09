@@ -1,0 +1,9 @@
+The total size of files that have not been modified in over a year is also 5,594,344,475 bytes, which is the same as the total space in the `eval_master` index.
+
+To find the share of this total space that is in files not modified in over a year:
+
+\[
+\text{Share} = \frac{\text{Size of Old Files}}{\text{Total Size}} = \frac{5594344475}{5594344475} = 1
+\]
+
+Thus, the share of the total space in `eval_master` that is in files nobody has modified in over a year is 100%.

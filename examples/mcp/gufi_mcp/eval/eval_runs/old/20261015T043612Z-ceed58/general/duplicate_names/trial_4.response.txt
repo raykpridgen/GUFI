@@ -1,0 +1,69 @@
+The following file names appear more than once in the `eval_master` index, along with the count of their occurrences:
+
+- **.build.txt**: 2
+- **.particle.py**: 2
+- **analysis.c**: 2
+- **analysis.csv**: 3
+- **analysis.dat**: 3
+- **analysis.gz**: 2
+- **analysis.log**: 4
+- **analysis.py**: 2
+- **analysis.txt**: 2
+- **analysis_stage**: 2
+- **archive**: 3
+- **archive.c**: 2
+- **archive.csv**: 3
+- **archive.dat**: 2
+- **archive.h5**: 2
+- **archive.json**: 2
+- **archive.log**: 2
+- **archive.png**: 2
+- **archive.py**: 3
+- **archive.txt**: 6
+- **archive_cache.py**: 2
+- **audio.csv**: 5
+- **audio.gz**: 2
+- **audio.h5**: 5
+- **audio.log**: 3
+- **audio.png**: 3
+- **audio.py**: 4
+- **audio.txt**: 3
+- **backup**: 2
+- **backup.csv**: 3
+- **backup.dat**: 6
+- **backup.json**: 2
+- **backup.lnk**: 6
+- **backup.log**: 5
+- **backup.png**: 2
+- **backup.txt**: 4
+- **backup_sweep.dat**: 2
+- **batch.csv**: 9
+- **batch.dat**: 2
+- **batch.lnk**: 4
+- **batch.log**: 2
+- **batch.png**: 3
+- **batch.py**: 3
+- **batch.txt**: 5
+- **bench.c**: 2
+- **bench.csv**: 2
+- **bench.dat**: 4
+- **bench.h5**: 2
+- **bench.json**: 3
+- **bench.lnk**: 3
+- **bench.log**: 2
+- **bench.png**: 2
+- **bench.py**: 6
+- **bench.txt**: 2
+- **build**: 2
+- **build.csv**: 3
+- **build.dat**: 4
+- **build.h5**: 2
+- **build.json**: 2
+- **build.lnk**: 2
+- **build.log**: 4
+- **build.py**: 2
+- **build.txt**: 6
+
+... and many more.
+
+If you need the full list or specific details on any particular file or additional files, just let me know!

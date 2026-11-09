@@ -1,0 +1,19 @@
+The files over 1 GB in the `eval_master` index and their respective owners are as follows:
+
+1. **File**: `eval_master/groups/grp05/usr012/output/scratch.c`
+   - **Owner UID**: 3012
+   - **Owner GID**: 2005
+
+2. **File**: `eval_master/groups/grp01/usr014/clean/step/old.log`
+   - **Owner UID**: 3014
+   - **Owner GID**: 2001
+
+3. **File**: `eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt`
+   - **Owner UID**: 3008
+   - **Owner GID**: 2005
+
+4. **File**: `eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py`
+   - **Owner UID**: 3001
+   - **Owner GID**: 2003
+
+Therefore, each of these files is owned by the specified user and group IDs.

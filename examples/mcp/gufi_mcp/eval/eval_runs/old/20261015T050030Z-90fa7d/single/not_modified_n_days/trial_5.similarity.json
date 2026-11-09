@@ -1,0 +1,43 @@
+{
+  "scenario": "not_modified_n_days",
+  "trial": 5,
+  "pass": false,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "mtime INT64",
+    "scatter_sql": [
+      "SELECT mtime FROM vrpentries WHERE type = 'f' AND mtime < 1791763200 - 60 * 86400"
+    ],
+    "gather_shape": "n INT64",
+    "gather_sql": "SELECT COUNT(*) FROM intermediate",
+    "final_sql": "SELECT SUM(n) AS n FROM aggregate"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT 1 FROM vrpentries WHERE mtime < 1791763200 - 60 * 86400"
+    ],
+    "scatter_shape": "dummy INTEGER",
+    "gather_sql": "SELECT dummy, COUNT(*) AS file_count FROM intermediate",
+    "gather_shape": "dummy INTEGER, file_count INT64",
+    "final_sql": "SELECT SUM(file_count) AS total_file_count FROM aggregate"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT 1 FROM vrpentries WHERE mtime < 1791763200 - 60 * 86400"
+      ],
+      "scatter_shape": "dummy INTEGER",
+      "gather_sql": "SELECT dummy, COUNT(*) AS file_count FROM intermediate",
+      "gather_shape": "dummy INTEGER, file_count INT64",
+      "final_sql": "SELECT SUM(file_count) AS total_file_count FROM aggregate"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 1,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "values differ: 1 expected row(s) missing, 1 unexpected"
+}

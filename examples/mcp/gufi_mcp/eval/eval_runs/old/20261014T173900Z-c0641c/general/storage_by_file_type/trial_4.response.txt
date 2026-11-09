@@ -1,0 +1,17 @@
+The file types that take up the most space in the `eval_master` index are as follows:
+
+### Regular Files
+1. **c**: 1,265,565,449 bytes
+2. **log**: 1,265,020,355 bytes
+3. **py**: 1,142,453,042 bytes
+4. **txt**: 1,141,972,077 bytes
+5. **dat**: 581,405,057 bytes
+
+### Symlinks
+1. **lnk**: 927 bytes
+2. **lnk**: 843 bytes
+3. **lnk**: 805 bytes
+4. **lnk**: 791 bytes
+5. **lnk**: 770 bytes
+
+The total sizes indicate that regular files dominate the space usage compared to symlinks.

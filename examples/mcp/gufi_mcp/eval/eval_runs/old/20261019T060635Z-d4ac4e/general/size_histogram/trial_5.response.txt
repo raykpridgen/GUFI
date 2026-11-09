@@ -1,0 +1,18 @@
+eval_master has **9,989 regular files** holding about **8.19 GiB** (8,797,702,315 bytes) in total. Symlinks and directories aren't counted.
+
+| Size range | Files | % of files | Total size | % of bytes |
+|---|---:|---:|---:|---:|
+| 0 B (empty) | 503 | 5.0% | 0 | 0% |
+| 1 B – 1 KiB | 4,360 | 43.6% | 628 KiB | <0.01% |
+| 1 KiB – 1 MiB | 4,285 | 42.9% | 639 MiB | 7.6% |
+| 1 MiB – 100 MiB | 835 | 8.4% | 1.75 GiB | 21.3% |
+| 100 MiB – 1 GiB | 2 | 0.02% | 1.42 GiB | 17.3% |
+| > 1 GiB | 4 | 0.04% | 4.40 GiB | 53.7% |
+
+Each range includes its upper limit, so a file of exactly 1 KiB is in "1 B – 1 KiB".
+
+- **Most files are small.** About 92% are 1 MiB or less, but together they take up under 8% of the space.
+- **A few files use most of the space.** The 6 files over 100 MiB hold about 71% of all bytes (5.8 GiB). The 4 files over 1 GiB alone account for more than half.
+- **There are 503 empty files.** You may want to clean these up.
+
+To free up space, start with the 6 largest files.

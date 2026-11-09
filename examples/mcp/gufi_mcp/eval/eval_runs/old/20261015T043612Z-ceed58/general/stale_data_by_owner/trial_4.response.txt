@@ -1,0 +1,19 @@
+Here are the total sizes of data for each user in `eval_master` that haven't been modified in over 90 days:
+
+- **User 3001:** 130,383,073 bytes
+- **User 3002:** 1,115,271,498 bytes
+- **User 3003:** 211,616,117 bytes
+- **User 3004:** 121,896,535 bytes
+- **User 3005:** 129,455,541 bytes
+- **User 3006:** 164,559,554 bytes
+- **User 3007:** 172,097,835 bytes
+- **User 3008:** 1,297,790,299 bytes
+- **User 3009:** 135,386,976 bytes
+- **User 3010:** 176,247,414 bytes
+- **User 3011:** 135,119,814 bytes
+- **User 3012:** 1,470,506,902 bytes
+- **User 3013:** 187,044,355 bytes
+- **User 3014:** 1,336,528,954 bytes
+- **User 3015:** 694,524,185 bytes
+
+This data represents the total storage for each user that has not been modified in the last 90 days.

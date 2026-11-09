@@ -1,0 +1,33 @@
+Here is a list of symbolic links in the `eval_master` index and their target paths:
+
+1. **Path:** `eval_master/groups/grp05/usr012/code_params.lnk`  
+   **Points to:** `output/weights/grid_final/audio_part/stage/.slice_epoch-794.txt`
+
+2. **Path:** `eval_master/groups/grp02/usr002/backup.lnk`  
+   **Points to:** `src_slice/checkpoint/results_neuron/model/cluster_sample/ocean-957.txt`
+
+3. **Path:** `eval_master/groups/grp05/usr008/cache_text/node_code.lnk`  
+   **Points to:** `../figures.log`
+
+4. **Path:** `eval_master/groups/grp05/usr012/lib.lnk`  
+   **Points to:** `output/params_report`
+
+5. **Path:** `eval_master/groups/grp01/usr014/checkpoint_lattice.lnk`  
+   **Points to:** `missing_build`
+
+6. **Path:** `eval_master/groups/grp05/usr008/lib/logs_scratch.lnk`  
+   **Points to:** `../cache_text/paper/paper/survey_lib-952.log`
+
+7. **Path:** `eval_master/groups/grp05/usr008/params_config.lnk`  
+   **Points to:** `missing_video`
+
+8. **Path:** `eval_master/groups/grp01/usr014/climate.lnk`  
+   **Points to:** `clean/survey_lib.txt`
+
+9. **Path:** `eval_master/groups/grp02/usr002/scratch.lnk`  
+   **Points to:** `missing_layer`
+
+10. **Path:** `eval_master/groups/grp05/usr008/lib/scratch.lnk`  
+    **Points to:** `../cache_text/signal_ocean/plots_protein/lib/shard_raw/step_neuron.h5`
+
+This is just a sample of the symbolic links. There are many more symbolic links listed in the full output, which can be provided upon request.

@@ -1,0 +1,18 @@
+I found 10 directories in eval_master with the setgid bit set. They are each of the five group directories plus the `shared` subdirectory inside each one:
+
+| Directory | Owner UID | GID |
+|---|---|---|
+| eval_master/groups/grp01 | 0 (root) | 2001 |
+| eval_master/groups/grp01/shared | 0 (root) | 2001 |
+| eval_master/groups/grp02 | 0 (root) | 2002 |
+| eval_master/groups/grp02/shared | 0 (root) | 2002 |
+| eval_master/groups/grp03 | 0 (root) | 2003 |
+| eval_master/groups/grp03/shared | 0 (root) | 2003 |
+| eval_master/groups/grp04 | 0 (root) | 2004 |
+| eval_master/groups/grp04/shared | 0 (root) | 2004 |
+| eval_master/groups/grp05 | 0 (root) | 2005 |
+| eval_master/groups/grp05/shared | 0 (root) | 2005 |
+
+All 10 have the same permissions, `drwxrws---` (octal 2770). The owner and group have full access, others have none, and the setgid bit means new files inside get the directory's group rather than the creator's main group. This is a common setup for shared group project areas.
+
+No other directory in the index has the setgid bit set.

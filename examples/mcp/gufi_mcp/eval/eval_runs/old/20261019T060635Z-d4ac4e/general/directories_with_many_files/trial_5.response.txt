@@ -1,0 +1,17 @@
+Nine directories in eval_master have more than 100 regular files directly in them (not counting files in subdirectories). Here they are, most files first:
+
+| # | Directory | Files |
+|---|---|---|
+| 1 | eval_master/groups/grp01/usr003/checkpoint/report/notes | 136 |
+| 2 | eval_master/groups/grp01/usr003/checkpoint/report | 133 |
+| 3 | eval_master/groups/grp01/usr003/checkpoint | 127 |
+| 4 | eval_master/groups/grp01/usr003/checkpoint/report/params | 126 |
+| 5 | eval_master/groups/grp01/usr003/text_grid | 125 |
+| 6 | eval_master/groups/grp01/shared | 112 |
+| 7 | eval_master/groups/grp02/shared | 109 |
+| 8 | eval_master/groups/grp04/shared | 108 |
+| 9 | eval_master/groups/grp01/usr003 | 106 |
+
+I counted the files two separate ways (from the per-directory totals and file by file), and both gave exactly these numbers. The counts don't include symlinks, and none of these directories has more than 6.
+
+Six of the nine are inside `grp01/usr003`, mostly under its `checkpoint` tree. The other three are the `shared` directories of grp01, grp02 and grp04.

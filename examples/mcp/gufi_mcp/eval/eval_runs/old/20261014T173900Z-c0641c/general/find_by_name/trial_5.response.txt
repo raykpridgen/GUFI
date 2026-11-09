@@ -1,0 +1,3 @@
+It appears that there are currently no HDF5 files (`*.h5`) in the `eval_master` index that include 'sim' in their names, based on the queries I performed. The search returned an empty result, and additional errors related to file permissions or missing directories were encountered.
+
+If you're looking for specific data files, you might want to check whether the indexing for that content is complete or if the files are located in a different directory. If you have further instructions or different search parameters, please let me know!

@@ -1,0 +1,18 @@
+eval_master has 9,989 regular files (symlinks not included). I counted them by the text after the last dot in each file name, because the built-in `gufi_stats extensions` returned no rows.
+
+| Extension | Files |
+|---|---|
+| .log | 1,410 |
+| .txt | 1,390 |
+| .csv | 1,130 |
+| .dat | 1,125 |
+| .py | 1,054 |
+| .json | 823 |
+| .h5 | 731 |
+| .png | 708 |
+| .c | 544 |
+| .gz | 525 |
+| No extension (no dot in the name) | 531 |
+| Hidden files with no extension | 18 |
+
+The last row is a judgement call. The rule picked up 18 one-off "extensions" from hidden file names like `.run-379`, `.metrics` and `.weights_field`. I checked five of them and each is a hidden file whose only dot is the leading one, so I don't count them as real extensions. If you count them with the 531, 549 files have no extension.

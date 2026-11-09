@@ -1,0 +1,30 @@
+Here is the list of files owned by user 3007 in the `eval_master` directory:
+
+```
+eval_master/groups/grp02/usr007
+eval_master/groups/grp02/usr007/.protein_lib.h5
+eval_master/groups/grp02/usr007/.stage.py
+eval_master/groups/grp02/usr007/archive_final-393.c
+eval_master/groups/grp02/usr007/audio-792.txt
+eval_master/groups/grp02/usr007/audio-894.gz
+eval_master/groups/grp02/usr007/backup_step-049.csv
+eval_master/groups/grp02/usr007/build_output.csv
+eval_master/groups/grp02/usr007/checkpoint
+eval_master/groups/grp02/usr007/code-877.txt
+eval_master/groups/grp02/usr007/corpus_analysis.txt
+eval_master/groups/grp02/usr007/draft_sample-559.png
+...
+(eval_master/groups/grp02/usr007/sim_cluster/image_eval/params.txt)
+(eval_master/groups/grp02/usr007/sim_cluster/image_eval/profile_phase-189.json)
+(eval_master/groups/grp02/usr007/sim_cluster/image_eval/trace_output.png)
+(eval_master/groups/grp02/usr007/sim_cluster/image_eval/video_neuron-369.dat)
+(eval_master/groups/grp02/usr007/sim_cluster/image_eval/video_neuron.log)
+(eval_master/groups/grp02/usr007/sim_cluster/metrics/stage)
+(eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/backup_eval-889.log)
+(eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/batch_protein-948.c)
+(eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/bench_chunk-808.txt)
+(eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/checkpoint_train-257.py)
+(eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/chunk-838.gz)
+```
+
+(Note: Due to the large number of files owned by this user, not all entries are shown. The output is truncated for readability.)

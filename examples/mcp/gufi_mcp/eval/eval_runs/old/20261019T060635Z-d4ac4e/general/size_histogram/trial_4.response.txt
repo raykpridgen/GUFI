@@ -1,0 +1,26 @@
+eval_master has **9,989 regular files** using about **8.19 GiB** (8,797,702,315 bytes). Symlinks and directories aren't counted.
+
+| Size range | Files | % of files | Total size | % of bytes |
+|---|---:|---:|---:|---:|
+| Empty (0 B) | 503 | 5.0% | 0 | 0% |
+| 1 B – 1 KiB | 4,360 | 43.6% | 628 KiB | <0.01% |
+| 1 KiB – 1 MiB | 4,285 | 42.9% | 639 MiB | 7.6% |
+| 1 MiB – 100 MiB | 835 | 8.4% | 1.75 GiB | 21.3% |
+| 100 MiB – 1 GiB | 2 | 0.02% | 1.42 GiB | 17.3% |
+| Over 1 GiB | 4 | 0.04% | 4.40 GiB | 53.7% |
+
+**What this shows:**
+- Almost all files are small. About 92% are 1 MiB or less, but together they take up less than 8% of the space.
+- There are no files between about 4 MiB and 500 MiB. The largest file in the 1–100 MiB range is about 4.0 MiB.
+- Just 6 files hold about 71% of all the data (6.25 GiB):
+
+| File | Size |
+|---|---:|
+| groups/grp05/usr012/output/scratch.c | 1.18 GiB |
+| groups/grp01/usr014/clean/step/old.log | 1.14 GiB |
+| groups/grp03/usr001/chunk/audio/archive/tests_output.py | 1.05 GiB |
+| groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt | 1.04 GiB |
+| groups/grp02/usr002/src_slice/checkpoint/results_neuron/final/trace_cluster-666.txt | 915 MiB |
+| groups/grp05/usr015/clean/particle_build/src/train_stage-240.dat | 538 MiB |
+
+Some of these are much bigger than their names suggest, like a 1.18 GiB `.c` file and a 1.05 GiB `.py` file. If you want to free up space, these six files are the place to start. The 503 empty files are also worth a look if you want to tidy up.

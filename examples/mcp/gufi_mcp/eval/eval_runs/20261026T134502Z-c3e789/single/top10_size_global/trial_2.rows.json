@@ -1,0 +1,94 @@
+{
+  "ordered_compare": true,
+  "row_order": "compared order (as returned)",
+  "expected": [
+    [
+      "eval_master/groups/grp05/usr012/output/scratch.c",
+      1261921083
+    ],
+    [
+      "eval_master/groups/grp01/usr014/clean/step/old.log",
+      1228550276
+    ],
+    [
+      "eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py",
+      1123091592
+    ],
+    [
+      "eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt",
+      1113310933
+    ],
+    [
+      "eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/final/trace_cluster-666.txt",
+      959252531
+    ],
+    [
+      "eval_master/groups/grp05/usr015/clean/particle_build/src/train_stage-240.dat",
+      564253616
+    ],
+    [
+      "eval_master/groups/grp04/usr006/layer_video-322.h5",
+      4194001
+    ],
+    [
+      "eval_master/groups/grp03/usr004/train/model_report/.train.txt",
+      4186836
+    ],
+    [
+      "eval_master/groups/grp04/usr006/figures.png",
+      4177565
+    ],
+    [
+      "eval_master/groups/grp03/usr011/lattice/shard_lattice/survey_final/src.h5",
+      4164923
+    ]
+  ],
+  "actual": [
+    [
+      "eval_master/groups/grp05/usr012/output/scratch.c",
+      1261921083
+    ],
+    [
+      "eval_master/groups/grp01/usr014/clean/step/old.log",
+      1228550276
+    ],
+    [
+      "eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py",
+      1123091592
+    ],
+    [
+      "eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt",
+      1113310933
+    ],
+    [
+      "eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/final/trace_cluster-666.txt",
+      959252531
+    ],
+    [
+      "eval_master/groups/grp05/usr015/clean/particle_build/src/train_stage-240.dat",
+      564253616
+    ],
+    [
+      "eval_master/groups/grp04/usr006/layer_video-322.h5",
+      4194001
+    ],
+    [
+      "eval_master/groups/grp03/usr004/train/model_report/.train.txt",
+      4186836
+    ],
+    [
+      "eval_master/groups/grp04/usr006/figures.png",
+      4177565
+    ],
+    [
+      "eval_master/groups/grp03/usr011/lattice/shard_lattice/survey_final/src.h5",
+      4164923
+    ]
+  ],
+  "missing_from_actual": [],
+  "unexpected_in_actual": [],
+  "expected_row_count": 10,
+  "actual_row_count": 10,
+  "gt_duration_ms": 51.02000399347162,
+  "agent_duration_ms": 83.54
+}

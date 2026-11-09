@@ -1,0 +1,46 @@
+{
+  "scenario": "top10_size_global",
+  "trial": 4,
+  "pass": true,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "path TEXT, size INT64",
+    "scatter_sql": [
+      "SELECT path, size FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "path TEXT, size INT64",
+    "gather_sql": "SELECT path, size FROM intermediate",
+    "final_sql": "SELECT path, size FROM aggregate ORDER BY size DESC LIMIT 10"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT size, path FROM vrpentries WHERE type = 'f'"
+    ],
+    "scatter_shape": "size INT64, path TEXT",
+    "gather_sql": "SELECT SUM(size) AS total_size, path FROM intermediate GROUP BY path",
+    "gather_shape": "total_size INT64, path TEXT",
+    "final_sql": "SELECT path, total_size FROM aggregate ORDER BY total_size DESC LIMIT 10"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT size, path FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "size INT64, path TEXT",
+      "gather_sql": "SELECT SUM(size) AS total_size, path FROM intermediate GROUP BY path",
+      "gather_shape": "total_size INT64, path TEXT",
+      "final_sql": "SELECT path, total_size FROM aggregate ORDER BY total_size DESC LIMIT 10"
+    }
+  ],
+  "gt_row_count": 10,
+  "agent_row_count": 10,
+  "ordered_compare": true,
+  "column_permutation": [
+    0,
+    1
+  ],
+  "reason": "match"
+}
