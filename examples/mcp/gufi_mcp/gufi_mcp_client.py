@@ -151,8 +151,6 @@ async def run(label: str, index: str, remote_cmd: Optional[str], remote_args: st
             print(uri)
 
         section("gufi_query")
-        print(await call(client, "gufi_location", {}))
-        print(await call(client, "gufi_version", {}))
 
         section("gufi://indexes")
         indexes = await read_json(client, "gufi://indexes")

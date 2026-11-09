@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 os.environ.setdefault("SCHEMAFILE", str(ROOT / "schema_hints.json"))
 os.environ.setdefault("GUFIVTLIB", "gufi_vt")
 os.environ.setdefault("GUFI_INDEX_ROOT", str(ROOT))
@@ -175,9 +175,9 @@ def test_per_directory_must_not_be_empty() -> None:
     ("SELECT size FROM entries ORDER BY size", "ORDER"),
     ("SELECT size FROM entries LIMIT 3", "LIMIT"),
     ("SELECT size FROM entries LIMIT 3 OFFSET 2", "LIMIT"),
-    ("SELECT ROW_NUMBER() OVER (ORDER BY size) FROM entries", "ORDER BY is only allowed in final_sql"),
+    ("SELECT ROW_NUMBER() OVER (ORDER BY size) FROM entries", "ORDER BY is not allowed in subqueries or window"),
     ("SELECT size FROM vrpentries WHERE size IN (SELECT size FROM vrpentries ORDER BY size LIMIT 5)",
-     "only allowed in final_sql"),
+     "not allowed in subqueries or window"),
     ("SELECT sname FROM vrpentries", "sname is internal rollup bookkeeping"),
     ("SELECT size FROM vrpentries WHERE sroll = 0", "sroll is internal rollup bookkeeping"),
     ("SELECT rpath(sname, sroll, name) FROM vrpentries", "sname is internal rollup bookkeeping"),
@@ -217,13 +217,78 @@ def test_gather_column_substring_is_not_enough() -> None:
              per_directory_sql=["SELECT size FROM entries"], partial_sql="SELECT SUM(size) FROM per_directory")
 
 
-@pytest.mark.parametrize("partial_sql", [
-    "SELECT SUM(size) FROM per_directory ORDER BY 1",
-    "SELECT SUM(size) FROM per_directory LIMIT 1",
-    "SELECT SUM(size) FROM (SELECT size FROM per_directory ORDER BY size DESC LIMIT 10)",
+@pytest.mark.parametrize("partial_sql, message", [
+    ("SELECT SUM(size) FROM per_directory ORDER BY 1", "only allowed together"),
+    ("SELECT SUM(size) FROM per_directory LIMIT 1", "only allowed together"),
+    ("SELECT SUM(size) FROM per_directory ORDER BY 1 LIMIT 1", "must keep one row per input row"),
+    ("SELECT SUM(size) FROM (SELECT size FROM per_directory ORDER BY size DESC LIMIT 10)",
+     "not allowed in subqueries or window"),
 ])
-def test_gather_rejects_ordering(partial_sql: str) -> None:
-    _invalid("only allowed in final_sql", partial_sql=partial_sql)
+def test_gather_rejects_ordering(partial_sql: str, message: str) -> None:
+    _invalid(message, partial_sql=partial_sql)
+
+
+# Top-N prefilter: ORDER BY ... LIMIT before final_sql, as ACTIVATE Studio's own pipelines use it
+
+def _top_n(per_directory: str = "SELECT path, size FROM vrpentries WHERE type = 'f' ORDER BY size DESC LIMIT 10",
+           **overrides: object) -> dict:
+    return {
+        "per_directory_shape": "path TEXT, size INT64",
+        "per_directory_sql": [per_directory],
+        "partial_shape": "path TEXT, size INT64",
+        "partial_sql": "SELECT path, size FROM per_directory",
+        "final_sql": "SELECT path, size FROM partial ORDER BY size DESC LIMIT 10",
+        **overrides,
+    }
+
+
+@pytest.mark.parametrize("overrides", [
+    {},
+    {"per_directory_sql": ["SELECT path, size FROM vrpentries ORDER BY 2 DESC LIMIT 25"],
+     "final_sql": "SELECT path, size FROM partial ORDER BY size DESC LIMIT 25"},
+    {"per_directory_sql": ["SELECT path, size AS bytes FROM vrpentries ORDER BY bytes DESC LIMIT 10"],
+     "final_sql": "SELECT path, size AS bytes FROM partial ORDER BY bytes DESC LIMIT 5 OFFSET 5"},
+    {"per_directory_shape": "path TEXT, size INT64, mtime INT64",
+     "per_directory_sql": ["SELECT path, size, mtime FROM vrpentries WHERE mtime > 0 ORDER BY mtime DESC LIMIT 25"],
+     "partial_shape": "p TEXT, s INT64, m INT64",
+     "partial_sql": "SELECT path, size, mtime FROM per_directory",
+     "final_sql": "SELECT p, s, datetime(m, 'unixepoch') FROM partial ORDER BY m DESC LIMIT 25"},
+    {"partial_sql": "SELECT path, size FROM per_directory ORDER BY size DESC LIMIT 10"},
+    {"per_directory_sql": ["SELECT path, size FROM vrpentries WHERE type = 'f'"],
+     "partial_sql": "SELECT path, size FROM per_directory ORDER BY size DESC LIMIT 10"},
+    {"per_directory_sql": ["SELECT path, size FROM vrpentries ORDER BY size LIMIT 10",
+                           "SELECT path, totsize FROM vrsummary"],
+     "final_sql": "SELECT path, size FROM partial ORDER BY size LIMIT 10"},
+])
+def test_top_n_prefilter_is_allowed(overrides: dict) -> None:
+    util.GufiAggregateQuery.model_validate(_payload(**_top_n(**overrides)))
+
+
+@pytest.mark.parametrize("overrides, message", [
+    ({"final_sql": "SELECT path, size FROM partial"}, "must end with ORDER BY size DESC and a LIMIT"),
+    ({"final_sql": "SELECT path, size FROM partial ORDER BY size DESC"}, "must end with ORDER BY size DESC"),
+    ({"final_sql": "SELECT path, size FROM partial ORDER BY size ASC LIMIT 10"}, "must end with ORDER BY size DESC"),
+    ({"final_sql": "SELECT path, size FROM partial ORDER BY path DESC LIMIT 10"}, "must end with ORDER BY size DESC"),
+    ({"final_sql": "SELECT path, size FROM partial ORDER BY size DESC LIMIT 11"}, "larger than the LIMIT 10"),
+    ({"final_sql": "SELECT path, size FROM partial ORDER BY size DESC LIMIT 5 OFFSET 6"}, "larger than the LIMIT 10"),
+    ({"final_sql": "SELECT path, size FROM partial WHERE size > 5 ORDER BY size DESC LIMIT 10"}, "uses WHERE"),
+    ({"final_sql": "SELECT path, SUM(size) FROM partial GROUP BY path ORDER BY 2 DESC LIMIT 10"}, "GROUP BY"),
+    ({"final_sql": "SELECT DISTINCT path, size FROM partial ORDER BY size DESC LIMIT 10"}, "DISTINCT"),
+    ({"partial_sql": "SELECT path, size FROM per_directory WHERE size > 0"}, "partial_sql: uses WHERE"),
+    ({"partial_shape": "path TEXT, total INT64", "partial_sql": "SELECT path, SUM(size) FROM per_directory GROUP BY path",
+      "final_sql": "SELECT path, total FROM partial ORDER BY total DESC LIMIT 10"}, "partial_sql: uses GROUP BY"),
+    ({"partial_sql": "SELECT path, size * 2 FROM per_directory"}, "must select size unchanged"),
+    ({"partial_sql": "SELECT path, size FROM per_directory ORDER BY path LIMIT 10"}, "must sort by the same columns"),
+    ({"per_directory_sql": ["SELECT path, size FROM vrpentries ORDER BY mtime DESC LIMIT 10"]}, "ORDER BY selected"),
+    ({"per_directory_sql": ["SELECT path, size FROM vrpentries ORDER BY size DESC LIMIT 10 OFFSET 2"]}, "OFFSET"),
+    ({"per_directory_sql": ["SELECT path, size FROM vrpentries ORDER BY size DESC LIMIT size"]}, "integer literal"),
+    ({"per_directory_shape": "uid INT64, size INT64", "partial_shape": "uid INT64, size INT64",
+      "per_directory_sql": ["SELECT uid, SUM(size) FROM vrpentries GROUP BY uid ORDER BY 2 DESC LIMIT 10"],
+      "partial_sql": "SELECT uid, size FROM per_directory",
+      "final_sql": "SELECT uid, size FROM partial ORDER BY size DESC LIMIT 10"}, "must keep one row per input row"),
+])
+def test_top_n_prefilter_must_be_exact(overrides: dict, message: str) -> None:
+    _invalid(message, **_top_n(**overrides))
 
 
 def test_path_functions_fail_in_later_stages() -> None:

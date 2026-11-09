@@ -119,11 +119,18 @@ How aggregate_sql_query works (per_directory, partial, final)
   in final_sql: SELECT ... FROM (SELECT ..., ROW_NUMBER() OVER (PARTITION BY
   <group> ORDER BY <value> DESC) AS rn FROM partial) WHERE rn <= N.
   A plain LIMIT N in final_sql returns N rows in total.
-- ORDER BY, LIMIT, and OFFSET are allowed only in final_sql, not in
-  per_directory_sql or partial_sql (subqueries and window functions included).
-  Those stages run once per directory or per thread, so ordering or limiting there
-  drops partial results and gives wrong totals. Filter with WHERE instead, and
-  sort or limit once in final_sql.
+- ORDER BY, LIMIT, and OFFSET belong in final_sql. per_directory_sql and partial_sql
+  run once per directory or per thread, so ordering or limiting there drops partial
+  results and gives wrong totals; they are rejected there, in subqueries and window
+  functions too. Filter with WHERE instead, and sort or limit once in final_sql.
+- One exception, for a plain global top N such as the N largest or newest files:
+  per_directory_sql may end with ORDER BY <selected columns> LIMIT N so each
+  directory keeps only its own top N. It must not aggregate, partial_sql must pass
+  rows through (no WHERE, GROUP BY or aggregates), and final_sql must repeat the
+  same ORDER BY with LIMIT at most N:
+    per_directory_sql   ["SELECT path, size FROM vrpentries WHERE type = 'f' ORDER BY size DESC LIMIT 10"]
+    partial_sql    "SELECT path, size FROM per_directory"
+    final_sql      "SELECT path, size FROM partial ORDER BY size DESC LIMIT 10"
   
 If a situation arises where some sort of breakdown / histogram is expected, use the following format:
 

@@ -613,15 +613,193 @@ def _reject_blocked_functions(tree: exp.Expression, context: str) -> None:
             raise GufiError(f"{context}: {call.name.lower()}() runs shell commands and is not available")
 
 
-def _reject_ordering(tree: exp.Expression, context: str) -> None:
-    """ORDER BY, LIMIT and OFFSET anywhere in tree (subqueries and window clauses included)."""
+TOP_N_RULE = (
+    "The one exception is a top-N prefilter: per_directory_sql or partial_sql may end with ORDER BY <selected "
+    "columns> LIMIT n when it does not aggregate, every later stage passes rows through unchanged (no WHERE, GROUP BY, "
+    "DISTINCT, aggregates or windows), and final_sql repeats the same ORDER BY with LIMIT (plus OFFSET) at most n"
+)
+
+
+def _ordering_nodes(tree: exp.Expression, top_n: bool) -> Iterator[tuple[exp.Expression, str]]:
+    """ORDER BY, LIMIT and OFFSET in tree, except the statement's own ORDER BY and LIMIT when top_n."""
     for node_type, keyword in ((exp.Order, "ORDER BY"), (exp.Limit, "LIMIT"), (exp.Offset, "OFFSET")):
-        if tree.find(node_type) is not None:
+        for node in tree.find_all(node_type):
+            if top_n and node.parent is tree and node.arg_key in ("order", "limit"):
+                continue
+            yield node, keyword
+
+
+def _reject_ordering(tree: exp.Select, context: str) -> None:
+    """ORDER BY, LIMIT and OFFSET in a stage before final_sql, except a top-N prefilter (see TOP_N_RULE).
+
+    A prefilter's own shape is checked here; whether the later stages keep its result
+    exact is checked by _check_top_n, which needs the whole pipeline.
+    """
+    for node, keyword in _ordering_nodes(tree, top_n=True):
+        where = "at the top level" if node.parent is tree else "in subqueries or window clauses"
+        raise GufiError(
+            f"{context}: {keyword} is not allowed {where} here; ordering and limiting belong in final_sql. "
+            f"Per-directory and partial SQL run once per directory or thread, so ordering or limiting there drops "
+            f"or reorders partial results. {TOP_N_RULE}"
+        )
+    order, limit = tree.args.get("order"), tree.args.get("limit")
+    if order is None and limit is None:
+        return
+    if order is None or limit is None:
+        missing = "LIMIT" if limit is None else "ORDER BY"
+        raise GufiError(f"{context}: ORDER BY and LIMIT are only allowed together here, as a top-N prefilter; add "
+                        f"{missing} or move the ordering to final_sql. {TOP_N_RULE}")
+    _limit_value(tree, context)
+    if tree.args.get("group") or tree.args.get("having") or tree.args.get("distinct") \
+            or tree.find(exp.AggFunc) is not None or tree.find(exp.Window) is not None:
+        raise GufiError(f"{context}: a top-N prefilter (ORDER BY ... LIMIT) must keep one row per input row; it "
+                        "cannot be combined with GROUP BY, HAVING, DISTINCT, aggregates or windows, because each "
+                        "directory or thread would keep only its own top groups. Order and limit in final_sql instead")
+
+
+def _limit_value(tree: exp.Select, context: str) -> int:
+    """The statement's LIMIT plus OFFSET, which must be integer literals; 0 without a LIMIT."""
+    total = 0
+    for key in ("limit", "offset"):
+        node = tree.args.get(key)
+        if node is None:
+            continue
+        value = node.expression
+        if not isinstance(value, exp.Literal) or not value.is_int or int(value.name) < 0:
+            raise GufiError(f"{context}: {key.upper()} must be a non-negative integer literal")
+        total += int(value.name)
+    return total
+
+
+def _same_expression(a: exp.Expression, b: exp.Expression) -> bool:
+    if isinstance(a, exp.Column) and isinstance(b, exp.Column):
+        return a.name.lower() == b.name.lower()
+    return a == b
+
+
+def _order_position(tree: exp.Select, key: exp.Expression) -> Optional[int]:
+    """Index of the selected column an ORDER BY key refers to (ordinal, alias or same expression), if any."""
+    selects = tree.selects
+    if isinstance(key, exp.Literal) and key.is_int:
+        position = int(key.name) - 1
+        return position if 0 <= position < len(selects) else None
+    if isinstance(key, exp.Column) and not key.table:
+        for i, select in enumerate(selects):
+            if isinstance(select, exp.Alias) and select.alias.lower() == key.name.lower():
+                return i
+    for i, select in enumerate(selects):
+        if _same_expression(select.unalias(), key):
+            return i
+    return None
+
+
+def _order_source(tree: exp.Select, key: exp.Expression) -> Optional[str]:
+    """The input column an ORDER BY key sorts by unchanged, or None if it sorts by a computed value."""
+    position = _order_position(tree, key)
+    expression = tree.selects[position].unalias() if position is not None else key
+    return expression.name.lower() if isinstance(expression, exp.Column) else None
+
+
+def _direction(ordered: exp.Ordered) -> tuple[bool, bool]:
+    return bool(ordered.args.get("desc")), bool(ordered.args.get("nulls_first"))
+
+
+def _describe_keys(keys: list[tuple[str, tuple[bool, bool]]]) -> str:
+    return ", ".join(f"{name} {'DESC' if desc else 'ASC'}" for name, (desc, _) in keys)
+
+
+def _require_row_wise(tree: exp.Select, context: str, prefilter: str) -> None:
+    """A stage after a top-N prefilter must pass every row through, or the prefilter changes the answer."""
+    reasons = [
+        ("WHERE", tree.args.get("where") is not None),
+        ("GROUP BY", tree.args.get("group") is not None),
+        ("HAVING", tree.args.get("having") is not None),
+        ("DISTINCT", tree.args.get("distinct") is not None),
+        ("aggregates", tree.find(exp.AggFunc) is not None),
+        ("windows", tree.find(exp.Window) is not None),
+        ("subqueries", any(select is not tree for select in tree.find_all(exp.Select))),
+    ]
+    found = [name for name, present in reasons if present]
+    if found:
+        raise GufiError(
+            f"{context}: uses {', '.join(found)} after the top-N prefilter in {prefilter}. That prefilter keeps only "
+            "each directory's or thread's top rows, so a later filter, grouping or aggregate would see an incomplete "
+            "set and give a wrong answer. Remove the ORDER BY ... LIMIT from "
+            f"{prefilter} and order in final_sql, or make this stage pass rows through"
+        )
+
+
+def _check_top_n(per_directory: list[tuple[str, exp.Select]], per_directory_cols: list[str],
+                 gather: exp.Select, partial_cols: list[str], final: exp.Select) -> None:
+    """A top-N prefilter (see TOP_N_RULE) must give exactly the rows that ordering in final_sql alone would.
+
+    Each prefilter's sort keys are followed, as column names, through the stages after it,
+    which must carry those columns unchanged and keep every row; final_sql must then sort by
+    the same keys in the same directions with a LIMIT no larger than the prefilter's.
+    """
+    prefilters = [(context, tree) for context, tree in per_directory if tree.args.get("order") is not None]
+    gather_top_n = gather.args.get("order") is not None
+    if not prefilters and not gather_top_n:
+        return
+    first = prefilters[0][0] if prefilters else "partial_sql"
+
+    def output_keys(tree: exp.Select, context: str, columns: list[str]) -> list[tuple[str, tuple[bool, bool]]]:
+        keys = []
+        for ordered in tree.args["order"].expressions:
+            position = _order_position(tree, ordered.this)
+            if position is None:
+                raise GufiError(f"{context}: a top-N prefilter must ORDER BY selected columns (by name, alias or "
+                                f"position), so later stages can repeat the order; "
+                                f"{ordered.this.sql(dialect=SQL_DIALECT)} is not one of them")
+            keys.append((columns[position], _direction(ordered)))
+        return keys
+
+    def carried(keys, context, columns, prefilter):
+        """keys, named as gather's input columns, renamed to gather's output columns."""
+        out = []
+        for name, direction in keys:
+            position = next((i for i, select in enumerate(gather.selects)
+                             if isinstance(select.unalias(), exp.Column) and select.unalias().name.lower() == name), None)
+            if position is None:
+                raise GufiError(f"{context}: must select {name} unchanged, because {prefilter} sorts by it and "
+                                "final_sql has to repeat that order")
+            out.append((columns[position], direction))
+        return out
+
+    def sorted_by(tree: exp.Select) -> list[tuple[str, tuple[bool, bool]]]:
+        """The statement's sort keys as its input columns ("" for a computed value); [] without ORDER BY and LIMIT."""
+        order = tree.args.get("order")
+        if order is None or tree.args.get("limit") is None:
+            return []
+        return [(_order_source(tree, ordered.this) or "", _direction(ordered)) for ordered in order.expressions]
+
+    _require_row_wise(final, "final_sql", first)
+    final_keys = sorted_by(final)
+    final_rows = _limit_value(final, "final_sql")
+
+    def require_final_matches(keys, limit, prefilter) -> None:
+        if final_keys != keys:
             raise GufiError(
-                f"{context}: {keyword} is only allowed in final_sql. Per-directory and partial SQL run once per "
-                "directory or thread, so ordering or limiting there drops or reorders partial results; "
-                "move it to final_sql"
+                f"final_sql: must end with ORDER BY {_describe_keys(keys)} and a LIMIT, because {prefilter} keeps "
+                "only the top rows in that order; any other final order or no LIMIT would be computed from an "
+                "incomplete set. Repeat that order in final_sql, or remove the ORDER BY ... LIMIT from "
+                f"{prefilter}"
             )
+        if final_rows > limit:
+            raise GufiError(f"final_sql: LIMIT (plus OFFSET) {final_rows} is larger than the LIMIT {limit} of "
+                            f"{prefilter}, which would then be missing rows; raise that LIMIT to at least {final_rows}")
+
+    if prefilters:
+        _require_row_wise(gather, "partial_sql", first)
+    for context, tree in prefilters:
+        keys = output_keys(tree, context, per_directory_cols)
+        if gather_top_n and sorted_by(gather) != keys:
+            raise GufiError(f"partial_sql: its ORDER BY must sort by the same columns as {context}, unchanged and "
+                            f"in the same directions ({_describe_keys(keys)})")
+        require_final_matches(carried(keys, "partial_sql", partial_cols, context), _limit_value(tree, context), context)
+    if gather_top_n:
+        require_final_matches(output_keys(gather, "partial_sql", partial_cols), _limit_value(gather, "partial_sql"),
+                              "partial_sql")
 
 
 def _check_projection_width(tree: exp.Select, expected: int, target: str, context: str) -> None:
@@ -695,8 +873,11 @@ class GufiAggregateQuery(BaseModel):
             "each result row is inserted into that thread's per_directory table. Each statement reads exactly one "
             "table, which decides its phase: treesummary/vtsummary* (once per tree), summary/vsummary*/vrsummary* "
             "(once per directory), or entries/pentries/vrpentries (the directory's files). At most one statement per "
-            "phase. Each must return exactly the columns of per_directory_shape, in order. ORDER BY, LIMIT and OFFSET are "
-            "rejected anywhere here (subqueries and windows included): they would apply per directory only. "
+            "phase. Each must return exactly the columns of per_directory_shape, in order. ORDER BY, LIMIT and OFFSET "
+            "would apply per directory only and are rejected, except a top-N prefilter: a statement without aggregates "
+            "may end with ORDER BY <selected columns> LIMIT n when final_sql repeats that ORDER BY with LIMIT at most "
+            "n and partial_sql passes rows through (e.g. SELECT path, size FROM vrpentries ORDER BY size DESC LIMIT 10 "
+            "for the 10 largest files). "
             f"Full paths are the path columns of {PATH_TABLES_TEXT}; this is the only stage that can read them. "
             "Read gufi_schemas/all for table names and gufi_schemas/<table> for column names before writing it. "
             "Example: SELECT gid, size FROM vrpentries WHERE type = 'l'"
@@ -716,7 +897,9 @@ class GufiAggregateQuery(BaseModel):
             "Partial stage: SELECT run against each thread's per_directory table; its rows are inserted into the shared "
             "partial table. Must read only from per_directory and return exactly the columns of partial_shape, in order. "
             "It runs once per thread, so the partial table holds one partial result per thread. ORDER BY, LIMIT "
-            "and OFFSET are rejected anywhere here; they belong in final_sql. "
+            "and OFFSET belong in final_sql and are rejected here, except the same top-N prefilter allowed in "
+            "per_directory_sql. After a per_directory_sql prefilter this stage must pass rows through: no WHERE, "
+            "GROUP BY, DISTINCT or aggregates, and the sort columns selected unchanged. "
             "Example: SELECT gid, COUNT(*), SUM(size) FROM per_directory GROUP BY gid"
         ),
     )
@@ -732,7 +915,8 @@ class GufiAggregateQuery(BaseModel):
         description=(
             "SELECT run once against the partial table to produce the answer. Must read only from partial. "
             "Combine the per-thread partial results here (SUM of counts and sums, MAX of maxima), and put global "
-            "ORDER BY and LIMIT here; this is the only stage where they are allowed. "
+            "ORDER BY and LIMIT here. After a top-N prefilter this must repeat its ORDER BY with LIMIT (plus OFFSET) at "
+            "most its n, without WHERE, GROUP BY, DISTINCT or aggregates. "
             "Example: SELECT gid, SUM(links) AS links, SUM(bytes) AS bytes FROM partial GROUP BY gid ORDER BY links DESC"
         ),
     )
@@ -794,9 +978,11 @@ class GufiAggregateQuery(BaseModel):
             partial_cols = parse_shape(self.partial_shape, "partial_shape")
 
             phases: dict[str, str] = {}
+            per_directory: list[tuple[str, exp.Select]] = []
             for i, sql in enumerate(self.per_directory_sql):
                 context = f"per_directory_sql[{i}]"
                 tree = parse_select(sql, context)
+                per_directory.append((context, tree))
                 table = _single_table(tree, context)
                 phase = _phase_for_table(table)
                 if phase in phases:
@@ -820,6 +1006,7 @@ class GufiAggregateQuery(BaseModel):
             if select_tables(final, "final_sql") != [PARTIAL_TABLE]:
                 raise GufiError("final_sql must read only from the partial table")
             _check_columns(final, set(partial_cols), "partial (partial_shape)", "final_sql", CARRY_PATH_HINT)
+            _check_top_n(per_directory, list(per_directory_cols), gather, list(partial_cols), final)
 
         self._phases = phases
         return self
