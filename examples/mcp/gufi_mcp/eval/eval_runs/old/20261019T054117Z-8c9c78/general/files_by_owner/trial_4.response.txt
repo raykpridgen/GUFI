@@ -1,0 +1,37 @@
+The files owned by user 3007 in the `eval_master` index are:
+
+1. `eval_master/groups/grp02/usr007`
+2. `eval_master/groups/grp02/usr007/.protein_lib.h5`
+3. `eval_master/groups/grp02/usr007/.stage.py`
+4. `eval_master/groups/grp02/usr007/archive_final-393.c`
+5. `eval_master/groups/grp02/usr007/audio-792.txt`
+6. `eval_master/groups/grp02/usr007/audio-894.gz`
+7. `eval_master/groups/grp02/usr007/backup_step-049.csv`
+8. `eval_master/groups/grp02/usr007/build_output.csv`
+9. `eval_master/groups/grp02/usr007/checkpoint`
+10. `eval_master/groups/grp02/usr007/code-877.txt`
+11. `eval_master/groups/grp02/usr007/corpus_analysis.txt`
+12. `eval_master/groups/grp02/usr007/draft_sample-559.png`
+13. `eval_master/groups/grp02/usr007/image_protein-906.gz`
+14. `eval_master/groups/grp02/usr007/input_figures-603.py`
+15. `eval_master/groups/grp02/usr007/lib.csv`
+16. `eval_master/groups/grp02/usr007/logs_part.log`
+17. `eval_master/groups/grp02/usr007/mesh-705.dat`
+18. `eval_master/groups/grp02/usr007/notes-405.log`
+19. `eval_master/groups/grp02/usr007/ocean.txt`
+20. `eval_master/groups/grp02/usr007/old_climate-188.txt`
+21. `eval_master/groups/grp02/usr007/params_figures.txt`
+22. `eval_master/groups/grp02/usr007/particle_clean-720.csv`
+23. `eval_master/groups/grp02/usr007/plots-301.dat`
+24. `eval_master/groups/grp02/usr007/plots_figures.py`
+25. `eval_master/groups/grp02/usr007/protein_genome-584.dat`
+26. `eval_master/groups/grp02/usr007/run_gpu-390.txt`
+27. `eval_master/groups/grp02/usr007/slice.dat`
+28. `eval_master/groups/grp02/usr007/stage_backup.csv`
+29. `eval_master/groups/grp02/usr007/sweep-038.txt`
+30. `eval_master/groups/grp02/usr007/tmp.json`
+31. `eval_master/groups/grp02/usr007/metrics_image`
+32. ...
+33. (Continued files in similar naming format)
+
+Please let me know if you need to see more specific files or further details!

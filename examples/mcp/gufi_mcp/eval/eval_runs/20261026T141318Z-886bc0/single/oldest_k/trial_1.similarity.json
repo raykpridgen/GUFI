@@ -1,0 +1,121 @@
+{
+  "scenario": "oldest_k",
+  "trial": 1,
+  "pass": false,
+  "passed_on_attempt": null,
+  "aggregate_revision_count": 4,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "path TEXT, mtime INT64",
+    "per_directory_sql": [
+      "SELECT path, mtime FROM vrpentries WHERE type = 'f'"
+    ],
+    "partial_shape": "path TEXT, mtime INT64",
+    "partial_sql": "SELECT path, mtime FROM per_directory",
+    "final_sql": "SELECT path, mtime FROM partial ORDER BY mtime ASC LIMIT 5"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT path, mtime FROM vrpentries WHERE type='f'"
+    ],
+    "per_directory_shape": "path TEXT, mtime INT64",
+    "partial_sql": "SELECT COUNT(*) AS count, mtime FROM per_directory GROUP BY mtime",
+    "partial_shape": "count INT64, mtime INT64",
+    "final_sql": "SELECT path, mtime FROM vrpentries WHERE mtime IN (SELECT mtime FROM partial ORDER BY mtime ASC LIMIT 5) ORDER BY mtime ASC"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT path, mtime FROM vrpentries"
+      ],
+      "per_directory_shape": "path TEXT, mtime INT64",
+      "partial_sql": "SELECT mtime, COUNT(*) FROM per_directory WHERE type='f' GROUP BY mtime",
+      "partial_shape": "mtime INT64, count INT64",
+      "final_sql": "SELECT path, mtime FROM partial ORDER BY mtime ASC LIMIT 5"
+    },
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT path, mtime FROM vrpentries WHERE type='f'"
+      ],
+      "per_directory_shape": "path TEXT, mtime INT64",
+      "partial_sql": "SELECT mtime, COUNT(*) FROM per_directory GROUP BY mtime",
+      "partial_shape": "mtime INT64, count INT64",
+      "final_sql": "SELECT path, mtime FROM partial ORDER BY mtime ASC LIMIT 5"
+    },
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT path, mtime FROM vrpentries WHERE type='f'"
+      ],
+      "per_directory_shape": "path TEXT, mtime INT64",
+      "partial_sql": "SELECT mtime, COUNT(*) FROM per_directory GROUP BY mtime",
+      "partial_shape": "mtime INT64, count INT64",
+      "final_sql": "SELECT path, mtime FROM per_directory WHERE mtime IN (SELECT mtime FROM partial ORDER BY mtime ASC LIMIT 5) ORDER BY mtime ASC"
+    },
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT path, mtime FROM vrpentries WHERE type='f'"
+      ],
+      "per_directory_shape": "path TEXT, mtime INT64",
+      "partial_sql": "SELECT mtime, COUNT(*) FROM per_directory GROUP BY mtime",
+      "partial_shape": "mtime INT64, count INT64",
+      "final_sql": "SELECT p.path, p.mtime FROM partial pa JOIN per_directory p ON p.mtime = pa.mtime ORDER BY p.mtime ASC LIMIT 5"
+    },
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT path, mtime FROM vrpentries WHERE type='f'"
+      ],
+      "per_directory_shape": "path TEXT, mtime INT64",
+      "partial_sql": "SELECT COUNT(*) AS count, mtime FROM per_directory GROUP BY mtime",
+      "partial_shape": "count INT64, mtime INT64",
+      "final_sql": "SELECT path, mtime FROM vrpentries WHERE mtime IN (SELECT mtime FROM partial ORDER BY mtime ASC LIMIT 5) ORDER BY mtime ASC"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": false,
+      "passed": false,
+      "row_count": 0,
+      "reason": "call failed: Error executing tool aggregate_sql_query: 1 validation error for aggregate_sql_queryArguments\nquery\n  Value error, partial_sql: column(s) type do not exist in per_directory (per_directory_shape) [type=value_error, input_value={'index': 'eval_master', ...R BY mtime ASC LIMIT 5'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+    },
+    {
+      "attempt": 2,
+      "ok": false,
+      "passed": false,
+      "row_count": 0,
+      "reason": "call failed: Error executing tool aggregate_sql_query: 1 validation error for aggregate_sql_queryArguments\nquery\n  Value error, final_sql: column(s) path do not exist in partial (partial_shape). Path columns come from vrpentries (path, dirpath) and vrsummary (path) in per_directory_sql; select them there and declare them as TEXT in per_directory_shape (and partial_shape) to use them in later stages [type=value_error, input_value={'index': 'eval_master', ...R BY mtime ASC LIMIT 5'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+    },
+    {
+      "attempt": 3,
+      "ok": false,
+      "passed": false,
+      "row_count": 0,
+      "reason": "call failed: Error executing tool aggregate_sql_query: 1 validation error for aggregate_sql_queryArguments\nquery\n  Value error, final_sql must read only from the partial table [type=value_error, input_value={'index': 'eval_master', ... 5) ORDER BY mtime ASC'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+    },
+    {
+      "attempt": 4,
+      "ok": false,
+      "passed": false,
+      "row_count": 0,
+      "reason": "call failed: Error executing tool aggregate_sql_query: 1 validation error for aggregate_sql_queryArguments\nquery\n  Value error, final_sql must read only from the partial table [type=value_error, input_value={'index': 'eval_master', ...BY p.mtime ASC LIMIT 5'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+    },
+    {
+      "attempt": 5,
+      "ok": false,
+      "passed": false,
+      "row_count": 0,
+      "reason": "call failed: Error executing tool aggregate_sql_query: 1 validation error for aggregate_sql_queryArguments\nquery\n  Value error, final_sql must read only from the partial table [type=value_error, input_value={'index': 'eval_master', ... 5) ORDER BY mtime ASC'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+    }
+  ],
+  "gt_row_count": 5,
+  "agent_row_count": 0,
+  "ordered_compare": null,
+  "column_permutation": null,
+  "reason": "no successful aggregate call"
+}

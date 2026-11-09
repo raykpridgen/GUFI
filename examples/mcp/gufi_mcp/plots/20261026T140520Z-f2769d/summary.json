@@ -1,0 +1,43 @@
+{
+  "run": "20261026T140520Z-f2769d",
+  "trials": 60,
+  "graded_trials": 60,
+  "correct": 32,
+  "incorrect": 28,
+  "ungraded": 0,
+  "grade_threshold": 0.9,
+  "correct_by_scenario": {
+    "age_histogram": "0/5",
+    "count_and_size": "0/5",
+    "count_over_1gib": "5/5",
+    "ext_histogram": "4/5",
+    "ext_winner": "5/5",
+    "not_modified_n_days": "0/5",
+    "oldest_k": "5/5",
+    "size_histogram": "0/5",
+    "top10_size_global": "5/5",
+    "top10_size_per_uid": "4/5",
+    "total_dir_size": "4/5",
+    "total_file_size": "0/5"
+  },
+  "error_categories": {
+    "ORDER/LIMIT outside final": 3,
+    "column count mismatch": 2,
+    "path column not carried": 1,
+    "unknown column": 1,
+    "stage read wrong table": 1
+  },
+  "grading": "single-mode trials use the eval's pass/fail, not answer text",
+  "single_failure_reasons": {
+    "wrong values": 18,
+    "result truncated": 5,
+    "wrong row count": 4,
+    "wrong column count": 1
+  },
+  "single_mean_aggregate_calls": 1.283,
+  "single_function_use": {
+    "ext": 10,
+    "agecat": 4,
+    "epochtoage": 1
+  }
+}

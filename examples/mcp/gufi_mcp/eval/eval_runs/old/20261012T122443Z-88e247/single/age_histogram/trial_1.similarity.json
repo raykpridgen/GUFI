@@ -1,0 +1,56 @@
+{
+  "scenario": "age_histogram",
+  "trial": 1,
+  "pass": true,
+  "aggregate_revision_count": 1,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "cat TEXT",
+    "scatter_sql": [
+      "SELECT agecat(mtime) FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "cat TEXT, count INT64",
+    "gather_sql": "SELECT cat, COUNT(*) FROM intermediate GROUP BY cat",
+    "final_sql": "SELECT cat, SUM(count) AS count FROM aggregate GROUP BY cat"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT agecat(mtime) AS age_category FROM vrpentries WHERE type = 'f'"
+    ],
+    "scatter_shape": "age_category TEXT",
+    "gather_sql": "SELECT age_category, COUNT(*) FROM intermediate GROUP BY age_category",
+    "gather_shape": "age_category TEXT, count INT64",
+    "final_sql": "SELECT age_category, SUM(count) AS file_count FROM aggregate GROUP BY age_category HAVING file_count > 0"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT agecat(mtime) AS age_category FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "age_category TEXT",
+      "gather_sql": "SELECT age_category, COUNT(*) FROM intermediate GROUP BY age_category",
+      "gather_shape": "age_category TEXT, count INT64",
+      "final_sql": "SELECT age_category, count FROM aggregate WHERE count > 0"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT agecat(mtime) AS age_category FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "age_category TEXT",
+      "gather_sql": "SELECT age_category, COUNT(*) FROM intermediate GROUP BY age_category",
+      "gather_shape": "age_category TEXT, count INT64",
+      "final_sql": "SELECT age_category, SUM(count) AS file_count FROM aggregate GROUP BY age_category HAVING file_count > 0"
+    }
+  ],
+  "gt_row_count": 5,
+  "agent_row_count": 5,
+  "ordered_compare": false,
+  "column_permutation": [
+    0,
+    1
+  ],
+  "reason": "match"
+}

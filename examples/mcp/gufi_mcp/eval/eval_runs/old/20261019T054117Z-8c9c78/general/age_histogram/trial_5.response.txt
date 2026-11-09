@@ -1,0 +1,9 @@
+Here's the breakdown of the files in the `eval_master` index based on how long ago they were last modified:
+
+- **More than a month ago:** 10,020 files
+- **Within the last month:** 199 files
+- **Within the last week:** 54 files
+- **Within the last day:** 14 files
+- **Within the last hour:** 2 files
+
+If you need further details or another breakdown, feel free to ask!

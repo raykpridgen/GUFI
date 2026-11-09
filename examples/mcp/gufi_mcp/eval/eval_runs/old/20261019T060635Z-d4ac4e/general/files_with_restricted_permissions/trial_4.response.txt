@@ -1,0 +1,25 @@
+**3,993 of the 9,989 regular files in eval_master (about 40%) can't be read by other users.** These are files with the "other" read permission turned off. They hold about 3.63 GB (3,634,805,599 bytes). That's too many to list here, so below is how they break down.
+
+**By permission:**
+| Mode | Who can read it | Files | Size |
+|---|---|---|---|
+| `640` (rw-r-----) | Owner and group | 2,973 | ~2.28 GB |
+| `600` (rw-------) | Owner only | 1,020 | ~1.35 GB |
+
+The 1,020 files set to `600` are the most locked down: even people in the file's group can't read them.
+
+**By location and owner:** every one of these files is under `eval_master/groups/`. Each file belongs to the group of the directory it's in.
+
+| Group dir (gid) | Owner uid: files that others can't read / all files they own there | Total not readable |
+|---|---|---|
+| grp01 (2001) | 3003: 325/794 · 3009: 288/685 · 3014: 141/359 | 754 |
+| grp02 (2002) | 3013: 309/770 · 3007: 308/770 · 3002: 245/635 | 862 |
+| grp03 (2003) | 3011: 291/712 · 3001: 242/600 · 3004: 218/567 | 751 |
+| grp04 (2004) | 3006: 300/729 · 3010: 270/694 · 3005: 230/574 | 800 |
+| grp05 (2005) | 3012: 304/783 · 3008: 301/756 · 3015: 221/561 | 826 |
+
+Every owner has roughly 40% of their files closed to others, so no single user is causing this. A few examples: `eval_master/groups/grp01/shared/backup.log` (640), `.../grp01/shared/batch_node-829.dat` (600) and `.../grp01/usr003/checkpoint/raw.dat` (600).
+
+I only looked at each file's own permission bits. Others could also be blocked by a parent directory's permissions, but I didn't check that, so the real number may be higher.
+
+I can pull the full list of paths for one group, one owner, or just the `600` files.

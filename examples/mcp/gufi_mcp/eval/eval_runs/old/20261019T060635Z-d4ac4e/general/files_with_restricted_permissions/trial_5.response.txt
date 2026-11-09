@@ -1,0 +1,46 @@
+I found **3,993 regular files** in `eval_master` that other users can't read: the "other" read bit is off on all of them. Together they hold about 3.63 GB. The full list has thousands of paths, too many to print here, so this is a summary.
+
+**Permission patterns** (these are the only two that appear):
+
+| Mode | Meaning | Files | Bytes |
+|---|---|---|---|
+| `640` (rw-r-----) | Owner and group can read; others can't | 2,973 | ~2.28 GB |
+| `600` (rw-------) | Only the owner can read | 1,020 | ~1.35 GB |
+
+So the 1,020 files at `600` are private to their owners. The 2,973 at `640` can still be read by members of the file's group.
+
+**Where they are:** Every one is under `eval_master/groups/`. Each user's home directory has about 40% of its files unreadable by others:
+
+| Directory | Owner UID | Unreadable / total files | Unreadable bytes |
+|---|---|---|---|
+| grp02/usr013 | 3013 | 273 / 681 | ~79 MB |
+| grp05/usr008 | 3008 | 270 / 673 | ~1.18 GB |
+| grp02/usr007 | 3007 | 269 / 693 | ~64 MB |
+| grp03/usr011 | 3011 | 269 / 651 | ~60 MB |
+| grp05/usr012 | 3012 | 266 / 681 | ~80 MB |
+| grp04/usr006 | 3006 | 264 / 644 | ~55 MB |
+| grp01/usr003 | 3003 | 258 / 647 | ~77 MB |
+| grp01/usr009 | 3009 | 254 / 619 | ~55 MB |
+| grp04/usr010 | 3010 | 240 / 619 | ~62 MB |
+| grp03/usr001 | 3001 | 221 / 547 | ~48 MB |
+| grp02/usr002 | 3002 | 212 / 555 | ~1.01 GB |
+| grp05/usr015 | 3015 | 200 / 513 | ~613 MB |
+| grp03/usr004 | 3004 | 197 / 515 | ~44 MB |
+| grp04/usr005 | 3005 | 187 / 466 | ~43 MB |
+| grp01/usr014 | 3014 | 111 / 282 | ~28 MB |
+
+The shared directories have the remaining 502 files:
+
+| Group | Files |
+|---|---|
+| grp01 | 131 (for example `grp01/shared/backup.log`, `grp01/shared/.input_weights.dat`) |
+| grp04 | 109 |
+| grp02 | 108 |
+| grp05 | 90 |
+| grp03 | 64 |
+
+Two things to keep in mind:
+- I only looked at each file's own permission bits. A file that is readable on its own can still be blocked if a parent directory has no access for others, and those files aren't counted here.
+- I checked regular files only, not symlinks or directories.
+
+I can list the full paths for one directory, owner or permission mode if you want them.

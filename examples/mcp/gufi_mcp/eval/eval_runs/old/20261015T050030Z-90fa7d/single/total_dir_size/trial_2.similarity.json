@@ -1,0 +1,43 @@
+{
+  "scenario": "total_dir_size",
+  "trial": 2,
+  "pass": false,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "size INT64",
+    "scatter_sql": [
+      "SELECT size FROM summary WHERE isroot = 1"
+    ],
+    "gather_shape": "total INT64",
+    "gather_sql": "SELECT SUM(size) FROM intermediate",
+    "final_sql": "SELECT SUM(total) AS total FROM aggregate"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT COUNT(*) AS dir_count, SUM(size) AS dir_size FROM vrsummary"
+    ],
+    "scatter_shape": "dir_count INT64, dir_size INT64",
+    "gather_sql": "SELECT SUM(dir_count) AS total_directories, SUM(dir_size) AS total_size FROM intermediate",
+    "gather_shape": "total_directories INT64, total_size INT64",
+    "final_sql": "SELECT total_directories, total_size FROM aggregate"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT COUNT(*) AS dir_count, SUM(size) AS dir_size FROM vrsummary"
+      ],
+      "scatter_shape": "dir_count INT64, dir_size INT64",
+      "gather_sql": "SELECT SUM(dir_count) AS total_directories, SUM(dir_size) AS total_size FROM intermediate",
+      "gather_shape": "total_directories INT64, total_size INT64",
+      "final_sql": "SELECT total_directories, total_size FROM aggregate"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 12,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "column counts differ: expected 1, got 2"
+}

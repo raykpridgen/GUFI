@@ -1,0 +1,11 @@
+The following directories in `eval_master` have more than 100 files directly in them, sorted by the number of files:
+
+1. `eval_master/groups/grp01/usr003` - 106 files
+2. `eval_master/groups/grp04/shared` - 108 files
+3. `eval_master/groups/grp02/shared` - 109 files
+4. `eval_master/groups/grp01/shared` - 112 files
+5. `eval_master/groups/grp01/usr003/text_grid` - 125 files
+6. `eval_master/groups/grp01/usr003/checkpoint/report/params` - 126 files
+7. `eval_master/groups/grp01/usr003/checkpoint` - 127 files
+8. `eval_master/groups/grp01/usr003/checkpoint/report` - 133 files
+9. `eval_master/groups/grp01/usr003/checkpoint/report/notes` - 136 files

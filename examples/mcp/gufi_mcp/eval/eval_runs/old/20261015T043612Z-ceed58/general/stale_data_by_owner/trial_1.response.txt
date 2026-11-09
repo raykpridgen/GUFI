@@ -1,0 +1,23 @@
+Here is the summary of data for each user in the `eval_master` index, showing how much data hasn't been modified in over 90 days along with the count of the files corresponding to that data:
+
+### Data Summary:
+
+| User ID | Total Size (bytes) | Total Files |
+|---------|--------------------|-------------|
+| 3001    | 12703837           | 52          |
+| 3002    | 38090439           | 45          |
+| 3003    | 82392673           | 101         |
+| 3004    | 14515334           | 17          |
+| 3005    | 20328234           | 108         |
+| 3006    | 32996797           | 125         |
+| 3007    | 17189845           | 60          |
+| 3008    | 1140603466        | 170         |
+| 3009    | 21997219           | 30          |
+| 3010    | 32164826           | 91          |
+| 3011    | 23799287           | 88          |
+| 3012    | 47019180           | 143         |
+| 3013    | 7946607            | 37          |
+| 3014    | 16981103           | 29          |
+| 3015    | 7451027            | 14          |
+
+This provides a clear overview of the amount of data each user has that hasn't been modified in the last 90 days, along with the corresponding file counts. If you need further details or analysis, feel free to ask!

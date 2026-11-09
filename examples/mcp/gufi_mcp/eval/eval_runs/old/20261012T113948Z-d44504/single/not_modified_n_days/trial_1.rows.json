@@ -1,0 +1,16 @@
+{
+  "expected": [
+    [
+      9453
+    ]
+  ],
+  "actual": [
+    [
+      9453
+    ]
+  ],
+  "expected_row_count": 1,
+  "actual_row_count": 1,
+  "gt_duration_ms": 27.96178000062355,
+  "agent_duration_ms": 29.026
+}

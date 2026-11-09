@@ -1,0 +1,24 @@
+Here are the files in the `eval_master` index that are buried at least 5 directories deep:
+
+1. `eval_master/groups/grp05/usr015/backup/.scratch-436.gz`
+2. `eval_master/groups/grp05/usr015/backup/analysis_epoch.lnk`
+3. `eval_master/groups/grp05/usr015/backup/archive-862.txt`
+4. `eval_master/groups/grp05/usr015/backup/audio.c`
+5. `eval_master/groups/grp05/usr015/backup/batch_neuron-467.dat`
+6. `eval_master/groups/grp05/usr015/clean/bench_slice-027.log`
+7. `eval_master/groups/grp05/usr015/clean/cache_survey.log`
+8. `eval_master/groups/grp05/usr015/clean/clean-843.log`
+9. `eval_master/groups/grp05/usr015/clean/code_shard.csv`
+10. `eval_master/groups/grp05/usr015/clean/epoch_survey`
+11. `eval_master/groups/grp05/usr015/clean-2/.sim-585.log`
+12. `eval_master/groups/grp05/usr015/clean-2/.slice_trace.txt`
+13. `eval_master/groups/grp05/usr015/clean-2/audio.log`
+14. `eval_master/groups/grp05/usr015/clean-2/backup-897.png`
+15. `eval_master/groups/grp05/usr015/clean-2/build.json`
+16. `eval_master/groups/grp05/usr015/backup/corpus_raw.h5`
+17. `eval_master/groups/grp05/usr015/backup/dataset_eval.c`
+18. `eval_master/groups/grp05/usr015/backup/gpu.lnk`
+19. `eval_master/groups/grp05/usr015/backup/image_archive.json`
+20. `eval_master/groups/grp05/usr015/backup/params-314.py`
+
+This list includes files and excludes directories, as there were no directories that fit the criteria.

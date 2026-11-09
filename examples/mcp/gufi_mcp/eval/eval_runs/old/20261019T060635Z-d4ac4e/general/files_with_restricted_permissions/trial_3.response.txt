@@ -1,0 +1,34 @@
+**3,993 regular files** in eval_master can't be read by other users. "Other users" here means anyone who isn't the owner and isn't in the file's group. Together these files hold about **3.63 GB** (3,634,805,599 bytes).
+
+I selected files whose "others" permission set has no read bit. They all have one of two permission settings:
+
+| Mode | Meaning | Files | Bytes |
+|---|---|---|---|
+| `-rw-r-----` (0640) | owner can read and write, group can read, others can't | 2,973 | 2,279,815,649 |
+| `-rw-------` (0600) | only the owner can read or write | 1,020 | 1,354,989,950 |
+
+So 1,020 of them can be read only by their owner.
+
+**Where they are:** every one is under `eval_master/groups/`, in each group's `shared/` folder and its users' home directories:
+
+| Group | Owner UID | Files | Bytes |
+|---|---|---|---|
+| grp01 | 3003 | 325 | 90.9 MB |
+| grp01 | 3009 | 288 | 60.1 MB |
+| grp01 | 3014 | 141 | 31.3 MB |
+| grp02 | 3013 | 309 | 94.8 MB |
+| grp02 | 3007 | 308 | 74.0 MB |
+| grp02 | 3002 | 245 | 1,016.1 MB |
+| grp03 | 3011 | 291 | 68.1 MB |
+| grp03 | 3001 | 242 | 52.9 MB |
+| grp03 | 3004 | 218 | 49.3 MB |
+| grp04 | 3006 | 300 | 69.6 MB |
+| grp04 | 3010 | 270 | 69.6 MB |
+| grp04 | 3005 | 230 | 51.9 MB |
+| grp05 | 3012 | 304 | 92.5 MB |
+| grp05 | 3008 | 301 | 1,197.0 MB |
+| grp05 | 3015 | 221 | 616.8 MB |
+
+Some examples are `groups/grp01/shared/batch_node-829.dat` (0600, 3.0 MB) and `groups/grp01/shared/old_audio.gz` (0640, 2.7 MB). Many files under `groups/grp01/usr003/checkpoint/...` are also on the list.
+
+This only checks each file's own permissions. Other users can also be blocked by permissions on the folders above a file, and those files aren't counted here. Symlinks aren't counted either. The full list is too long to show here; I can list the files for a particular group, user or folder, or just the owner-only (0600) ones.

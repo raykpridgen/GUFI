@@ -1,0 +1,12 @@
+Three users own regular files in group 2003 in eval_master:
+
+| User (UID) | Regular files |
+|---|---|
+| 3011 | 712 |
+| 3001 | 600 |
+| 3004 | 567 |
+| **Total** | **1,879** |
+
+These are UIDs because I didn't look up the matching user names.
+
+The counts are regular files only. Each of these users also owns a few symlinks in group 2003: 21 for UID 3011, 18 for 3001 and 17 for 3004. With symlinks included, the totals are 733, 618 and 584.

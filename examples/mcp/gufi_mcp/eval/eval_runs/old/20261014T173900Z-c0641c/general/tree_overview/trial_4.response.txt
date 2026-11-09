@@ -1,0 +1,63 @@
+Here's an overview of the space usage and file count for each directory under `groups/` in the `eval_master` index:
+
+| Directory Path | Total Files | Total Size (Bytes) |
+|----------------|-------------|---------------------|
+| output         | 69          | 1,276,200,080       |
+| step           | 63          | 1,250,242,319       |
+| archive        | 31          | 1,127,052,361       |
+| text_output    | 46          | 1,123,410,269       |
+| final          | 53          | 977,072,363         |
+| src            | 17          | 564,835,884         |
+| checkpoint     | 175         | 50,360,087          |
+| params         | 126         | 48,707,332          |
+| lib            | 143         | 44,663,605          |
+| text_grid      | 125         | 38,777,367          |
+| report         | 133         | 37,241,938          |
+| notes          | 156         | 36,593,522          |
+| shared         | 109         | 34,651,703          |
+| signal         | 78          | 31,162,228          |
+| shared         | 108         | 30,469,617          |
+| output         | 127         | 28,803,664          |
+| usr012         | 69          | 26,789,547          |
+| results_raw    | 85          | 24,717,870          |
+| chunk          | 52          | 24,582,657          |
+| protein        | 84          | 24,452,959          |
+| sample_build   | 48          | 24,358,299          |
+| profile        | 107         | 24,107,097          |
+| shared         | 90          | 23,691,519          |
+| shared         | 112         | 22,885,456          |
+| shared         | 85          | 22,843,350          |
+| grid_final     | 71          | 22,739,761          |
+| usr003         | 106         | 22,136,409          |
+| protein        | 74          | 22,011,486          |
+| backup         | 42          | 21,651,331          |
+| cluster        | 95          | 21,062,552          |
+| params         | 88          | 20,328,826          |
+| report_slice   | 47          | 20,291,794          |
+| usr013         | 58          | 19,690,456          |
+| weights        | 69          | 19,427,696          |
+| profile_tmp    | 61          | 19,353,642          |
+| usr006         | 50          | 18,784,884          |
+| genome_shard   | 67          | 18,223,527          |
+| final          | 61          | 18,207,985          |
+| batch          | 55          | 17,772,627          |
+| data           | 54          | 17,418,240          |
+| chunk_bench    | 44          | 17,381,548          |
+| stage          | 65          | 17,158,455          |
+| cluster_sample  | 50          | 17,128,894          |
+| draft_archive  | 25          | 16,982,494          |
+| usr008         | 55          | 16,977,811          |
+| run            | 46          | 16,729,945          |
+| report         | 38          | 16,482,395          |
+| text_build     | 42          | 16,406,203          |
+
+### Empty Directories:
+- `eval_master`: 0 files, 0 bytes
+- `groups`: 0 files, 0 bytes
+- `grp01`: 0 files, 0 bytes
+- `grp02`: 0 files, 0 bytes
+- `grp03`: 0 files, 0 bytes
+- `grp04`: 0 files, 0 bytes
+- `grp05`: 0 files, 0 bytes
+
+The directories under `groups/` are currently empty in terms of file count and size.

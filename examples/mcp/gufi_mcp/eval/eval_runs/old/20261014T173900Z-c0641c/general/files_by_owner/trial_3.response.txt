@@ -1,0 +1,53 @@
+Here are the files owned by user 3007 in the `eval_master` index:
+
+- `eval_master/groups/grp02/shared/.code_checkpoint.png`
+- `eval_master/groups/grp02/shared/checkpoint_run-523.txt`
+- `eval_master/groups/grp02/shared/chunk-494.txt`
+- `eval_master/groups/grp02/shared/chunk_eval.py`
+- `eval_master/groups/grp02/shared/clean-781`
+- `eval_master/groups/grp02/shared/climate_trace-731.log`
+- `eval_master/groups/grp02/shared/cluster_epoch-264.h5`
+- `eval_master/groups/grp02/shared/code_signal.csv`
+- `eval_master/groups/grp02/shared/dataset_draft-482.png`
+- `eval_master/groups/grp02/shared/epoch_phase.csv`
+- `eval_master/groups/grp02/shared/eval_phase-808.log`
+- `eval_master/groups/grp02/shared/field.log`
+- `eval_master/groups/grp02/shared/final_code.png`
+- `eval_master/groups/grp02/shared/gpu_mesh-813.csv`
+- `eval_master/groups/grp02/shared/gpu_particle-217.csv`
+- `eval_master/groups/grp02/shared/grid_cluster.py`
+- `eval_master/groups/grp02/shared/image-089.h5`
+- `eval_master/groups/grp02/shared/lattice_step.log`
+- `eval_master/groups/grp02/shared/lib_logs.py`
+- `eval_master/groups/grp02/shared/lib_tests-873.csv`
+- `eval_master/groups/grp02/shared/logs_metrics.json`
+- `eval_master/groups/grp02/shared/logs_results-419`
+- `eval_master/groups/grp02/shared/metrics_epoch-723.py`
+- `eval_master/groups/grp02/shared/model_particle-936.py`
+- `eval_master/groups/grp02/shared/neuron.py`
+- `eval_master/groups/grp02/shared/neuron_analysis-168.h5`
+- `eval_master/groups/grp02/shared/neuron_shard-901.py`
+- `eval_master/groups/grp02/shared/notes-444.png`
+- `eval_master/groups/grp02/shared/old.txt`
+- `eval_master/groups/grp02/shared/old_trace.txt`
+- `eval_master/groups/grp02/shared/output_phase.dat`
+- `eval_master/groups/grp02/shared/part_plots-815.json`
+- `eval_master/groups/grp02/shared/particle.log`
+- `eval_master/groups/grp02/shared/profile_field.log`
+- `eval_master/groups/grp02/shared/protein-230.txt`
+- `eval_master/groups/grp02/shared/run.c`
+- `eval_master/groups/grp02/shared/sample.png`
+- `eval_master/groups/grp02/shared/shard-615.py`
+- `eval_master/groups/grp02/shared/signal_lib-186.dat`
+- `eval_master/groups/grp02/shared/slice_output-661.csv`
+- `eval_master/groups/grp02/shared/stage_fluid-681.log`
+- `eval_master/groups/grp02/shared/step_slice.h5`
+- `eval_master/groups/grp02/shared/tmp_config.png`
+- `eval_master/groups/grp02/shared/tmp_lib.csv`
+- `eval_master/groups/grp02/shared/trace_paper-657.py`
+- `eval_master/groups/grp02/shared/train-343.gz`
+- `eval_master/groups/grp02/shared/video_batch-179.dat`
+- `eval_master/groups/grp02/shared/weights_gpu-219.gz`
+- (Additional files may exist; see the complete output for all entries)
+
+This is a selection of the results. If you need more files or specific details about them, please let me know!

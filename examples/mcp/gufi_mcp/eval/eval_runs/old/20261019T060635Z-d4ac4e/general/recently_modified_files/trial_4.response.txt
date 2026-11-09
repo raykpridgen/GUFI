@@ -1,0 +1,32 @@
+**269 entries in eval_master were modified in the past 30 days** (since 2026-09-12): 261 regular files and 8 symlinks, about 66.8 MB in total.
+
+I went by modification time (mtime) rather than status-change time (ctime). Every one of the 10,289 entries has a ctime of 2026-10-12 08:36:43, which is later than the current time. That looks like it was set when the data was copied or indexed, so filtering on ctime would have returned every file.
+
+**By group:**
+| Group | Changed | Of which symlinks | Size |
+|---|---|---|---|
+| grp01 | 58 | 3 | 19.1 MB |
+| grp03 | 58 | 1 | 16.6 MB |
+| grp05 | 55 | 0 | 11.5 MB |
+| grp02 | 52 | 1 | 12.0 MB |
+| grp04 | 46 | 3 | 7.6 MB |
+
+**Most recently modified (all in `eval_master/groups/`):**
+- `grp01/usr009/output_lib/cluster_batch/output/dataset.lnk` (symlink), 2026-10-11 23:13
+- `grp04/usr005/params/audio.py`, 2026-10-11 23:05
+- `grp04/usr005/job_data.txt`, 2026-10-11 22:29
+- `grp04/usr005/params/protein/genome_shard/results_raw/profile.csv`, 2026-10-11 21:34
+- `grp05/usr012/output/weights/grid_final/audio_part/build_video.py`, 2026-10-11 20:20
+- `grp03/usr004/part_epoch/climate_particle.png`, 2026-10-11 18:22
+- `grp03/usr011/lattice/run_protein/notes/stage.png`, 2026-10-11 17:36
+- `grp05/usr008/cache_text/signal_ocean/plots_protein/lib/shard_raw/config_trace.dat`, 2026-10-11 12:40
+- `grp04/usr005/params/corpus_old.json`, 2026-10-11 12:23
+- `grp03/usr004/scratch_stage/run_checkpoint.gz`, 2026-10-11 05:37
+
+**Largest of the changed files:**
+- `grp03/usr001/step_image.log`, 3.7 MB
+- `grp01/usr009/output_lib/cluster_batch/output/slice/report/logs_model-719.dat`, 3.4 MB
+- `grp05/usr012/output/weights/grid_final/audio_part/stage/backup.png`, 3.4 MB
+- `grp03/usr011/lattice/shard_lattice/survey_final/.text_audio.log`, 3.2 MB
+
+The output I got back was cut off, so I've only seen part of the list, through about 2026-09-26. The counts above do cover all 269 entries. If you want the full list, I can get it for one group or user at a time.

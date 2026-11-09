@@ -1,0 +1,17 @@
+In the `eval_master` index, there are a total of **480 empty files**. They are owned by the following user IDs:
+
+- UID 3001
+- UID 3002
+- UID 3003
+- UID 3004
+- UID 3005
+- UID 3006
+- UID 3007
+- UID 3008
+- UID 3009
+- UID 3010
+- UID 3011
+- UID 3012
+- UID 3013
+- UID 3014
+- UID 3015

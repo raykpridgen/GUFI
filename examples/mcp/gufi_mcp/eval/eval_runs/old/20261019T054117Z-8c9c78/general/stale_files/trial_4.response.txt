@@ -1,0 +1,1 @@
+The total size of the `eval_master` index is 0 bytes, and the size of files that have not been modified in over a year is also 0 bytes. Consequently, the share of such files in the total space is undefined since there are no files recorded.

@@ -1,0 +1,16 @@
+**GID 2005 uses the most storage in eval_master by a wide margin.** It holds about 3.50 GB, roughly 40% of the 8.80 GB in regular files across the index.
+
+| Rank | GID | Files | Bytes | Approx. size | Share |
+|---|---|---|---|---|---|
+| 1 | 2005 | 2,100 | 3,497,973,533 | 3.50 GB | 39.8% |
+| 2 | 2001 | 1,838 | 1,730,852,644 | 1.73 GB | 19.7% |
+| 3 | 2003 | 1,879 | 1,560,356,675 | 1.56 GB | 17.7% |
+| 4 | 2002 | 2,175 | 1,510,437,987 | 1.51 GB | 17.2% |
+| 5 | 2004 | 1,997 | 498,081,476 | 0.50 GB | 5.7% |
+
+- **GID 2005** uses about twice as much as the next group.
+- **GID 2001** is in second place mostly because of one file: `groups/grp01/usr014/clean/step/old.log` is about 1.23 GB, around 70% of that group's total. Without it, 2001 would be the smallest group.
+- **GIDs 2003 and 2002** are close to each other at about 1.5–1.6 GB each. GID 2002 has the most files (2,175), but they're smaller on average.
+- **GID 2004** uses the least, at about 0.5 GB.
+
+The totals count regular files only (symlinks are left out), and sizes are apparent file sizes in bytes. I listed groups by number because the index doesn't record group names.

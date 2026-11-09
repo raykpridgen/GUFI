@@ -1,0 +1,95 @@
+In the `eval_master` index, there are **46 empty files**. Here are details about their ownership:
+
+1. **File: `eval_master/groups/grp03/usr011/signal_lib-640.h5`**
+   - Size: 0 bytes
+   - Owned by user UID **3011** (unknown name)
+   - Owned by group GID **2003** (unknown name)
+
+2. **File: `eval_master/groups/grp05/usr012/output/checkpoint.json`**
+   - Size: 0 bytes
+   - Owned by user UID **3012** (unknown name)
+   - Owned by group GID **2005** (unknown name)
+
+3. **File: `eval_master/groups/grp05/usr012/output/data_step-598.h5`**
+   - Size: 0 bytes
+   - Owned by user UID **3012** (unknown name)
+   - Owned by group GID **2005** (unknown name)
+
+4. **File: `eval_master/groups/grp05/usr012/output/epoch_code.log`**
+   - Size: 0 bytes
+   - Owned by user UID **3012** (unknown name)
+   - Owned by group GID **2005** (unknown name)
+
+5. **File: `eval_master/groups/grp05/usr012/output/layer-996`**
+   - Size: 0 bytes
+   - Owned by user UID **3012** (unknown name)
+   - Owned by group GID **2005** (unknown name)
+
+6. **File: `eval_master/groups/grp05/usr012/output/tmp_batch.txt`**
+   - Size: 0 bytes
+   - Owned by user UID **3012** (unknown name)
+   - Owned by group GID **2005** (unknown name)
+
+7. **File: `eval_master/groups/grp02/usr007/audio_archive/ocean_results-588.csv`**
+   - Size: 0 bytes
+   - Owned by user UID **3007** (unknown name)
+   - Owned by group GID **2002** (unknown name)
+
+8. **File: `eval_master/groups/grp02/usr007/sim_cluster/eval/config.log`**
+   - Size: 0 bytes
+   - Owned by user UID **3007** (unknown name)
+   - Owned by group GID **2002** (unknown name)
+
+9. **File: `eval_master/groups/grp02/usr007/sim_cluster/eval/corpus_step-276.c`**
+   - Size: 0 bytes
+   - Owned by user UID **3007** (unknown name)
+   - Owned by group GID **2002** (unknown name)
+
+10. **File: `eval_master/groups/grp02/usr007/sim_cluster/eval/neuron_report.log`**
+    - Size: 0 bytes
+    - Owned by user UID **3007** (unknown name)
+    - Owned by group GID **2002** (unknown name)
+
+11. **File: `eval_master/groups/grp02/usr007/sim_cluster/eval/trace_scratch-456.py`**
+    - Size: 0 bytes
+    - Owned by user UID **3007** (unknown name)
+    - Owned by group GID **2002** (unknown name)
+
+12. **File: `eval_master/groups/grp02/usr013/batch/sim/job-744.h5`**
+    - Size: 0 bytes
+    - Owned by user UID **3013** (unknown name)
+    - Owned by group GID **2002** (unknown name)
+
+13. **File: `eval_master/groups/grp02/usr013/batch/sim/output-639.h5`**
+    - Size: 0 bytes
+    - Owned by user UID **3013** (unknown name)
+    - Owned by group GID **2002** (unknown name)
+
+14. **File: `eval_master/groups/grp02/usr013/batch/sim/sweep_lib.log`**
+    - Size: 0 bytes
+    - Owned by user UID **3013** (unknown name)
+    - Owned by group GID **2002** (unknown name)
+
+15. **File: `eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/old/clean_protein-079.dat`**
+    - Size: 0 bytes
+    - Owned by user UID **3007** (unknown name)
+    - Owned by group GID **2002** (unknown name)
+
+16. **File: `eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/old/scratch_part.json`**
+    - Size: 0 bytes
+    - Owned by user UID **3007** (unknown name)
+    - Owned by group GID **2002** (unknown name)
+
+17. **File: `eval_master/groups/grp03/usr004/part_epoch/dataset_archive/cluster_signal.h5`**
+    - Size: 0 bytes
+    - Owned by user UID **3004** (unknown name)
+    - Owned by group GID **2003** (unknown name)
+
+18. **File: `eval_master/groups/grp03/usr004/part_epoch/dataset_archive/signal_genome.log`**
+    - Size: 0 bytes
+    - Owned by user UID **3004** (unknown name)
+    - Owned by group GID **2003** (unknown name)
+
+... (This pattern continues for the remaining files.)
+
+For the remainder of the files, the ownership details are similar: many have "unknown" user and group names, but indicate their UID and GID. If you need the complete list of every file or just specific files from the list, let me know!

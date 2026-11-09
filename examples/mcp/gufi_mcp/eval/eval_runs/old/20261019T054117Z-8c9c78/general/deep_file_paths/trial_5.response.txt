@@ -1,0 +1,14 @@
+The files in the `eval_master` index that are buried at least 5 directories deep include:
+
+1. `eval_master/groups/grp02/usr007/audio_archive/grid`
+2. `eval_master/groups/grp02/usr007/audio_archive/grid/.climate_archive-123.h5`
+3. `eval_master/groups/grp02/usr007/audio_archive/grid/.job_phase-699.txt`
+4. `eval_master/groups/grp02/usr007/audio_archive/grid/.part_params.dat`
+5. `eval_master/groups/grp02/usr007/audio_archive/grid/audio_sim.txt`
+6. `eval_master/groups/grp02/usr007/audio_archive/grid/backup_fluid.txt`
+7. `eval_master/groups/grp02/usr007/audio_archive/grid/build.py`
+8. `eval_master/groups/grp02/usr007/audio_archive/grid/build_audio.c`
+9. `eval_master/groups/grp02/usr007/audio_archive/grid/cache_slice-879.csv`
+... and many more.
+
+This list includes only a few of the found files due to the extensive number of results. If you need the complete list or specific file details, please let me know!

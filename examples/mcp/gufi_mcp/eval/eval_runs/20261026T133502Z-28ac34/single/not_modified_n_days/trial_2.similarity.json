@@ -1,0 +1,53 @@
+{
+  "scenario": "not_modified_n_days",
+  "trial": 2,
+  "pass": false,
+  "passed_on_attempt": null,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "mtime INT64",
+    "per_directory_sql": [
+      "SELECT mtime FROM vrpentries WHERE type = 'f' AND mtime < 1791763200 - 60 * 86400"
+    ],
+    "partial_shape": "n INT64",
+    "partial_sql": "SELECT COUNT(*) FROM per_directory",
+    "final_sql": "SELECT SUM(n) AS n FROM partial"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT uid, mtime FROM vrpentries"
+    ],
+    "per_directory_shape": "uid INT64, mtime INT64",
+    "partial_sql": "SELECT uid, COUNT(*) AS count FROM per_directory WHERE mtime < 1791763200 - 60*86400 GROUP BY uid",
+    "partial_shape": "uid INT64, count INT64",
+    "final_sql": "SELECT SUM(count) AS total_count FROM partial"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT uid, mtime FROM vrpentries"
+      ],
+      "per_directory_shape": "uid INT64, mtime INT64",
+      "partial_sql": "SELECT uid, COUNT(*) AS count FROM per_directory WHERE mtime < 1791763200 - 60*86400 GROUP BY uid",
+      "partial_shape": "uid INT64, count INT64",
+      "final_sql": "SELECT SUM(count) AS total_count FROM partial"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": true,
+      "passed": false,
+      "row_count": 1,
+      "reason": "values differ: 1 expected row(s) missing, 1 unexpected"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 1,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "values differ: 1 expected row(s) missing, 1 unexpected (attempt 1 of 1)"
+}

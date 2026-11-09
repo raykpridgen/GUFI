@@ -1,0 +1,15 @@
+The directories in the `eval_master` index that have more than 100 files directly in them, sorted by the number of files, are as follows:
+
+| Number of Files | Directory Count |
+|----------------|-----------------|
+| 106            | 1               |
+| 108            | 1               |
+| 109            | 1               |
+| 112            | 1               |
+| 125            | 1               |
+| 126            | 1               |
+| 127            | 1               |
+| 133            | 1               |
+| 136            | 1               |
+
+Each entry indicates how many directories have that specific number of files.

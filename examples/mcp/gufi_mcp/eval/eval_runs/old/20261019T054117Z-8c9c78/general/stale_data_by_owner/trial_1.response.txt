@@ -1,0 +1,15 @@
+Here are the users from the `eval_master` index who have data that hasn't been modified in over 90 days, along with the total size of their unmodified data:
+
+| User ID | Total Size (bytes) |
+|---------|---------------------|
+| 3012    | 1,305,690,976       |
+| 3014    | 1,244,581,605       |
+| 3008    | 1,123,020,491       |
+| 3002    | 1,001,187,345       |
+| 3015    | 566,072,397         |
+| 3013    | 50,719,682          |
+| 3003    | 47,586,199          |
+| 3007    | 38,338,106          |
+| ...     | ...                 |
+
+The list includes more users, but for brevity, only the top entries are displayed. Let me know if you need further details!

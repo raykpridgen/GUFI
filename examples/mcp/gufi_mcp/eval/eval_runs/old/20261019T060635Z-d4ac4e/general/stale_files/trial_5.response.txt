@@ -1,0 +1,8 @@
+About **63.6%** of the space in eval_master is in files that haven't been modified in over a year.
+
+| | Files | Bytes |
+|---|---|---|
+| All regular files | 9,989 | 8,797,702,315 (~8.2 GiB) |
+| Not modified in over a year | 6,631 (66.4%) | 5,594,338,835 (~5.2 GiB) |
+
+I counted a file as "over a year old" if its last modification was more than 365 days before 2026-10-12. "Space" here means each file's logical size; I didn't use allocated blocks, and symlinks and directories aren't included.

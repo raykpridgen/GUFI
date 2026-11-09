@@ -1,0 +1,142 @@
+The following files in the `eval_master` index are buried at least 5 directories deep:
+
+1. eval_master/groups/grp03/usr004/climate_survey/old_backup
+   - .neuron_part.txt
+   - .output_results-316.txt
+   - audio_text.txt
+   - batch_particle.dat
+   - build_analysis.png
+   - cache.txt
+   - chunk_genome-553.dat
+   - clean-964.py
+   - clean_build.log
+   - config_draft.dat
+   - corpus_slice.txt
+   - epoch_train.txt
+   - eval-873.py
+   - figures
+   - fluid-518.dat
+   - genome.py
+   - image_gpu-799.png
+   - lib.csv
+   - mesh.lnk
+   - mesh_weights.py
+   - old_checkpoint.log
+   - params-508.txt
+   - part_cluster-576.dat
+   - particle-446.log
+   - profile-044.csv
+   - results.png
+   - src_batch-876.log
+   - tests_build-874.dat
+   - tests_raw.json
+   - video_climate-694.txt
+
+2. eval_master/groups/grp03/usr004/train/model_report
+   - .train.txt
+   - bench_backup-907.c
+   - chunk_raw-843
+   - code.log
+   - corpus_climate.txt
+   - data_text.log
+   - draft.png
+   - epoch-872.csv
+   - field.log
+   - field_video.h5
+   - final_phase.csv
+   - final_text.png
+   - genome_cache-334.h5
+   - gpu.csv
+   - job-454
+   - logs_archive.json
+   - metrics_params.log
+   - model_phase.csv
+   - model_src.png
+   - node_bench.csv
+   - ocean_dataset-706.png
+   - phase_scratch-514.dat
+   - plots-281.py
+   - sample_survey-266.log
+   - scratch.log
+   - slice_checkpoint.h5
+
+3. eval_master/groups/grp03/usr004/part_epoch/dataset_archive
+   - .params_build-304.py
+   - .text_epoch.py
+   - bench_layer-309.json
+   - checkpoint.gz
+   - climate_logs-525.dat
+   - cluster_signal.h5
+   - data_ocean.lnk
+   - lib-028.txt
+   - mesh_ocean.dat
+   - metrics_src.h5
+   - notes_eval-900.log
+   - output_ocean.dat
+   - params.json
+   - report_climate.lnk
+   - sample_notes-138.c
+   - scratch_tests.lnk
+   - shard-057.dat
+   - signal_genome.log
+   - signal_params.png
+   - src_input.txt
+   - tests-566
+   - tests.gz
+   - trace_params-392.dat
+   - trace_params-625.py
+   - weights_particle-945.log
+   - weights_tmp.py
+
+4. eval_master/groups/grp02/usr007/audio_archive/grid
+   - .climate_archive-123.h5
+   - .job_phase-699.txt
+   - .part_params.dat
+   - audio_sim.txt
+   - backup_fluid.txt
+   - build.py
+   - build_audio.c
+   - cache_slice-879.csv
+   - checkpoint_fluid.py
+   - checkpoint_model-904.csv
+   - climate_mesh.csv
+   - code_phase-389.dat
+   - corpus_batch.lnk
+   - draft.c
+   - epoch.py
+   - final.log
+   - grid.txt
+   - image.lnk
+   - lattice_old-250.png
+   - layer.png
+   - layer_audio-817.log
+   - layer_cluster.py
+   - model.log
+   - neuron_layer
+   - neuron_mesh-411
+   - old_particle-359.log
+   - particle_batch.log
+   - phase.lnk
+   - profile.c
+   - raw-360.log
+
+5. eval_master/groups/grp03/usr004/train/output
+   - .weights-772
+   - build_scratch.png
+   - clean.csv
+   - climate.json
+   - draft-104.dat
+   - fluid.csv
+   - image_src.png
+   - job_batch-098.csv
+   - layer-482.txt
+   - metrics_field.lnk
+   - model_node.log
+   - ocean_plots-316.dat
+   - old_lattice.csv
+   - protein.csv
+   - sim_lattice.txt
+   - slice_checkpoint.py
+   - text_cache-702.dat
+
+This is an excerpt, and there are more files fulfilling the same criteria across the index. If you'd like the complete list or more specifics about any particular files, please let me know!

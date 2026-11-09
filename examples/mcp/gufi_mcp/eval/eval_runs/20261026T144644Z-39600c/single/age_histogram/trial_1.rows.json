@@ -1,0 +1,41 @@
+{
+  "ordered_compare": false,
+  "row_order": "compared order (both sides sorted)",
+  "expected": [
+    [
+      "Mos",
+      3071
+    ],
+    [
+      "Wks",
+      134
+    ],
+    [
+      "Yrs",
+      6784
+    ]
+  ],
+  "actual": [
+    [
+      "Less than a month",
+      138,
+      41431595
+    ],
+    [
+      "Less than a year",
+      3170,
+      3112076117
+    ],
+    [
+      "More than a year",
+      6981,
+      5644202874
+    ]
+  ],
+  "missing_from_actual": [],
+  "unexpected_in_actual": [],
+  "expected_row_count": 3,
+  "actual_row_count": 3,
+  "gt_duration_ms": 53.51204400358256,
+  "agent_duration_ms": 85.884
+}

@@ -1,0 +1,16 @@
+Ten directories in eval_master have the setgid bit set. They are the five group directories and the `shared` subdirectory inside each one:
+
+| Directory | Owner UID | Group GID |
+|---|---|---|
+| eval_master/groups/grp01 | 0 (root) | 2001 |
+| eval_master/groups/grp01/shared | 0 (root) | 2001 |
+| eval_master/groups/grp02 | 0 (root) | 2002 |
+| eval_master/groups/grp02/shared | 0 (root) | 2002 |
+| eval_master/groups/grp03 | 0 (root) | 2003 |
+| eval_master/groups/grp03/shared | 0 (root) | 2003 |
+| eval_master/groups/grp04 | 0 (root) | 2004 |
+| eval_master/groups/grp04/shared | 0 (root) | 2004 |
+| eval_master/groups/grp05 | 0 (root) | 2005 |
+| eval_master/groups/grp05/shared | 0 (root) | 2005 |
+
+All ten have the same permissions, `drwxrws---` (octal 2770). That means the owner and group can read, write and enter them, and everyone else has no access. Because of the setgid bit, new files created inside take the directory's group (2001–2005) instead of the creator's main group.

@@ -1,0 +1,53 @@
+{
+  "scenario": "top10_size_per_uid",
+  "trial": 4,
+  "pass": false,
+  "aggregate_revision_count": 1,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "uid INT64, path TEXT, size INT64",
+    "scatter_sql": [
+      "SELECT uid, path, size FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "uid INT64, path TEXT, size INT64",
+    "gather_sql": "SELECT uid, path, size FROM intermediate",
+    "final_sql": "SELECT uid, path, size FROM (SELECT uid, path, size, ROW_NUMBER() OVER (PARTITION BY uid ORDER BY size DESC) AS rn FROM aggregate) WHERE rn <= 10"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT uid, path, size FROM vrpentries WHERE type = 'f'"
+    ],
+    "scatter_shape": "uid INT64, path TEXT, size INT64",
+    "gather_sql": "SELECT uid, path, size FROM intermediate",
+    "gather_shape": "uid INT64, path TEXT, size INT64",
+    "final_sql": "SELECT uid, path, size FROM aggregate ORDER BY size DESC LIMIT 10"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT uid, path, size FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "uid INT64, path TEXT, size INT64",
+      "gather_sql": "SELECT uid, path, size FROM intermediate ORDER BY size DESC LIMIT 10",
+      "gather_shape": "uid INT64, path TEXT, size INT64",
+      "final_sql": "SELECT uid, path, size FROM aggregate ORDER BY size DESC LIMIT 10"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT uid, path, size FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "uid INT64, path TEXT, size INT64",
+      "gather_sql": "SELECT uid, path, size FROM intermediate",
+      "gather_shape": "uid INT64, path TEXT, size INT64",
+      "final_sql": "SELECT uid, path, size FROM aggregate ORDER BY size DESC LIMIT 10"
+    }
+  ],
+  "gt_row_count": 150,
+  "agent_row_count": 10,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "row count 10 != expected 150"
+}

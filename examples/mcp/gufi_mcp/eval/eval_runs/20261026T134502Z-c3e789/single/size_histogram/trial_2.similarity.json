@@ -1,0 +1,53 @@
+{
+  "scenario": "size_histogram",
+  "trial": 2,
+  "pass": false,
+  "passed_on_attempt": null,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "cat TEXT",
+    "per_directory_sql": [
+      "SELECT bytecat(size) FROM vrpentries WHERE type = 'f'"
+    ],
+    "partial_shape": "cat TEXT, count INT64",
+    "partial_sql": "SELECT cat, COUNT(*) FROM per_directory GROUP BY cat",
+    "final_sql": "SELECT cat, SUM(count) AS count FROM partial GROUP BY cat"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT size FROM vrpentries"
+    ],
+    "per_directory_shape": "size INT64",
+    "partial_sql": "SELECT CASE\n    WHEN size <= 1024 THEN '<= 1KB'\n    WHEN size <= 1048576 THEN '<= 1MB'\n    WHEN size <= 1073741824 THEN '<= 1GB'\n    ELSE '> 1GB'\nEND AS size_category, COUNT(*) \nFROM per_directory\nGROUP BY size_category",
+    "partial_shape": "size_category TEXT, count INT64",
+    "final_sql": "SELECT size_category, SUM(count) AS total_files FROM partial GROUP BY size_category ORDER BY total_files DESC"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT size FROM vrpentries"
+      ],
+      "per_directory_shape": "size INT64",
+      "partial_sql": "SELECT CASE\n    WHEN size <= 1024 THEN '<= 1KB'\n    WHEN size <= 1048576 THEN '<= 1MB'\n    WHEN size <= 1073741824 THEN '<= 1GB'\n    ELSE '> 1GB'\nEND AS size_category, COUNT(*) \nFROM per_directory\nGROUP BY size_category",
+      "partial_shape": "size_category TEXT, count INT64",
+      "final_sql": "SELECT size_category, SUM(count) AS total_files FROM partial GROUP BY size_category ORDER BY total_files DESC"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": true,
+      "passed": false,
+      "row_count": 4,
+      "reason": "row count 4 != expected 5"
+    }
+  ],
+  "gt_row_count": 5,
+  "agent_row_count": 4,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "row count 4 != expected 5 (attempt 1 of 1)"
+}

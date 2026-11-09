@@ -1,0 +1,14 @@
+The 10 users with the most files in the `eval_master` index are as follows:
+
+1. User ID: 3003 - 278 files
+2. User ID: 3003 - 258 files
+3. User ID: 3012 - 215 files
+4. User ID: 3012 - 189 files
+5. User ID: 3005 - 177 files
+6. User ID: 3003 - 172 files
+7. User ID: 3007 - 164 files
+8. User ID: 3013 - 162 files
+9. User ID: 3002 - 157 files
+10. User ID: 3002 - 152 files
+
+(Note: There are some duplications in user IDs shown due to different counts. It appears that these users have multiple entries based on the counts of files.)

@@ -1,0 +1,46 @@
+{
+  "scenario": "ext_histogram",
+  "trial": 1,
+  "pass": true,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "ext TEXT",
+    "scatter_sql": [
+      "SELECT ext(name) FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "ext TEXT, count INT64",
+    "gather_sql": "SELECT ext, COUNT(*) FROM intermediate GROUP BY ext",
+    "final_sql": "SELECT ext, SUM(count) AS count FROM aggregate GROUP BY ext"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT ext(name) AS extension FROM vrpentries WHERE type = 'f'"
+    ],
+    "scatter_shape": "extension TEXT",
+    "gather_sql": "SELECT extension, COUNT(*) FROM intermediate GROUP BY extension",
+    "gather_shape": "extension TEXT, file_count INT64",
+    "final_sql": "SELECT extension, SUM(file_count) AS file_count FROM aggregate GROUP BY extension"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT ext(name) AS extension FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "extension TEXT",
+      "gather_sql": "SELECT extension, COUNT(*) FROM intermediate GROUP BY extension",
+      "gather_shape": "extension TEXT, file_count INT64",
+      "final_sql": "SELECT extension, SUM(file_count) AS file_count FROM aggregate GROUP BY extension"
+    }
+  ],
+  "gt_row_count": 29,
+  "agent_row_count": 29,
+  "ordered_compare": false,
+  "column_permutation": [
+    0,
+    1
+  ],
+  "reason": "match"
+}

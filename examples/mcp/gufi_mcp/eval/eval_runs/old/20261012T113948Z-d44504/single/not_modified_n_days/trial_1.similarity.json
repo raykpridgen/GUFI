@@ -1,0 +1,45 @@
+{
+  "scenario": "not_modified_n_days",
+  "trial": 1,
+  "pass": true,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "mtime INT64",
+    "scatter_sql": [
+      "SELECT mtime FROM vrpentries WHERE type = 'f' AND mtime < 1791763200 - 60 * 86400"
+    ],
+    "gather_shape": "n INT64",
+    "gather_sql": "SELECT COUNT(*) FROM intermediate",
+    "final_sql": "SELECT SUM(n) AS n FROM aggregate"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT gid FROM vrpentries WHERE type = 'f' AND mtime < 1791763200 - 60 * 86400"
+    ],
+    "scatter_shape": "gid INT64",
+    "gather_sql": "SELECT gid, COUNT(*) AS count FROM intermediate GROUP BY gid",
+    "gather_shape": "gid INT64, count INT64",
+    "final_sql": "SELECT SUM(count) AS total_files FROM aggregate"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT gid FROM vrpentries WHERE type = 'f' AND mtime < 1791763200 - 60 * 86400"
+      ],
+      "scatter_shape": "gid INT64",
+      "gather_sql": "SELECT gid, COUNT(*) AS count FROM intermediate GROUP BY gid",
+      "gather_shape": "gid INT64, count INT64",
+      "final_sql": "SELECT SUM(count) AS total_files FROM aggregate"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 1,
+  "ordered_compare": false,
+  "column_permutation": [
+    0
+  ],
+  "reason": "match"
+}

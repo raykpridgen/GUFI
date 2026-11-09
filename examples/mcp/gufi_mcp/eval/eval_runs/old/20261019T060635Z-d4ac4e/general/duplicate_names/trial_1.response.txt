@@ -1,0 +1,35 @@
+**602 file names appear more than once in eval_master.** The most repeated are `batch.csv` and `figures.log`, at 9 times each.
+
+I counted every file and symlink entry by its base name across the whole index. Directories aren't included. Matching names are in different directories, so they're not necessarily copies of the same file.
+
+| Times seen | Names |
+|---|---|
+| 9 | 2 |
+| 8 | 4 |
+| 7 | 11 |
+| 6 | 23 |
+| 5 | 40 |
+| 4 | 83 |
+| 3 | 144 |
+| 2 | 295 |
+| **Total** | **602** |
+
+All copies of a given name are the same kind of entry: either all regular files or all symlinks. The repeated `.lnk` names are the symlinks.
+
+**9 times:** batch.csv, figures.log
+
+**8 times:** cache.txt, config.log, plots.csv, sweep.log
+
+**7 times:** cluster.txt, corpus.log, grid.csv, input.png, lib.py, mesh.txt, neuron.log, old.txt, report.csv, shard.log, weights.txt
+
+**6 times:** archive.txt, backup.dat, backup.lnk (symlink), bench.py, build.txt, cache.py, chunk.log, clean.dat, clean.log, config.py, final.dat, genome.log, gpu.csv, metrics.png, notes.log, ocean.txt, output.lnk (symlink), params.csv, results.log, run.txt, scratch.dat, src.log, train.dat
+
+**5 times:** audio.csv, audio.h5, backup.log, batch.txt, checkpoint.dat, chunk.lnk, climate.txt, corpus.txt, data.log, dataset.dat, eval.csv, field.log, fluid.png, genome.py, input.log, lib.json, neuron.png, node.lnk, notes.txt, old.py, params.json, part.txt, particle.log, phase.json, profile.lnk, report.txt, results.h5, results.lnk, scratch.log, signal.h5, signal.lnk, slice.py, src.py, stage, step.dat, step.log, step.png, survey.log, text.txt, tmp.py
+
+**4 times (83 names):** analysis.log, audio.py, backup.txt, batch.lnk, bench.dat, build.dat, build.log, checkpoint.csv, clean.csv, climate.lnk, climate.log, cluster.h5, cluster.log, cluster.py, code.txt, config, corpus, corpus.dat, data.h5, dataset.txt, draft.csv, draft.py, epoch.png, eval.txt, field.csv, field.h5, field.txt, figures.py, figures.txt, fluid.log, genome.csv, genome.png, gpu.json, gpu.lnk, gpu.txt, input.c, job.dat, job.h5, job.json, lattice.json, lattice.txt, layer.csv, layer.dat, lib.lnk, logs.csv, logs.py, mesh.json, metrics.lnk, model.log, node.csv, old.log, output.log, paper.csv, paper.h5, paper.png, paper.py, params.lnk, part.dat, phase.csv, phase.log, plots.dat, profile.log, profile.png, protein.json, raw.dat, raw.txt, results.txt, sample.dat, scratch.lnk, scratch.png, shard.dat, signal.csv, signal.json, sim.dat, sim.log, stage.csv, step.lnk, survey.dat, survey.py, text.log, tmp.h5, trace.lnk, video.lnk
+
+**3 times (144 names), some examples:** analysis.csv, archive, cache.gz, code_node.txt, config.json, gpu_neuron.txt, run.c, survey.gz, trace_code.csv, weights.dat
+
+**2 times (295 names), some examples:** .build.txt, .particle.py, analysis_stage, cache_fluid.py, chunk-691.log, layer_sample, video_bench, weights_metrics.py
+
+The 3-time and 2-time groups are too long to list in full here; I can give you either complete list, or the full paths for any name.

@@ -1,0 +1,16 @@
+Here is a list of symbolic links in the `eval_master` index along with their target paths:
+
+1. `eval_master/groups/grp03/usr011/layer_lib.lnk` → `lattice/run_protein/notes/shard.dat`
+2. `eval_master/groups/grp03/usr001/fluid.lnk` → `chunk/audio/job/build_weights-136.txt`
+3. `eval_master/groups/grp05/usr015/backup/analysis_epoch.lnk` → `../clean/signal/output/output/notes_chunk/part_dataset-656.c`
+4. `eval_master/groups/grp02/usr002/backup.lnk` → `src_slice/checkpoint/results_neuron/model/cluster_sample/ocean-957.txt`
+5. `eval_master/groups/grp05/usr015/clean-2/image.lnk` → `../clean/signal/output/src/profile/figures.json`
+6. `eval_master/groups/grp05/usr015/backup/gpu.lnk` → `../clean/signal/fluid_step-802.dat`
+7. `eval_master/groups/grp05/usr015/clean/model.lnk` → `../backup/.scratch-436.gz`
+8. `eval_master/groups/grp05/usr012/code_params.lnk` → `output/weights/grid_final/audio_part/stage/.slice_epoch-794.txt`
+9. `eval_master/groups/grp02/usr013/field.lnk` → `run_plots-058.log`
+10. `eval_master/groups/grp01/usr003/cluster.lnk` → `text_grid/final_input-479.txt`
+
+... [and many more; the output has been truncated for clarity] ...
+
+This list shows the symbolic links and where they point to in the `eval_master` filesystem index. Would you like to see more entries or details?

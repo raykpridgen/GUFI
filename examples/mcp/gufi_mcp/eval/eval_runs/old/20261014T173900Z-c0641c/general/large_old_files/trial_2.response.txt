@@ -1,0 +1,8 @@
+Here are the files in the `eval_master` index that are over 500 MB and haven't been modified in more than a year, sorted by size in descending order:
+
+1. **/home/raykprid/search/eval_master/groups/grp05/usr012/output/scratch.c** - 1,261,921,083 bytes
+2. **/home/raykprid/search/eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt** - 1,113,310,933 bytes
+3. **/home/raykprid/search/eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/final/trace_cluster-666.txt** - 959,252,531 bytes
+4. **/home/raykprid/search/eval_master/groups/grp05/usr015/clean/particle_build/src/train_stage-240.dat** - 564,253,616 bytes
+
+Let me know if you need any further assistance!

@@ -1,0 +1,6 @@
+eval_master has **9,989 regular files**, and together they use about **8.8 GB**.
+
+- **Total file size:** 8,797,702,315 bytes (about 8.80 GB, or 8.19 GiB).
+- **Space actually taken on disk:** 17,237,592 blocks. Assuming the usual 512-byte blocks, that's about 8,825,647,104 bytes (8.83 GB, or 8.22 GiB).
+
+The count leaves out directories and symbolic links.

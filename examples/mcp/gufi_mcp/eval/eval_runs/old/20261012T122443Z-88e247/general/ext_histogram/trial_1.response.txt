@@ -1,0 +1,20 @@
+Here is the count of regular files by their file name extensions in the `eval_master` index:
+
+| Extension | File Count |
+|-----------|------------|
+| txt       | 151        |
+| log       | 150        |
+| csv       | 122        |
+| dat       | 122        |
+| py        | 107        |
+| json      | 99         |
+| h5        | 81         |
+| png       | 78         |
+| gz        | 56         |
+| c         | 63         |
+| _empty_   | 63         |
+| ...       | ...        |
+
+This table represents various file extensions and their corresponding counts. The counts include multiple entries for extensions that may appear under different conditions in the dataset (e.g. `txt` and `log` showing up multiple times with varying counts). The _empty_ category represents files without any extensions. 
+
+If you would like me to filter or sort this data further, please let me know!

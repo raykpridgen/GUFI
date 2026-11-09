@@ -1,0 +1,18 @@
+Here's the breakdown of the files in the `eval_master` index by size:
+
+| Total Size (Bytes) | File Count |
+|---------------------|------------|
+| 153,931,029         | 707        |
+| 1,249,898,099       | 597        |
+| 1,431,619,427       | 750        |
+| 248,300,981         | 921        |
+| 246,522,887         | 930        |
+| 220,435,199         | 885        |
+| 1,892,809,838       | 1,046      |
+| 1,215,685,907       | 1,076      |
+| 317,615,044         | 1,198      |
+| 240,071,291         | 914        |
+| 1,412,057,628       | 576        |
+| 168,763,256         | 689        |
+
+This table summarizes the total sizes and corresponding file counts in various size groups.

@@ -1,0 +1,31 @@
+Here are the 10 biggest files in the `eval_master` index along with their full paths and sizes:
+
+1. **Full Path:** /home/raykprid/search/eval_master/groups/grp05/usr012/output/scratch.c  
+   **Size:** 1,261,921,083 bytes
+
+2. **Full Path:** /home/raykprid/search/eval_master/groups/grp01/usr014/clean/step/old.log  
+   **Size:** 1,228,550,276 bytes
+
+3. **Full Path:** /home/raykprid/search/eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py  
+   **Size:** 1,123,091,592 bytes
+
+4. **Full Path:** /home/raykprid/search/eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt  
+   **Size:** 1,113,310,933 bytes
+
+5. **Full Path:** /home/raykprid/search/eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/final/trace_cluster-666.txt  
+   **Size:** 959,252,531 bytes
+
+6. **Full Path:** /home/raykprid/search/eval_master/groups/grp05/usr015/clean/particle_build/src/train_stage-240.dat  
+   **Size:** 564,253,616 bytes
+
+7. **Full Path:** /home/raykprid/search/eval_master/groups/grp04/usr006/layer_video-322.h5  
+   **Size:** 4,194,001 bytes
+
+8. **Full Path:** /home/raykprid/search/eval_master/groups/grp03/usr004/train/model_report/.train.txt  
+   **Size:** 4,186,836 bytes
+
+9. **Full Path:** /home/raykprid/search/eval_master/groups/grp04/usr006/figures.png  
+   **Size:** 4,177,565 bytes
+
+10. **Full Path:** /home/raykprid/search/eval_master/groups/grp03/usr011/lattice/shard_lattice/survey_final/src.h5  
+    **Size:** 4,164,923 bytes

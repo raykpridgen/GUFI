@@ -1,0 +1,10 @@
+**All 9,989 regular files in eval_master have been read since they were last modified.** For every one of them, the last-access time (atime) is later than the last-modification time (mtime).
+
+The answer depends on what "changed" means:
+
+| Comparison | Files |
+|---|---|
+| Last read after content was last modified (atime > mtime) | **9,989 of 9,989** |
+| Last read after the status-change time (atime > ctime) | **0** (atime is earlier than ctime for all 9,989) |
+
+I've read "changed" as content modification (mtime), so the answer is 9,989. If you meant ctime, which also updates on permission, owner or rename changes, the answer is 0. Every file has a ctime later than its last read. That pattern usually comes from a metadata event across the whole tree, such as files being copied, restored or having their permissions changed in bulk, rather than from real changes to each file.

@@ -1,0 +1,9 @@
+The top 5 users (uids) who own the most data in the eval_master index, along with their total bytes, are:
+
+1. Uid: 1000 - Total Bytes: 12,373,196,800
+2. Uid: 1000 - Total Bytes: 8,827,155,577
+3. Uid: 1000 - Total Bytes: 8,827,155,577
+4. Uid: 1000 - Total Bytes: 6,518,974,464
+5. Uid: 3001 - Total Bytes: 1,123,091,592
+
+(Note: Uid 1000 appears multiple times with different entries, but these represent distinct data ownerships.)

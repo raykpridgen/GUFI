@@ -1,0 +1,16 @@
+Here are the details of the 10 largest regular files owned by different UIDs in the `eval_master` index:
+
+| UID   | Full Path                                                                                                                           | Size (bytes) |
+|-------|-------------------------------------------------------------------------------------------------------------------------------------|--------------|
+| 3012  | /home/raykprid/search/eval_master/groups/grp05/usr012/output/scratch.c                                                            | 1,261,921,083 |
+| 3014  | /home/raykprid/search/eval_master/groups/grp01/usr014/clean/step/old.log                                                         | 1,228,550,276 |
+| 3001  | /home/raykprid/search/eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py                                          | 1,123,091,592 |
+| 3008  | /home/raykprid/search/eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt              | 1,113,310,933 |
+| 3002  | /home/raykprid/search/eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/final/trace_cluster-666.txt            | 959,252,531   |
+| 3015  | /home/raykprid/search/eval_master/groups/grp05/usr015/clean/particle_build/src/train_stage-240.dat                              | 564,253,616   |
+| 3006  | /home/raykprid/search/eval_master/groups/grp04/usr006/layer_video-322.h5                                                          | 4,194,001     |
+| 3004  | /home/raykprid/search/eval_master/groups/grp03/usr004/train/model_report/.train.txt                                               | 4,186,836     |
+| 3006  | /home/raykprid/search/eval_master/groups/grp04/usr006/figures.png                                                                 | 4,177,565     |
+| 3011  | /home/raykprid/search/eval_master/groups/grp03/usr011/lattice/shard_lattice/survey_final/src.h5                                  | 4,164,923     |
+
+Each row shows the UID, the full path of the file, and its size in bytes.

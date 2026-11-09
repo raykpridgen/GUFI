@@ -1,0 +1,53 @@
+{
+  "scenario": "age_histogram",
+  "trial": 2,
+  "pass": false,
+  "passed_on_attempt": null,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "cat TEXT",
+    "per_directory_sql": [
+      "SELECT agecat(mtime) FROM vrpentries WHERE type = 'f'"
+    ],
+    "partial_shape": "cat TEXT, count INT64",
+    "partial_sql": "SELECT cat, COUNT(*) FROM per_directory GROUP BY cat",
+    "final_sql": "SELECT cat, SUM(count) AS count FROM partial GROUP BY cat"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT mtime FROM vrpentries"
+    ],
+    "per_directory_shape": "mtime INT64",
+    "partial_sql": "SELECT agecat(mtime) AS age_category, COUNT(*) AS file_count FROM per_directory GROUP BY age_category",
+    "partial_shape": "age_category TEXT, file_count INT64",
+    "final_sql": "SELECT age_category, SUM(file_count) AS total_files FROM partial GROUP BY age_category ORDER BY total_files DESC"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT mtime FROM vrpentries"
+      ],
+      "per_directory_shape": "mtime INT64",
+      "partial_sql": "SELECT agecat(mtime) AS age_category, COUNT(*) AS file_count FROM per_directory GROUP BY age_category",
+      "partial_shape": "age_category TEXT, file_count INT64",
+      "final_sql": "SELECT age_category, SUM(file_count) AS total_files FROM partial GROUP BY age_category ORDER BY total_files DESC"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": true,
+      "passed": false,
+      "row_count": 3,
+      "reason": "values differ: 3 expected row(s) missing, 3 unexpected"
+    }
+  ],
+  "gt_row_count": 3,
+  "agent_row_count": 3,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "values differ: 3 expected row(s) missing, 3 unexpected (attempt 1 of 1)"
+}

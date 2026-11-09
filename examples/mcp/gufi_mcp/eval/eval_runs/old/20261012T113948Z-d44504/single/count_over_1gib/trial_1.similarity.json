@@ -1,0 +1,45 @@
+{
+  "scenario": "count_over_1gib",
+  "trial": 1,
+  "pass": true,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "size INT64",
+    "scatter_sql": [
+      "SELECT size FROM vrpentries WHERE type = 'f' AND size > 1073741824"
+    ],
+    "gather_shape": "n INT64",
+    "gather_sql": "SELECT COUNT(*) FROM intermediate",
+    "final_sql": "SELECT SUM(n) AS n FROM aggregate"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT gid, size FROM vrpentries WHERE type = 'f' AND size > 1073741824"
+    ],
+    "scatter_shape": "gid INT64, size INT64",
+    "gather_sql": "SELECT gid, COUNT(*) AS count FROM intermediate GROUP BY gid",
+    "gather_shape": "gid INT64, count INT64",
+    "final_sql": "SELECT SUM(count) FROM aggregate"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT gid, size FROM vrpentries WHERE type = 'f' AND size > 1073741824"
+      ],
+      "scatter_shape": "gid INT64, size INT64",
+      "gather_sql": "SELECT gid, COUNT(*) AS count FROM intermediate GROUP BY gid",
+      "gather_shape": "gid INT64, count INT64",
+      "final_sql": "SELECT SUM(count) FROM aggregate"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 1,
+  "ordered_compare": false,
+  "column_permutation": [
+    0
+  ],
+  "reason": "match"
+}

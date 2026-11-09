@@ -1,0 +1,18 @@
+eval_master has **9,989 regular files**. The built-in `gufi_stats extensions` report returned nothing, so I counted them directly by the text after the last `.` in each file name (symlinks not included).
+
+| Extension | Files |
+|---|---|
+| .log | 1,410 |
+| .txt | 1,390 |
+| .csv | 1,130 |
+| .dat | 1,125 |
+| .py | 1,054 |
+| .json | 823 |
+| .h5 | 731 |
+| .png | 708 |
+| .c | 544 |
+| (no extension) | 531 |
+| .gz | 525 |
+| 18 other one-off "extensions" | 1 each |
+
+The 18 one-off entries probably aren't real extensions. They're just whatever follows a dot somewhere in the name: audio-855, build_field-564, chunk_final-439, draft, figures-206, fluid_epoch, image_paper, logs_chunk-014, metrics, ocean_grid-645, plots_config-665, run-379, run_lib-668, shard-078, text_video-388, trace-369, weights-772 and weights_field.

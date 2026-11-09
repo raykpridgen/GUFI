@@ -1,0 +1,3 @@
+**eval_master has 9,989 regular files, with a combined size of 8,797,702,315 bytes (about 8.8 GB, or 8.19 GiB).**
+
+The space actually allocated on disk is a little higher: 17,237,592 blocks. Assuming the usual 512-byte blocks, that's about 8.83 GB (8.22 GiB). This count covers regular files only, not symlinks or directories.

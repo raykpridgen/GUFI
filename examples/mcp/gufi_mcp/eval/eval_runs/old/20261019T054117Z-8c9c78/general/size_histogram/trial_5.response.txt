@@ -1,0 +1,40 @@
+Here’s a breakdown of the files in the `eval_master` index by size:
+
+| Size (bytes) | Total Files |
+|--------------|-------------|
+| 0            | 503         |
+| 1            | 438         |
+| 2            | 266         |
+| 3            | 183         |
+| 4            | 132         |
+| 5            | 107         |
+| 6            | 94          |
+| 7            | 79          |
+| 8            | 76          |
+| 9            | 45          |
+| 10           | 71          |
+| 11           | 64          |
+| 12           | 64          |
+| 13           | 83          |
+| 14           | 61          |
+| 15           | 56          |
+| 16           | 51          |
+| 17           | 47          |
+| 18           | 40          |
+| 19           | 53          |
+| 20           | 44          |
+| 21           | 38          |
+| 22           | 29          |
+| 23           | 32          |
+| 24           | 29          |
+| 25           | 28          |
+| 26           | 33          |
+| 27           | 23          |
+| 28           | 25          |
+| 29           | 27          |
+| 30           | 24          |
+| 31           | 29          |
+| 32           | 24          |
+| ...          | ...         |
+
+This table captures only a portion of the size categories for brevity. If you need the full breakdown or further details, let me know!

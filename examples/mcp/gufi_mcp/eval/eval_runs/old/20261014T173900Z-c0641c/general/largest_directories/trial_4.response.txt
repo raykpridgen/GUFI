@@ -1,0 +1,14 @@
+The directories in `eval_master` that hold the most data directly inside them (with a total size of 4096 bytes each) are:
+
+1. `/home/raykprid/search/eval_master`
+2. `/home/raykprid/search/eval_master/groups/grp01/usr003/checkpoint/report/notes`
+3. `/home/raykprid/search/eval_master/groups/grp01/usr009/input/ocean`
+4. `/home/raykprid/search/eval_master/groups/grp01/usr009/output_lib`
+5. `/home/raykprid/search/eval_master/groups/grp01/usr009/output_lib/cluster_batch/bench`
+6. `/home/raykprid/search/eval_master/groups/grp01/usr009/output_lib/cluster_batch/output/gpu_sim`
+7. `/home/raykprid/search/eval_master/groups/grp02/usr002/genome/node`
+8. `/home/raykprid/search/eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/final`
+9. `/home/raykprid/search/eval_master/groups/grp02/usr007/metrics_image/image`
+10. `/home/raykprid/search/eval_master/groups/grp02/usr013/chunk/chunk_bench`
+
+These directories have been found to contain data directly, all having a size of 4096 bytes. If you would like to see more details or a complete list, please let me know!

@@ -1,0 +1,43 @@
+{
+  "scenario": "ext_histogram",
+  "trial": 4,
+  "pass": false,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "ext TEXT",
+    "scatter_sql": [
+      "SELECT ext(name) FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "ext TEXT, count INT64",
+    "gather_sql": "SELECT ext, COUNT(*) FROM intermediate GROUP BY ext",
+    "final_sql": "SELECT ext, SUM(count) AS count FROM aggregate GROUP BY ext"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT ext(name) AS extension FROM vrpentries WHERE type = 'f' GROUP BY extension"
+    ],
+    "scatter_shape": "extension TEXT",
+    "gather_sql": "SELECT extension, COUNT(*) AS count FROM intermediate GROUP BY extension",
+    "gather_shape": "extension TEXT, count INT64",
+    "final_sql": "SELECT extension, SUM(count) AS count FROM aggregate GROUP BY extension"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT ext(name) AS extension FROM vrpentries WHERE type = 'f' GROUP BY extension"
+      ],
+      "scatter_shape": "extension TEXT",
+      "gather_sql": "SELECT extension, COUNT(*) AS count FROM intermediate GROUP BY extension",
+      "gather_shape": "extension TEXT, count INT64",
+      "final_sql": "SELECT extension, SUM(count) AS count FROM aggregate GROUP BY extension"
+    }
+  ],
+  "gt_row_count": 29,
+  "agent_row_count": 29,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "values differ: 11 expected row(s) missing, 11 unexpected"
+}

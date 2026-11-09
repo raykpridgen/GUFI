@@ -1,0 +1,7 @@
+The users who have placed files in the shared directory of `grp03` in `eval_master` and the total amount of data they've contributed are as follows:
+
+- **User ID: 3003** has added **41 files** with a total size of **9,589,070 bytes**.
+- **User ID: 3009** has added **41 files** with a total size of **3,353,299 bytes**.
+- **User ID: 3014** has added **30 files** with a total size of **9,943,087 bytes**.
+
+If you need any more details or further assistance, feel free to ask!

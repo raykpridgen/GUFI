@@ -1,0 +1,6 @@
+In the `eval_master` index, the file types that take up the most space are as follows:
+
+- Regular files (`f`): 8,797,702,315 bytes
+- Symlinks (`l`): 8,271 bytes
+
+Regular files occupy the vast majority of space in this index.

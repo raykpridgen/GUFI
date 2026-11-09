@@ -1,0 +1,9 @@
+Here are the file ownership counts by group in the `eval_master` index:
+
+- Group ID 2001: 12 files
+- Group ID 2002: 12 files
+- Group ID 2003: 12 files
+- Group ID 2004: 12 files
+- Group ID 2005: 12 files
+
+Each specified group owns 12 files.

@@ -1,0 +1,21 @@
+Here is the total size of data for each user in `eval_master` that hasn't been modified in over 90 days:
+
+| User ID | Total Size (bytes) |
+|---------|---------------------|
+| 3001    | 130,383,073         |
+| 3002    | 1,115,271,498       |
+| 3003    | 211,616,117         |
+| 3004    | 121,896,535         |
+| 3005    | 129,455,541         |
+| 3006    | 164,559,554         |
+| 3007    | 172,097,835         |
+| 3008    | 1,297,790,299       |
+| 3009    | 135,386,976         |
+| 3010    | 176,247,414         |
+| 3011    | 135,119,814         |
+| 3012    | 1,470,506,902       |
+| 3013    | 187,044,355         |
+| 3014    | 1,336,528,954       |
+| 3015    | 694,524,185         |
+
+Each value represents the total size of files owned by that user that have not been modified in the specified time frame.

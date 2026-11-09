@@ -1,0 +1,73 @@
+{
+  "scenario": "oldest_k",
+  "trial": 5,
+  "pass": true,
+  "passed_on_attempt": 2,
+  "aggregate_revision_count": 1,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "path TEXT, mtime INT64",
+    "per_directory_sql": [
+      "SELECT path, mtime FROM vrpentries WHERE type = 'f'"
+    ],
+    "partial_shape": "path TEXT, mtime INT64",
+    "partial_sql": "SELECT path, mtime FROM per_directory",
+    "final_sql": "SELECT path, mtime FROM partial ORDER BY mtime ASC LIMIT 5"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT mtime, path FROM vrpentries"
+    ],
+    "per_directory_shape": "mtime INT64, path TEXT",
+    "partial_sql": "SELECT mtime, path FROM per_directory",
+    "partial_shape": "mtime INT64, path TEXT",
+    "final_sql": "SELECT path, mtime FROM partial ORDER BY mtime ASC LIMIT 5"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT mtime, path FROM vrpentries"
+      ],
+      "per_directory_shape": "mtime INT64, path TEXT",
+      "partial_sql": "SELECT mtime, path FROM per_directory ORDER BY mtime ASC",
+      "partial_shape": "mtime INT64, path TEXT",
+      "final_sql": "SELECT path, mtime FROM partial ORDER BY mtime ASC LIMIT 5"
+    },
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT mtime, path FROM vrpentries"
+      ],
+      "per_directory_shape": "mtime INT64, path TEXT",
+      "partial_sql": "SELECT mtime, path FROM per_directory",
+      "partial_shape": "mtime INT64, path TEXT",
+      "final_sql": "SELECT path, mtime FROM partial ORDER BY mtime ASC LIMIT 5"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": false,
+      "passed": false,
+      "row_count": 0,
+      "reason": "call failed: Error executing tool aggregate_sql_query: 1 validation error for aggregate_sql_queryArguments\nquery.partial_sql\n  Value error, partial_sql: ORDER BY is only allowed in final_sql. Per-directory and partial SQL run once per directory or thread, so ordering or limiting there drops or reorders partial results; move it to final_sql [type=value_error, input_value='SELECT mtime, path FROM ...tory ORDER BY mtime ASC', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+    },
+    {
+      "attempt": 2,
+      "ok": true,
+      "passed": true,
+      "row_count": 5,
+      "reason": "match"
+    }
+  ],
+  "gt_row_count": 5,
+  "agent_row_count": 5,
+  "ordered_compare": true,
+  "column_permutation": [
+    0,
+    1
+  ],
+  "reason": "match (attempt 2 of 2)"
+}

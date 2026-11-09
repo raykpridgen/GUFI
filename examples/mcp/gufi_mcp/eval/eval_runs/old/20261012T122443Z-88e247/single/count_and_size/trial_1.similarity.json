@@ -1,0 +1,66 @@
+{
+  "scenario": "count_and_size",
+  "trial": 1,
+  "pass": true,
+  "aggregate_revision_count": 2,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "size INT64",
+    "scatter_sql": [
+      "SELECT size FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "n INT64, total INT64",
+    "gather_sql": "SELECT COUNT(*), SUM(size) FROM intermediate",
+    "final_sql": "SELECT SUM(n) AS n, SUM(total) AS total FROM aggregate"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT COUNT(*) as file_count, SUM(size) as total_size FROM vrpentries WHERE type = 'f'"
+    ],
+    "scatter_shape": "file_count INT64, total_size INT64",
+    "gather_sql": "SELECT SUM(file_count) as file_count, SUM(total_size) as total_size FROM intermediate",
+    "gather_shape": "file_count INT64, total_size INT64",
+    "final_sql": "SELECT SUM(file_count) AS file_count, SUM(total_size) AS total_size FROM aggregate"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT COUNT(*) as file_count, SUM(size) as total_size FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "file_count INT64, total_size INT64",
+      "gather_sql": "SELECT SUM(file_count) as file_count, SUM(total_size) as total_size FROM intermediate",
+      "gather_shape": "file_count INT64, total_size INT64",
+      "final_sql": "SELECT file_count, total_size FROM aggregate"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT COUNT(*) as file_count, SUM(size) as total_size FROM vrpentries WHERE type = 'f' GROUP BY sname, sroll"
+      ],
+      "scatter_shape": "file_count INT64, total_size INT64",
+      "gather_sql": "SELECT SUM(file_count) as file_count, SUM(total_size) as total_size FROM intermediate",
+      "gather_shape": "file_count INT64, total_size INT64",
+      "final_sql": "SELECT file_count, total_size FROM aggregate LIMIT 1"
+    },
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT COUNT(*) as file_count, SUM(size) as total_size FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "file_count INT64, total_size INT64",
+      "gather_sql": "SELECT SUM(file_count) as file_count, SUM(total_size) as total_size FROM intermediate",
+      "gather_shape": "file_count INT64, total_size INT64",
+      "final_sql": "SELECT SUM(file_count) AS file_count, SUM(total_size) AS total_size FROM aggregate"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 1,
+  "ordered_compare": false,
+  "column_permutation": [
+    0,
+    1
+  ],
+  "reason": "match"
+}

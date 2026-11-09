@@ -1,0 +1,7 @@
+In the `eval_master` index, the file types and their corresponding total sizes are as follows:
+
+- Regular files (`f`): **8,797,702,315 bytes**
+- Symlinks (`l`): **8,271 bytes**
+- Directories (`d`): **0 bytes** (directories do not contribute to total size since they only represent paths)
+
+Clearly, regular files occupy the most space in the index.

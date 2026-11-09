@@ -1,0 +1,53 @@
+{
+  "scenario": "age_histogram",
+  "trial": 4,
+  "pass": false,
+  "passed_on_attempt": null,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "cat TEXT",
+    "per_directory_sql": [
+      "SELECT agecat(mtime) FROM vrpentries WHERE type = 'f'"
+    ],
+    "partial_shape": "cat TEXT, count INT64",
+    "partial_sql": "SELECT cat, COUNT(*) FROM per_directory GROUP BY cat",
+    "final_sql": "SELECT cat, SUM(count) AS count FROM partial GROUP BY cat"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT mtime FROM vrpentries"
+    ],
+    "per_directory_shape": "mtime INT64",
+    "partial_sql": "SELECT CASE WHEN mtime >= 0 THEN epochtoage(mtime, 'd') ELSE NULL END AS age_band, COUNT(*) FROM per_directory GROUP BY age_band",
+    "partial_shape": "age_band TEXT, count INT64",
+    "final_sql": "SELECT age_band, SUM(count) AS count FROM partial GROUP BY age_band ORDER BY age_band DESC"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT mtime FROM vrpentries"
+      ],
+      "per_directory_shape": "mtime INT64",
+      "partial_sql": "SELECT CASE WHEN mtime >= 0 THEN epochtoage(mtime, 'd') ELSE NULL END AS age_band, COUNT(*) FROM per_directory GROUP BY age_band",
+      "partial_shape": "age_band TEXT, count INT64",
+      "final_sql": "SELECT age_band, SUM(count) AS count FROM partial GROUP BY age_band ORDER BY age_band DESC"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": true,
+      "passed": false,
+      "row_count": 1095,
+      "reason": "row count 1095 != expected 3"
+    }
+  ],
+  "gt_row_count": 3,
+  "agent_row_count": 1095,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "row count 1095 != expected 3 (attempt 1 of 1)"
+}

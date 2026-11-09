@@ -1,0 +1,7 @@
+There are **4,168 files** in the `eval_master` index that were last modified before 2024. Here are a few examples of those files:
+
+1. `eval_master/groups/grp03/usr004/chunk_lib.json`
+2. `eval_master/groups/grp03/usr004/climate-143.c`
+3. `eval_master/groups/grp02/shared/.code_checkpoint.png`
+4. `eval_master/groups/grp02/shared/analysis_profile.csv`
+5. `eval_master/groups/grp02/shared/analysis_sample-715.gz`

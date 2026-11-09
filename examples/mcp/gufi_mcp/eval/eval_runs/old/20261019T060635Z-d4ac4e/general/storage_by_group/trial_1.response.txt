@@ -1,0 +1,16 @@
+Five groups own files in eval_master. **GID 2005 uses the most storage by a wide margin**, about twice as much as the next group.
+
+| Rank | GID | Files | Total size |
+|---|---|---|---|
+| 1 | 2005 | 2,163 | 3,497,975,377 B (~3.50 GB / 3.26 GiB) |
+| 2 | 2001 | 1,894 | 1,730,853,980 B (~1.73 GB / 1.61 GiB) |
+| 3 | 2003 | 1,935 | 1,560,358,317 B (~1.56 GB / 1.45 GiB) |
+| 4 | 2002 | 2,240 | 1,510,439,863 B (~1.51 GB / 1.41 GiB) |
+| 5 | 2004 | 2,057 | 498,083,049 B (~0.50 GB / 0.46 GiB) |
+
+- **GID 2005** holds about 40% of the roughly 8.8 GB total.
+- **GIDs 2001, 2003 and 2002** each use about 1.5–1.7 GB.
+- **GID 2004** uses much less, about 0.5 GB, even though it has more files than 2005 or 2001.
+- **GID 2002 has the most files (2,240)** but ranks only fourth by size, so its files are smaller on average.
+
+The sizes are the apparent sizes of all files and links in the index, added up for each group. They are not the disk blocks actually allocated. The index stores numeric GIDs, so I haven't matched them to group names. GID 2001's files are under `groups/grp01`, so the others may follow the same pattern (2005 → grp05, and so on), but I haven't checked that.

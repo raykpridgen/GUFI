@@ -1,0 +1,3 @@
+The most common file extension in eval_master is **`.log`**, with **1,410 files**.
+
+`.txt` is a close second at 1,390 files. Next come `.csv` (1,130), `.dat` (1,125) and `.py` (1,054). These counts cover regular files only, and they treat upper- and lowercase versions of an extension as different. 531 files have no extension at all.

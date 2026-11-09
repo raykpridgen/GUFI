@@ -1,0 +1,90 @@
+{
+  "expected": [
+    [
+      "/home/raykprid/search/eval_master/groups/grp05/usr012/output/scratch.c",
+      1261921083
+    ],
+    [
+      "/home/raykprid/search/eval_master/groups/grp01/usr014/clean/step/old.log",
+      1228550276
+    ],
+    [
+      "/home/raykprid/search/eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py",
+      1123091592
+    ],
+    [
+      "/home/raykprid/search/eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt",
+      1113310933
+    ],
+    [
+      "/home/raykprid/search/eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/final/trace_cluster-666.txt",
+      959252531
+    ],
+    [
+      "/home/raykprid/search/eval_master/groups/grp05/usr015/clean/particle_build/src/train_stage-240.dat",
+      564253616
+    ],
+    [
+      "/home/raykprid/search/eval_master/groups/grp04/usr006/layer_video-322.h5",
+      4194001
+    ],
+    [
+      "/home/raykprid/search/eval_master/groups/grp03/usr004/train/model_report/.train.txt",
+      4186836
+    ],
+    [
+      "/home/raykprid/search/eval_master/groups/grp04/usr006/figures.png",
+      4177565
+    ],
+    [
+      "/home/raykprid/search/eval_master/groups/grp03/usr011/lattice/shard_lattice/survey_final/src.h5",
+      4164923
+    ]
+  ],
+  "actual": [
+    [
+      "scratch.c",
+      1261921083
+    ],
+    [
+      "old.log",
+      1228550276
+    ],
+    [
+      "tests_output.py",
+      1123091592
+    ],
+    [
+      "text_run.txt",
+      1113310933
+    ],
+    [
+      "trace_cluster-666.txt",
+      959252531
+    ],
+    [
+      "train_stage-240.dat",
+      564253616
+    ],
+    [
+      "profile.h5",
+      4674080
+    ],
+    [
+      "layer_video-322.h5",
+      4194001
+    ],
+    [
+      ".train.txt",
+      4186836
+    ],
+    [
+      "figures.png",
+      4177565
+    ]
+  ],
+  "expected_row_count": 10,
+  "actual_row_count": 10,
+  "gt_duration_ms": 87.62789599859389,
+  "agent_duration_ms": 42.988
+}

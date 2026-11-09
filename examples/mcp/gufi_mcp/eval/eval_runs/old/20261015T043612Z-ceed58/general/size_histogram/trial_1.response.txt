@@ -1,0 +1,6 @@
+The breakdown of files in the `eval_master` directory by size is as follows:
+
+- **Total Size**: 0 bytes
+- **Total Files**: 0 files
+
+This indicates that there are currently no files recorded in the `eval_master` directory.

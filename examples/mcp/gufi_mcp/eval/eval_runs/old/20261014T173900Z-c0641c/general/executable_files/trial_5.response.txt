@@ -1,0 +1,11 @@
+Here are some of the executable files in the 'eval_master' directory:
+
+1. `eval_master/groups/grp04`
+2. `eval_master/groups/grp05/shared/analysis_survey.csv`
+3. `eval_master/groups/grp05/shared/climate_logs-632.csv`
+4. `eval_master/groups/grp05/shared/eval_src-165.py`
+5. `eval_master/groups/grp02/usr013/field_notes-086.c`
+6. `eval_master/groups/grp02/usr013/job.h5`
+7. `eval_master/groups/grp03/usr001/checkpoint-588.py`
+
+This is just a partial list of executable files. If you need a complete list or details about specific ones, let me know!

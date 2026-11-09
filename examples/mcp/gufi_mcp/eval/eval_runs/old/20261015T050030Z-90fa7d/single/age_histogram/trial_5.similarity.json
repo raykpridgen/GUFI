@@ -1,0 +1,43 @@
+{
+  "scenario": "age_histogram",
+  "trial": 5,
+  "pass": false,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "cat TEXT",
+    "scatter_sql": [
+      "SELECT agecat(mtime) FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "cat TEXT, count INT64",
+    "gather_sql": "SELECT cat, COUNT(*) FROM intermediate GROUP BY cat",
+    "final_sql": "SELECT cat, SUM(count) AS count FROM aggregate GROUP BY cat"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT size, mtime FROM vrpentries"
+    ],
+    "scatter_shape": "size INT64, mtime INT64",
+    "gather_sql": "SELECT CASE \n    WHEN mtime >= 1791763200 - 86400 * 30 THEN '0-30 days'\n    WHEN mtime >= 1791763200 - 86400 * 60 THEN '31-60 days'\n    WHEN mtime >= 1791763200 - 86400 * 90 THEN '61-90 days'\n    ELSE 'More than 90 days'\nEND AS age_group, COUNT(*) AS count, SUM(size) AS total_size \nFROM intermediate \nGROUP BY age_group",
+    "gather_shape": "age_group TEXT, count INT64, total_size INT64",
+    "final_sql": "SELECT age_group, SUM(count) AS total_files, SUM(total_size) AS total_size FROM aggregate GROUP BY age_group ORDER BY total_files DESC"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT size, mtime FROM vrpentries"
+      ],
+      "scatter_shape": "size INT64, mtime INT64",
+      "gather_sql": "SELECT CASE \n    WHEN mtime >= 1791763200 - 86400 * 30 THEN '0-30 days'\n    WHEN mtime >= 1791763200 - 86400 * 60 THEN '31-60 days'\n    WHEN mtime >= 1791763200 - 86400 * 90 THEN '61-90 days'\n    ELSE 'More than 90 days'\nEND AS age_group, COUNT(*) AS count, SUM(size) AS total_size \nFROM intermediate \nGROUP BY age_group",
+      "gather_shape": "age_group TEXT, count INT64, total_size INT64",
+      "final_sql": "SELECT age_group, SUM(count) AS total_files, SUM(total_size) AS total_size FROM aggregate GROUP BY age_group ORDER BY total_files DESC"
+    }
+  ],
+  "gt_row_count": 4,
+  "agent_row_count": 4,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "column counts differ: expected 2, got 3"
+}

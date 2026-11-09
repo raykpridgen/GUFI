@@ -1,0 +1,70 @@
+The following files are owned by user 3007 in the `eval_master` index:
+
+- eval_master/groups/grp02/usr007/.protein_lib.h5
+- eval_master/groups/grp02/usr007/.stage.py
+- eval_master/groups/grp02/usr007/archive_final-393.c
+- eval_master/groups/grp02/usr007/audio-792.txt
+- eval_master/groups/grp02/usr007/audio-894.gz
+- eval_master/groups/grp02/shared/.code_checkpoint.png
+- eval_master/groups/grp02/usr007/backup_step-049.csv
+- eval_master/groups/grp02/usr007/build_output.csv
+- eval_master/groups/grp02/usr007/checkpoint
+- eval_master/groups/grp02/usr007/code-877.txt
+- eval_master/groups/grp02/usr007/corpus_analysis.txt
+- eval_master/groups/grp02/shared/checkpoint_run-523.txt
+- eval_master/groups/grp02/usr007/draft_sample-559.png
+- eval_master/groups/grp02/usr007/image_protein-906.gz
+- eval_master/groups/grp02/usr007/input_figures-603.py
+- eval_master/groups/grp02/usr007/lib.csv
+- eval_master/groups/grp02/usr007/logs_part.log
+- eval_master/groups/grp02/shared/chunk-494.txt
+- eval_master/groups/grp02/shared/chunk_eval.py
+- eval_master/groups/grp02/shared/clean-781
+- eval_master/groups/grp02/shared/climate_trace-731.log
+- eval_master/groups/grp02/usr007/mesh-705.dat
+- eval_master/groups/grp02/usr007/notes-405.log
+- eval_master/groups/grp02/usr007/ocean.txt
+- eval_master/groups/grp02/usr007/old_climate-188.txt
+- eval_master/groups/grp02/usr007/params_figures.txt
+- eval_master/groups/grp02/shared/cluster_epoch-264.h5
+- eval_master/groups/grp02/shared/code_signal.csv
+- eval_master/groups/grp02/usr007/particle_clean-720.csv
+- eval_master/groups/grp02/usr007/plots-301.dat
+- eval_master/groups/grp02/usr007/plots_figures.py
+- eval_master/groups/grp02/usr007/protein_genome-584.dat
+- eval_master/groups/grp02/usr007/run_gpu-390.txt
+- eval_master/groups/grp02/shared/dataset_draft-482.png
+- eval_master/groups/grp02/shared/epoch_phase.csv
+- eval_master/groups/grp02/shared/eval_phase-808.log
+- eval_master/groups/grp02/shared/field.log
+- eval_master/groups/grp02/shared/final_code.png
+- eval_master/groups/grp02/shared/gpu_mesh-813.csv
+- eval_master/groups/grp02/shared/gpu_particle-217.csv
+- eval_master/groups/grp02/shared/grid_cluster.py
+- eval_master/groups/grp02/shared/image-089.h5
+- eval_master/groups/grp02/usr007/slice.dat
+- eval_master/groups/grp02/usr007/stage_backup.csv
+- eval_master/groups/grp02/usr007/sweep-038.txt
+- eval_master/groups/grp02/usr007/tmp.json
+- eval_master/groups/grp02/usr007/sim_cluster/.draft_climate.dat
+- eval_master/groups/grp02/shared/lib_logs.py
+- eval_master/groups/grp02/shared/lib_tests-873.csv
+- eval_master/groups/grp02/shared/logs_metrics.json
+- eval_master/groups/grp02/shared/logs_results-419
+- eval_master/groups/grp02/usr007/sim_cluster/config-564.dat
+- eval_master/groups/grp02/usr007/sim_cluster/corpus.py
+- eval_master/groups/grp02/usr007/sim_cluster/dataset-459.gz
+- eval_master/groups/grp02/usr007/sim_cluster/draft_eval.txt
+- eval_master/groups/grp02/usr007/sim_cluster/epoch_field.dat
+- eval_master/groups/grp02/shared/metrics_epoch-723.py
+- eval_master/groups/grp02/shared/model_particle-936.py
+- eval_master/groups/grp02/shared/neuron.py
+- eval_master/groups/grp02/usr007/sim_cluster/epoch_report-111.log
+- eval_master/groups/grp02/usr007/sim_cluster/fluid.c
+- eval_master/groups/grp02/usr007/sim_cluster/genome-389.c
+- eval_master/groups/grp02/usr007/sim_cluster/grid-739.json
+- eval_master/groups/grp02/usr007/sim_cluster/image_config.log
+
+(And many more...)
+
+Due to the large output size, this is just a partial list. If you need anyone specific or additional information, let me know!

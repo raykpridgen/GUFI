@@ -1,0 +1,19 @@
+Here are the files in the `eval_master` index that are over 500 MB and haven't been modified in more than a year, sorted by size in descending order:
+
+1. **File Name:** `scratch.c`
+   - **Size:** 1,261,921,083 bytes
+   - **Last Modified:** [Unix Time: 1755978725](https://www.epochconverter.com/), which corresponds to date 2025-12-17.
+
+2. **File Name:** `text_run.txt`
+   - **Size:** 1,113,310,933 bytes
+   - **Last Modified:** [Unix Time: 1726774637](https://www.epochconverter.com/), which corresponds to date 2024-07-24.
+
+3. **File Name:** `trace_cluster-666.txt`
+   - **Size:** 959,252,531 bytes
+   - **Last Modified:** [Unix Time: 1734745504](https://www.epochconverter.com/), which corresponds to date 2024-08-19.
+
+4. **File Name:** `train_stage-240.dat`
+   - **Size:** 564,253,616 bytes
+   - **Last Modified:** [Unix Time: 1738453342](https://www.epochconverter.com/), which corresponds to date 2024-11-30.
+
+These files have been identified based on the criteria specified (size greater than 500 MB and last modified more than a year ago).

@@ -1,0 +1,45 @@
+{
+  "scenario": "total_file_size",
+  "trial": 3,
+  "pass": true,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "size INT64",
+    "scatter_sql": [
+      "SELECT size FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "total INT64",
+    "gather_sql": "SELECT SUM(size) FROM intermediate",
+    "final_sql": "SELECT SUM(total) AS total FROM aggregate"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT SUM(size) AS total_size FROM vrpentries WHERE type = 'f'"
+    ],
+    "scatter_shape": "total_size INT64",
+    "gather_sql": "SELECT SUM(total_size) FROM intermediate",
+    "gather_shape": "total_size INT64",
+    "final_sql": "SELECT SUM(total_size) AS total_bytes FROM aggregate"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT SUM(size) AS total_size FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "total_size INT64",
+      "gather_sql": "SELECT SUM(total_size) FROM intermediate",
+      "gather_shape": "total_size INT64",
+      "final_sql": "SELECT SUM(total_size) AS total_bytes FROM aggregate"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 1,
+  "ordered_compare": false,
+  "column_permutation": [
+    0
+  ],
+  "reason": "match"
+}

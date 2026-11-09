@@ -1,0 +1,15 @@
+The directories in `eval_master` that have more than 100 files directly in them, along with their respective counts of files, are as follows:
+
+| Number of Files | Directory Count |
+|-----------------|-----------------|
+| 106             | 1               |
+| 108             | 1               |
+| 109             | 1               |
+| 112             | 1               |
+| 125             | 1               |
+| 126             | 1               |
+| 127             | 1               |
+| 133             | 1               |
+| 136             | 1               |
+
+Each of these counts indicates how many directories fall into that specific range of file counts.

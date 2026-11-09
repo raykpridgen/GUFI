@@ -1,0 +1,1 @@
+In the `eval_master` index, there are a total of **10,289 files** with a combined size of **8,797,710,586 bytes**.

@@ -1,0 +1,20 @@
+In the `eval_master` index, there are **753 files** that were last modified before 2024.
+
+Here are a few examples of those files:
+
+1. **Path:** `eval_master/groups/grp02/usr013/checkpoint_plots.gz`  
+   **Last Modified:** `2023-12-20 21:54:53` (Unix time: 1698021693)
+
+2. **Path:** `eval_master/groups/grp04/usr010/notes.log`  
+   **Last Modified:** `2023-10-12 22:18:31` (Unix time: 1697173111)
+
+3. **Path:** `eval_master/groups/grp02/shared/backup_protein-771.txt`  
+   **Last Modified:** `2023-12-22 05:52:44` (Unix time: 1703721964)
+
+4. **Path:** `eval_master/groups/grp02/shared/build_step.h5`  
+   **Last Modified:** `2023-10-24 23:19:43` (Unix time: 1698220783)
+
+5. **Path:** `eval_master/groups/grp04/shared/audio_particle.csv`  
+   **Last Modified:** `2023-12-08 01:32:24` (Unix time: 1702419944)
+
+If you need more details or another query, feel free to ask!

@@ -1,0 +1,22 @@
+**734 regular files** in eval_master were last modified before January 1, 2024, out of 9,989 files in the index (about 7%). Together they hold about 201 MB (201,131,791 bytes).
+
+The oldest file in the index was modified on 2023-10-13, so all of these files date from mid-October to late December 2023. That's roughly the oldest quarter of the index's three-year span, which ends 2026-10-11.
+
+The 10 oldest:
+
+| Modified (UTC) | Size (bytes) | UID | Path |
+|---|---|---|---|
+| 2023-10-13 04:58:31 | 7,866 | 3010 | eval_master/groups/grp04/usr010/notes.log |
+| 2023-10-13 05:05:01 | 4 | 3006 | eval_master/groups/grp04/usr006/ocean/trace_plots/text_metrics.txt |
+| 2023-10-13 08:45:52 | 507,546 | 3005 | eval_master/groups/grp04/usr005/params/report_draft-782.log |
+| 2023-10-13 10:11:38 | 71 | 3001 | eval_master/groups/grp03/usr001/chunk/audio/archive/gpu_neuron/tmp/tmp.py |
+| 2023-10-13 19:27:44 | 17,418 | 3007 | eval_master/groups/grp02/usr007/sim_cluster/metrics/eval/tests-591.log |
+| 2023-10-13 21:55:20 | 124,831 | 3013 | eval_master/groups/grp02/usr013/batch/sim/results_chunk/output_lib-265.json |
+| 2023-10-13 22:14:42 | 4,061 | 3005 | eval_master/groups/grp04/usr005/params/protein/genome_shard/results_raw/neuron_epoch-740.h5 |
+| 2023-10-13 23:33:03 | 8 | 3003 | eval_master/groups/grp01/usr003/checkpoint/field_input.dat |
+| 2023-10-14 00:18:38 | 405,176 | 3003 | eval_master/groups/grp01/usr003/checkpoint/report/draft_node-267.txt |
+| 2023-10-14 01:21:00 | 0 | 3014 | eval_master/groups/grp01/usr014/clean/data/sample_build/final_backup-408.csv |
+
+These files are spread across several users and groups (grp01 to grp04) rather than sitting in one folder.
+
+The count covers regular files only. The index also has 300 symlinks, and the oldest of those dates from 2023-10-18, so a few of them may also predate 2024. I didn't count those.

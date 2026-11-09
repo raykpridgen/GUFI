@@ -1,0 +1,155 @@
+Here are the 10 biggest files for each user in the `eval_master` index:
+
+### User ID: 3001
+1. `eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py` - 1,123,091,592 bytes
+2. `eval_master/groups/grp03/usr001/chunk/train/code/cache/data-003.json` - 4,088,609 bytes
+3. `eval_master/groups/grp03/usr001/chunk/audio/archive/corpus/dataset_run.json` - 3,816,099 bytes
+4. `eval_master/groups/grp03/usr001/step_image.log` - 3,720,491 bytes
+5. `eval_master/groups/grp03/usr001/chunk/audio/job/.scratch_survey-182.gz` - 3,696,228 bytes
+6. `eval_master/groups/grp03/usr001/mesh/particle_input-681.txt` - 3,685,612 bytes
+7. `eval_master/groups/grp03/usr001/chunk/audio/archive/gpu_neuron/lattice/batch_raw-954.json` - 3,377,998 bytes
+8. `eval_master/groups/grp03/usr001/chunk/fluid_train-444.json` - 3,362,630 bytes
+9. `eval_master/groups/grp03/usr001/train/cluster-301.png` - 3,051,404 bytes
+10. `eval_master/groups/grp03/usr001/trace/cluster_scratch-745` - 3,043,312 bytes
+
+### User ID: 3002
+1. `eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/final/trace_cluster-666.txt` - 959,252,531 bytes
+2. `eval_master/groups/grp02/usr002/genome/survey_node-615.txt` - 3,989,839 bytes
+3. `eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/model/phase-338` - 3,823,227 bytes
+4. `eval_master/groups/grp02/usr002/src_slice/checkpoint/logs-474.py` - 3,656,960 bytes
+5. `eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/model/metrics.dat` - 3,527,749 bytes
+6. `eval_master/groups/grp02/usr002/src_slice/final/src_weights-385.log` - 3,521,933 bytes
+7. `eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/model/cluster_sample/fluid_sample.dat` - 3,503,970 bytes
+8. `eval_master/groups/grp02/usr002/src_slice/final/run/scratch_tests` - 3,472,474 bytes
+9. `eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/model/cluster_sample/old-591` - 3,471,541 bytes
+10. `eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/slice/config_shard-272.py` - 3,421,080 bytes
+
+### User ID: 3003
+1. `eval_master/groups/grp01/usr003/checkpoint/report/params/ocean_tmp-832.log` - 4,163,171 bytes
+2. `eval_master/groups/grp01/usr003/checkpoint/report/params/particle_slice-938.log` - 4,043,846 bytes
+3. `eval_master/groups/grp01/usr003/checkpoint/report/params/node_grid.csv` - 3,854,989 bytes
+4. `eval_master/groups/grp01/usr003/checkpoint/report_run-037.log` - 3,847,781 bytes
+5. `eval_master/groups/grp01/usr003/checkpoint/video.py` - 3,808,937 bytes
+6. `eval_master/groups/grp01/usr003/text_grid/scratch_params-691.py` - 3,682,020 bytes
+7. `eval_master/groups/grp01/usr003/text_grid/particle-2.txt` - 3,629,821 bytes
+8. `eval_master/groups/grp01/usr003/checkpoint/report/profile_particle-329` - 3,539,633 bytes
+9. `eval_master/groups/grp01/usr003/checkpoint/report/params/report_build-368.h5` - 3,490,658 bytes
+10. `eval_master/groups/grp01/usr003/climate-915.png` - 3,439,479 bytes
+
+### User ID: 3004
+1. `eval_master/groups/grp03/usr004/train/model_report/.train.txt` - 4,186,836 bytes
+2. `eval_master/groups/grp03/usr004/part_epoch/dataset_archive/shard-057.dat` - 4,059,464 bytes
+3. `eval_master/groups/grp03/usr004/part_epoch/final/ocean_phase.log` - 3,955,231 bytes
+4. `eval_master/groups/grp03/usr004/field_lattice.csv` - 3,915,817 bytes
+5. `eval_master/groups/grp03/usr004/stage/batch_genome/layer_mesh.png` - 3,868,829 bytes
+6. `eval_master/groups/grp03/usr004/part_epoch/backup.dat` - 3,480,491 bytes
+7. `eval_master/groups/grp03/usr004/train/tests_protein/particle/text.png` - 3,465,164 bytes
+8. `eval_master/groups/grp03/usr004/scratch_stage/mesh.txt` - 3,334,664 bytes
+9. `eval_master/groups/grp03/usr004/sim_gpu/epoch_node-484.csv` - 3,286,447 bytes
+10. `eval_master/groups/grp03/usr004/part_epoch/batch-162.py` - 3,010,787 bytes
+
+### User ID: 3005
+1. `eval_master/groups/grp04/usr005/params/protein/genome_shard/gpu_signal.csv` - 4,129,725 bytes
+2. `eval_master/groups/grp04/usr005/params/protein/raw_lattice-886.png` - 4,101,620 bytes
+3. `eval_master/groups/grp04/usr005/params/protein/genome_shard/profile/grid-665.dat` - 4,030,164 bytes
+4. `eval_master/groups/grp04/usr005/params/protein/genome_shard/results_raw/config-797.csv` - 3,635,987 bytes
+5. `eval_master/groups/grp04/usr005/params/protein/genome_shard/results_raw/sample_data-121.c` - 3,475,122 bytes
+6. `eval_master/groups/grp04/usr005/params/protein/genome_shard/profile/backup_video.log` - 3,403,084 bytes
+7. `eval_master/groups/grp04/usr005/params/protein/video_dataset-999` - 3,239,908 bytes
+8. `eval_master/groups/grp04/usr005/params/protein/genome_shard/results_raw/slice_audio.dat` - 3,140,237 bytes
+9. `eval_master/groups/grp04/usr005/params/particle_survey.dat` - 3,136,406 bytes
+10. `eval_master/groups/grp04/usr005/params/protein/genome_shard/results_raw/mesh.json` - 2,950,606 bytes
+
+### User ID: 3006
+1. `eval_master/groups/grp04/usr006/layer_video-322.h5` - 4,194,001 bytes
+2. `eval_master/groups/grp04/usr006/figures.png` - 4,177,565 bytes
+3. `eval_master/groups/grp04/usr006/ocean/phase/params/text_build/src_genome` - 4,117,199 bytes
+4. `eval_master/groups/grp04/usr006/ocean/phase/params/train_part/bench-711.dat` - 4,046,582 bytes
+5. `eval_master/groups/grp04/usr006/ocean/phase/field/cluster/report_slice/chunk_clean.csv` - 3,939,167 bytes
+6. `eval_master/groups/grp04/usr006/ocean/phase/field/cluster/tmp-328.dat` - 3,907,727 bytes
+7. `eval_master/groups/grp04/usr006/ocean/phase/field/cache-672.png` - 3,896,252 bytes
+8. `eval_master/groups/grp04/usr006/ocean/chunk_final.dat` - 3,758,506 bytes
+9. `eval_master/groups/grp04/usr006/ocean/phase/field/sim_figures.txt` - 3,752,701 bytes
+10. `eval_master/groups/grp04/usr006/ocean/phase/params/text_build/run_bench.csv` - 3,557,468 bytes
+
+### User ID: 3007
+1. `eval_master/groups/grp02/usr007/metrics_image/gpu_raw/neuron_dataset/neuron_profile-854.dat` - 3,974,168 bytes
+2. `eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/chunk-838.gz` - 3,781,979 bytes
+3. `eval_master/groups/grp02/usr007/sim_cluster/eval/tests/clean.txt` - 3,728,646 bytes
+4. `eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/old/neuron.txt` - 3,720,722 bytes
+5. `eval_master/groups/grp02/usr007/metrics_image/run_archive/archive/node_data-020.png` - 3,700,655 bytes
+6. `eval_master/groups/grp02/shared/neuron.py` - 3,650,338 bytes
+7. `eval_master/groups/grp02/usr007/sim_cluster/metrics/eval/neuron_part.json` - 3,626,622 bytes
+8. `eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/train/results_final.json` - 3,618,962 bytes
+9. `eval_master/groups/grp02/usr007/metrics_image/checkpoint_report/text-447.py` - 3,533,774 bytes
+10. `eval_master/groups/grp02/shared/cluster_epoch-264.h5` - 3,513,056 bytes
+
+### User ID: 3008
+1. `eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt` - 1,113,310,933 bytes
+2. `eval_master/groups/grp05/usr008/cache_text/climate_part.txt` - 4,157,025 bytes
+3. `eval_master/groups/grp05/usr008/cache_text/signal_ocean/analysis/tmp_scratch-552.png` - 4,042,893 bytes
+4. `eval_master/groups/grp05/usr008/cluster_build.log` - 4,007,750 bytes
+5. `eval_master/groups/grp05/shared/src-824.csv` - 3,950,736 bytes
+6. `eval_master/groups/grp05/usr008/cache_text/signal_ocean/analysis/job_old-058.dat` - 3,941,974 bytes
+7. `eval_master/groups/grp05/usr008/cache_text/paper/logs-278.txt` - 3,658,977 bytes
+8. `eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/cluster/clean/model.png` - 3,656,593 bytes
+9. `eval_master/groups/grp05/usr008/cache_text/paper/audio_part.h5` - 3,604,320 bytes
+10. `eval_master/groups/grp05/usr008/cache_text/paper/bench.py` - 3,557,138 bytes
+
+### User ID: 3009
+1. `eval_master/groups/grp01/usr009/output_lib/cluster_batch/output/train/draft_archive/lattice_params-141.log` - 3,858,216 bytes
+2. `eval_master/groups/grp01/usr009/output_lib/cluster_batch/output/gpu_sim/notes/field_neuron-030.png` - 3,563,653 bytes
+3. `eval_master/groups/grp01/usr009/output_lib/cluster_batch/output/gpu_sim/logs_input/.layer_neuron-660.dat` - 3,490,761 bytes
+4. `eval_master/groups/grp01/usr009/output_lib/cluster_batch/output/slice/report/logs_model-719.dat` - 3,435,076 bytes
+5. `eval_master/groups/grp01/usr009/output_lib/cluster_batch/output/train/input-624.log` - 3,383,630 bytes
+6. `eval_master/groups/grp01/usr009/output_lib/cluster_batch/output/train/draft_archive/survey-088.log` - 3,338,766 bytes
+7. `eval_master/groups/grp01/usr009/output_lib/cluster_batch/trace-452.log` - 3,247,183 bytes
+8. `eval_master/groups/grp01/usr009/output_lib/cluster_batch/output/slice/report/analysis.py` - 3,218,936 bytes
+9. `eval_master/groups/grp01/usr009/output_lib/cluster_batch/video_old/protein/checkpoint_train/final_eval` - 3,073,510 bytes
+10. `eval_master/groups/grp01/usr009/output_lib/cluster_batch/paper_ocean-411.py` - 2,915,786 bytes
+
+### User ID: 3010
+1. `eval_master/groups/grp04/usr010/mesh/code/code_params.py` - 4,122,256 bytes
+2. `eval_master/groups/grp04/usr010/mesh/tmp_genome/backup/phase.h5` - 3,967,743 bytes
+3. `eval_master/groups/grp04/usr010/mesh/tmp_genome/sweep/profile/old/particle.py` - 3,873,250 bytes
+4. `eval_master/groups/grp04/usr010/mesh/cluster_lattice/chunk.json` - 3,812,410 bytes
+5. `eval_master/groups/grp04/usr010/profile/eval/trace_sim.h5` - 3,796,043 bytes
+6. `eval_master/groups/grp04/usr010/mesh/tmp_genome/backup/phase_clean-377.csv` - 3,773,681 bytes
+7. `eval_master/groups/grp04/usr010/mesh/model_clean/fluid/genome_fluid.c` - 3,739,657 bytes
+8. `eval_master/groups/grp04/usr010/mesh/tmp_genome/sweep/profile/old/image_model-086.csv` - 3,683,242 bytes
+9. `eval_master/groups/grp04/usr010/mesh/tmp_genome/grid/lib/old/params_bench-470.json` - 3,676,842 bytes
+10. `eval_master/groups/grp04/usr010/profile/eval/image_genome` - 3,591,908 bytes
+
+### User ID: 3011
+1. `eval_master/groups/grp03/usr011/lattice/shard_lattice/survey_final/src.h5` - 4,164,923 bytes
+2. `eval_master/groups/grp03/usr011/lattice/run_protein/archive_params/stage_raw/src-449.py` - 4,012,668 bytes
+3. `eval_master/groups/grp03/usr011/scratch/report/analysis_profile-061.txt` - 3,998,615 bytes
+4. `eval_master/groups/grp03/usr011/lattice/run_protein/archive_params/stage_raw/profile/lattice_results-553.py` - 3,456,925 bytes
+5. `eval_master/groups/grp03/usr011/lattice/run_protein/archive_params/stage_raw/cluster.txt` - 3,384,904 bytes
+6. `eval_master/groups/grp03/usr011/lattice/notes-278.h5` - 3,326,695 bytes
+7. `eval_master/groups/grp03/shared/paper-000.txt` - 3,254,049 bytes
+8. `eval_master/groups/grp03/usr011/lattice/shard_lattice/survey_final/.text_audio.log` - 3,225,418 bytes
+9. `eval_master/groups/grp03/usr011/lattice/shard_lattice/stage_genome/paper_profile-185.csv` - 3,083,824 bytes
+10. `eval_master/groups/grp03/usr011/audio/data_train.h5` - 3,049,197 bytes
+
+### User ID: 3012
+1. `eval_master/groups/grp05/usr012/output/scratch.c` - 1,261,921,083 bytes
+2. `eval_master/groups/grp05/usr012/output/weights/grid_final/cluster_sim.txt` - 4,123,685 bytes
+3. `eval_master/groups/grp05/usr012/output/weights/trace_metrics-761.png` - 4,058,828 bytes
+4. `eval_master/groups/grp05/usr012/output/audio-996.txt` - 3,828,945 bytes
+5. `eval_master/groups/grp05/usr012/output/weights/grid_final/audio_part/protein/paper_grid-618.json` - 3,802,629 bytes
+6. `eval_master/groups/grp05/usr012/output/weights/lib/logs_weights-701.txt` - 3,658,113 bytes
+7. `eval_master/groups/grp05/usr012/scratch_plots.csv` - 3,629,958 bytes
+8. `eval_master/groups/grp05/usr012/epoch-155.csv` - 3,604,070 bytes
+9. `eval_master/groups/grp05/usr012/output/weights/grid_final/audio_part/cluster_input-488.dat` - 3,569,222 bytes
+10. `eval_master/groups/grp05/usr012/output/weights/grid_final/signal/node.gz` - 3,554,708 bytes
+
+### User ID: 3013
+1. `eval_master/groups/grp02/usr013/batch/sim/results_chunk/params-561.dat` - 4,068,149 bytes
+2. `eval_master/groups/grp02/usr013/chunk/chunk_bench/sample_profile.dat` - 4,052,104 bytes
+3. `eval_master/groups/grp02/usr013/batch/step/video_final-949` - 3,816,743 bytes
+4. `eval_master/groups/grp02/usr013/batch/scratch_sample-531.log` - 3,783,280 bytes
+5. `eval_master/groups/grp02/usr013/batch/step/tmp_particle/lattice/train/tmp_lattice-980.dat` - 3,729,846 bytes
+6. `eval_master/groups/grp02/usr013/fluid_particle-909.dat` - 3,694,474 bytes
+7. `eval_master/groups/grp02/usr013/lib_stage.gz` - 3,545,219 bytes
+8. `eval_master/groups/grp02/usr013/batch/sim/results_chunk/mesh_weights

@@ -1,0 +1,46 @@
+{
+  "scenario": "size_histogram",
+  "trial": 1,
+  "pass": true,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "cat TEXT",
+    "scatter_sql": [
+      "SELECT bytecat(size) FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "cat TEXT, count INT64",
+    "gather_sql": "SELECT cat, COUNT(*) FROM intermediate GROUP BY cat",
+    "final_sql": "SELECT cat, SUM(count) AS count FROM aggregate GROUP BY cat"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT gid, bytecat(size) AS bcat FROM vrpentries WHERE type = 'f'"
+    ],
+    "scatter_shape": "gid INT64, bcat TEXT",
+    "gather_sql": "SELECT bcat, COUNT(*) AS file_count FROM intermediate GROUP BY bcat",
+    "gather_shape": "bcat TEXT, file_count INT64",
+    "final_sql": "SELECT bcat, SUM(file_count) AS total_files FROM aggregate GROUP BY bcat ORDER BY total_files DESC"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT gid, bytecat(size) AS bcat FROM vrpentries WHERE type = 'f'"
+      ],
+      "scatter_shape": "gid INT64, bcat TEXT",
+      "gather_sql": "SELECT bcat, COUNT(*) AS file_count FROM intermediate GROUP BY bcat",
+      "gather_shape": "bcat TEXT, file_count INT64",
+      "final_sql": "SELECT bcat, SUM(file_count) AS total_files FROM aggregate GROUP BY bcat ORDER BY total_files DESC"
+    }
+  ],
+  "gt_row_count": 5,
+  "agent_row_count": 5,
+  "ordered_compare": false,
+  "column_permutation": [
+    0,
+    1
+  ],
+  "reason": "match"
+}

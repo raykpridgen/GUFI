@@ -1,0 +1,19 @@
+eval_master has **9,989 regular files** totalling about **8.19 GiB** (8,797,702,315 bytes). Symlinks and directories aren't counted.
+
+| Size range | Files | % of files | Total size | % of bytes | Smallest – largest file |
+|---|---:|---:|---:|---:|---|
+| Empty (0 B) | 503 | 5.0% | 0 B | 0% | — |
+| 1 B – 1 KiB | 4,360 | 43.6% | 628 KiB | <0.01% | 1 B – 1 KiB |
+| 1 KiB – 100 KiB | 2,812 | 28.2% | 57.4 MiB | 0.7% | 1.0 KiB – 99.8 KiB |
+| 100 KiB – 1 MiB | 1,473 | 14.7% | 581.7 MiB | 6.9% | 100 KiB – 1.0 MiB |
+| 1 MiB – 100 MiB | 835 | 8.4% | 1.75 GiB | 21.3% | 1.0 MiB – 4.0 MiB |
+| 100 MiB – 1 GiB | 2 | 0.02% | 1.42 GiB | 17.3% | 538 MiB – 915 MiB |
+| Over 1 GiB | 4 | 0.04% | 4.40 GiB | 53.7% | 1.04 GiB – 1.18 GiB |
+
+**What stands out:**
+- **Most files are small.** About 77% are 100 KiB or less (including the empty ones), but together they hold less than 1% of the space.
+- **A few files take most of the space.** Just 6 files over 100 MiB account for about 71% of all bytes (~5.8 GiB). The 4 files over 1 GiB alone are more than half the total.
+- **The middle range is narrow.** The largest file in the 1–100 MiB range is only about 4 MiB. Nothing falls between 4 MiB and 538 MiB, so the index is mostly many small files plus a handful of very large ones.
+- **503 files are empty** (0 bytes). They might be placeholders or leftover files.
+
+If you want to know where the space is going, I can list the 6 largest files with their paths, or break this down by directory, owner or file extension.

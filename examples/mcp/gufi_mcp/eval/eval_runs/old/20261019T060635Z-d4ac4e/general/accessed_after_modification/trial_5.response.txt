@@ -1,0 +1,7 @@
+**None of them: 0 files.** Out of the 9,989 regular files in eval_master, not one has an access time (atime) later than its change time (ctime). That stays 0 even if an access at the exact same second as the change counts as a read.
+
+How you define "changed" matters a lot here:
+- **Measured against status change time (ctime)**, which is what "changed" means for Unix files and covers both content and metadata changes: **0 files**.
+- **Measured against content modification time (mtime)**: **all 9,989 files** have been accessed since their contents were last modified.
+
+So every file was read after its contents were last written, but each file's ctime is at or after its last read, meaning some later change touched every file. A metadata change such as a permission update or a re-copy would do that. It could also happen if the index was built from copied or restored data.

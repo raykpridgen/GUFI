@@ -1,0 +1,39 @@
+The following files in the `eval_master` index cannot be read by other users at all (i.e., they are not accessible for reading):
+
+1. `eval_master/groups/grp02/shared`
+2. `eval_master/groups/grp02/shared/.code_checkpoint.png`
+3. `eval_master/groups/grp02/shared/.paper-676.dat`
+4. `eval_master/groups/grp02/shared/analysis_profile.csv`
+5. `eval_master/groups/grp02/shared/analysis_sample-715.gz`
+6. `eval_master/groups/grp02/shared/archive.json`
+7. `eval_master/groups/grp02/shared/archive.py`
+8. `eval_master/groups/grp02/shared/audio-566.log`
+9. `eval_master/groups/grp02/shared/backup_model-920.h5`
+10. `eval_master/groups/grp02/shared/backup_protein-771.txt`
+11. `eval_master/groups/grp02/shared/backup_tmp-522.c`
+12. `eval_master/groups/grp02/shared/batch-456.png`
+13. `eval_master/groups/grp02/shared/build_step.h5`
+14. `eval_master/groups/grp02/shared/checkpoint_run-523.txt`
+15. `eval_master/groups/grp02/shared/checkpoint_signal-160.log`
+16. `eval_master/groups/grp02/shared/chunk`
+17. `eval_master/groups/grp02/shared/chunk-494.txt`
+18. `eval_master/groups/grp02/shared/chunk-691.log`
+19. `eval_master/groups/grp02/shared/chunk_eval.py`
+20. `eval_master/groups/grp02/shared/clean-781`
+21. `eval_master/groups/grp02/shared/climate_trace-731.log`
+22. `eval_master/groups/grp02/shared/cluster.py`
+23. `eval_master/groups/grp02/shared/cluster_archive-160.log`
+24. `eval_master/groups/grp02/shared/cluster_epoch-264.h5`
+25. `eval_master/groups/grp02/shared/code_signal.csv`
+26. `eval_master/groups/grp02/shared/corpus.log`
+27. `eval_master/groups/grp02/shared/data.py`
+28. `eval_master/groups/grp02/shared/dataset_draft-482.png`
+29. `eval_master/groups/grp02/shared/dataset_stage-580.log`
+30. `eval_master/groups/grp02/shared/epoch_phase.csv`
+31. `eval_master/groups/grp02/shared/eval_phase-808.log`
+32. `eval_master/groups/grp02/shared/field`
+33. `eval_master/groups/grp02/shared/field.log`
+34. `eval_master/groups/grp02/shared/final_code.png`
+35. ... *(and many more)*
+
+This is just a portion of the complete list. If you need the full list or specific details about any of these files, let me know!

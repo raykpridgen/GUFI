@@ -1,0 +1,16 @@
+**734 regular files** in eval_master were last modified before 2024-01-01 (UTC). That's about 7.3% of the 9,989 files in the index, and together they hold about 201 MB (201,131,791 bytes). All of them date from late 2023: the oldest was modified 2023-10-13 04:58:31 and the newest 2023-12-31 23:53:43. Nothing in the index is older than October 2023.
+
+The eight oldest:
+
+| Path | Size (bytes) | Last modified (UTC) |
+|---|---|---|
+| eval_master/groups/grp04/usr010/notes.log | 7,866 | 2023-10-13 04:58:31 |
+| eval_master/groups/grp04/usr006/ocean/trace_plots/text_metrics.txt | 4 | 2023-10-13 05:05:01 |
+| eval_master/groups/grp04/usr005/params/report_draft-782.log | 507,546 | 2023-10-13 08:45:52 |
+| eval_master/groups/grp03/usr001/chunk/audio/archive/gpu_neuron/tmp/tmp.py | 71 | 2023-10-13 10:11:38 |
+| eval_master/groups/grp02/usr007/sim_cluster/metrics/eval/tests-591.log | 17,418 | 2023-10-13 19:27:44 |
+| eval_master/groups/grp02/usr013/batch/sim/results_chunk/output_lib-265.json | 124,831 | 2023-10-13 21:55:20 |
+| eval_master/groups/grp04/usr005/params/protein/genome_shard/results_raw/neuron_epoch-740.h5 | 4,061 | 2023-10-13 22:14:42 |
+| eval_master/groups/grp01/usr003/checkpoint/field_input.dat | 8 | 2023-10-13 23:33:03 |
+
+The 734 count covers regular files only. Another 19 symlinks were also last modified before 2024.

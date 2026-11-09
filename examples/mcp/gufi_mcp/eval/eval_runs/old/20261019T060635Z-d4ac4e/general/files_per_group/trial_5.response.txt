@@ -1,0 +1,11 @@
+The `eval_master` index has 9,989 regular files, owned by five groups:
+
+| GID  | Files |
+|------|-------|
+| 2002 | 2,175 |
+| 2005 | 2,100 |
+| 2004 | 1,997 |
+| 2003 | 1,879 |
+| 2001 | 1,838 |
+
+These counts are regular files only. Symlinks and directories aren't included. The index stores numeric group IDs, not group names.

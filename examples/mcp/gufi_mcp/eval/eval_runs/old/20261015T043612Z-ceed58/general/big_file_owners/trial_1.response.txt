@@ -1,0 +1,23 @@
+Here are the files over 1 GB in the `eval_master` index, along with their owners (UID) and paths:
+
+1. **Owner UID: 3012**
+   - Path: `eval_master/groups/grp05/usr012/output/scratch.c`
+   - Size: 1,261,921,083 bytes
+
+2. **Owner UID: 3001**
+   - Path: `eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py`
+   - Size: 1,123,091,592 bytes
+
+3. **Owner UID: 3014**
+   - Path: `eval_master/groups/grp01/usr014/clean/step/old.log`
+   - Size: 1,228,550,276 bytes
+
+4. **Owner UID: 3008**
+   - Path: `eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt`
+   - Size: 1,113,310,933 bytes
+
+In summary, the files belong to the following UIDs:
+- 3012
+- 3001
+- 3014
+- 3008

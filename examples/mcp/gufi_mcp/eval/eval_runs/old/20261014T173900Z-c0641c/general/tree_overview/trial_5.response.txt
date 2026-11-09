@@ -1,0 +1,3 @@
+It appears that there are currently no directories under the `groups/` directory in the `eval_master` index that contain any files or consume any space, as the result set returned zero rows. 
+
+If you have any other questions or need information about a different area, feel free to ask!

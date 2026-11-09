@@ -1,0 +1,52 @@
+{
+  "run_id": "20261012T085124Z-bb8114",
+  "mcp_git": {
+    "rev": "e41eecc064921c9d41ee835889ceb13184937a1f",
+    "branch": "lateral",
+    "dirty": true
+  },
+  "gufi_version": "86abf601-dirty",
+  "packages": {
+    "python": "3.13.15",
+    "mcp": "2.2.0",
+    "openai": "3.29.0",
+    "pydantic": "2.13.5",
+    "sqlglot": "30.18.0"
+  },
+  "registries": {
+    "single": {
+      "path": "/home/raykprid/omniverse/work/mcp/stripped/examples/mcp/gufi_mcp/scenarios.single.yaml",
+      "sha256": "36569bf5fed1fad8adbb93dfdb0ecaed3fa8133909370a403dbbf0aa15655b9c"
+    },
+    "general": {
+      "path": "/home/raykprid/omniverse/work/mcp/stripped/examples/mcp/gufi_mcp/scenarios.general.yaml",
+      "sha256": "bb3634054269f9b8fb603146d14dfb3db48fa4ac7663d78cc8f3f91183ae8cdc"
+    }
+  },
+  "index_manifests": {
+    "eval_master": "807f77879b5ad885"
+  },
+  "agent_config": {
+    "agent": "openrouter",
+    "model": "openai/gpt-4o-mini",
+    "temperature": null,
+    "max_completion_tokens": 4096,
+    "base_url": "https://openrouter.ai/api/v1",
+    "tool_result_chars": 20000
+  },
+  "agent_config_hash": "52879d198e19eaa6",
+  "results": {
+    "single_pass_rate": 0.3333333333333333,
+    "single_pass_rate_by_scenario": {
+      "total_file_size": 1.0,
+      "not_modified_n_days": 0.0,
+      "top10_size_global": 0.0
+    },
+    "trials": 5,
+    "single_trials": 3,
+    "general_trials": 2,
+    "total_cost_usd": 0.003623,
+    "total_tokens": 27430,
+    "infrastructure_errors": []
+  }
+}

@@ -1,0 +1,24 @@
+Here is a list of symbolic links in the `eval_master` index along with their targets:
+
+1. `eval_master/groups/grp04/usr005/gpu.lnk` -> `params/protein/node_logs/epoch_part-447.json`
+2. `eval_master/groups/grp05/usr012/code_params.lnk` -> `output/weights/grid_final/audio_part/stage/.slice_epoch-794.txt`
+3. `eval_master/groups/grp04/usr010/code.lnk` -> `sample_clean.png`
+4. `eval_master/groups/grp04/usr005/protein_data.lnk` -> `params/protein/video_checkpoint-933.log`
+5. `eval_master/groups/grp04/usr010/config.lnk` -> `missing_layer`
+6. `eval_master/groups/grp05/usr012/lib.lnk` -> `output/params_report`
+7. `eval_master/groups/grp01/usr014/checkpoint_lattice.lnk` -> `missing_build`
+8. `eval_master/groups/grp01/usr014/climate.lnk` -> `clean/survey_lib.txt`
+9. `eval_master/groups/grp04/usr010/profile/config.lnk` -> `missing_train`
+10. `eval_master/groups/grp04/usr010/mesh/job_build.lnk` -> `../profile/checkpoint_text-000.csv`
+11. `eval_master/groups/grp04/usr010/mesh/mesh_shard.lnk` -> `tmp_genome/train/scratch_params.py`
+12. `eval_master/groups/grp04/usr005/trace.lnk` -> `params/protein/run_figures.dat`
+13. `eval_master/groups/grp04/usr010/mesh/tmp_genome/epoch.lnk` -> `missing_stage`
+14. `eval_master/groups/grp01/usr014/sample_stage.lnk` -> `missing_logs`
+15. `eval_master/groups/grp02/usr002/backup.lnk` -> `src_slice/checkpoint/results_neuron/model/cluster_sample/ocean-957.txt`
+16. `eval_master/groups/grp04/usr010/mesh/cluster_lattice/tmp_epoch.lnk` -> `missing_bench`
+17. `eval_master/groups/grp01/usr014/text.lnk` -> `node_video-843.log`
+18. `eval_master/groups/grp04/usr010/mesh/tmp_genome/output.lnk` -> `sweep/fluid-991.csv`
+19. `eval_master/groups/grp03/usr011/layer_lib.lnk` -> `lattice/run_protein/notes/shard.dat`
+20. `eval_master/groups/grp02/usr002/genome/chunk.lnk` -> `../src_slice/checkpoint/results_neuron/final/gpu.txt`
+
+This is just a sample of the symbolic links. If you need more entries or specific segments, let me know!

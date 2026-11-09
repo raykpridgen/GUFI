@@ -1,0 +1,53 @@
+{
+  "scenario": "total_file_size",
+  "trial": 3,
+  "pass": false,
+  "passed_on_attempt": null,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "size INT64",
+    "per_directory_sql": [
+      "SELECT size FROM vrpentries WHERE type = 'f'"
+    ],
+    "partial_shape": "total INT64",
+    "partial_sql": "SELECT SUM(size) FROM per_directory",
+    "final_sql": "SELECT SUM(total) AS total FROM partial"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT size FROM vrpentries"
+    ],
+    "per_directory_shape": "size INT64",
+    "partial_sql": "SELECT SUM(size) FROM per_directory",
+    "partial_shape": "total_size INT64",
+    "final_sql": "SELECT SUM(total_size) AS total_size FROM partial"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT size FROM vrpentries"
+      ],
+      "per_directory_shape": "size INT64",
+      "partial_sql": "SELECT SUM(size) FROM per_directory",
+      "partial_shape": "total_size INT64",
+      "final_sql": "SELECT SUM(total_size) AS total_size FROM partial"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": true,
+      "passed": false,
+      "row_count": 1,
+      "reason": "values differ: 1 expected row(s) missing, 1 unexpected"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 1,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "values differ: 1 expected row(s) missing, 1 unexpected (attempt 1 of 1)"
+}

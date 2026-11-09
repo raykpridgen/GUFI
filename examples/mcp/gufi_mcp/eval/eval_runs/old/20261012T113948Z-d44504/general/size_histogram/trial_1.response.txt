@@ -1,0 +1,9 @@
+The query returned multiple rows per category, indicating the counts were accumulated across different runs. Here's a summary of the unique size categories along with their total file counts:
+
+- **B**: 5004 files
+- **G**: 4 files
+- **K**: 3511 files
+- **M**: 829 files
+- **Zero**: 484 files
+
+These counts represent the total number of regular files grouped by each GUFI size category.

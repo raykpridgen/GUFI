@@ -1,0 +1,21 @@
+eval_master has **9,989 regular files** using **8.19 GiB** in total. Most of the files are small, but most of the space goes to a handful of very large ones.
+
+| Size range | Files | % of files | Total size | % of bytes |
+|---|---:|---:|---:|---:|
+| Empty (0 B) | 503 | 5.0% | 0 | 0% |
+| 1 B – 1 KiB | 4,359 | 43.6% | 627 KiB | <0.01% |
+| 1 – 10 KiB | 1,475 | 14.8% | 5.7 MiB | 0.07% |
+| 10 – 100 KiB | 1,338 | 13.4% | 51.7 MiB | 0.6% |
+| 100 KiB – 1 MiB | 1,473 | 14.7% | 581.7 MiB | 6.9% |
+| 1 – 10 MiB | 835 | 8.4% | 1.75 GiB | 21.3% |
+| 10 – 100 MiB | 0 | 0% | 0 | 0% |
+| 100 MiB – 1 GiB | 2 | 0.02% | 1.42 GiB | 17.3% |
+| ≥ 1 GiB | 4 | 0.04% | 4.40 GiB | 53.7% |
+
+**What stands out:**
+- **Few files take most of the space:** the 6 files over 100 MiB are 0.06% of all files but hold about 71% of the bytes. The 4 files over 1 GiB (about 1.04–1.18 GiB each) hold over half of the total on their own.
+- **Lots of tiny files:** about 49% of files are 1 KiB or smaller, and 503 of those are empty. Together they use less than 1 MiB.
+- **A gap in the middle:** no files are between 10 MiB and 100 MiB. Sizes jump from about 10 MiB straight to the 538 MiB–915 MiB range.
+- **Smallest and largest:** apart from the empty files, sizes run from 1 byte up to about 1.18 GiB.
+
+These figures cover regular files only; symlinks and directories aren't counted. I can list the 6 largest files or show where the empty files are if you want.

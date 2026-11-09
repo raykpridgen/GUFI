@@ -1,0 +1,20 @@
+These are the 5 users who own the most data in eval_master, ranked by the total size of their regular files:
+
+| Rank | UID | Total size | Files |
+|---|---|---|---|
+| 1 | 3012 | 1,486,218,563 bytes (about 1.38 GiB) | 783 |
+| 2 | 3014 | 1,345,751,245 bytes (about 1.25 GiB) | 359 |
+| 3 | 3008 | 1,307,551,424 bytes (about 1.22 GiB) | 756 |
+| 4 | 3001 | 1,265,869,222 bytes (about 1.18 GiB) | 600 |
+| 5 | 3002 | 1,121,611,465 bytes (about 1.04 GiB) | 635 |
+
+The index only stores numeric UIDs, not usernames. Judging by the folder names, each UID probably belongs to a matching home folder: UID 3012 → `groups/grp05/usr012`, 3014 → `grp01/usr014`, 3008 → `grp05/usr008`, 3001 → `grp03/usr001`, 3002 → `grp02/usr002`.
+
+For each of these users, one very large file makes up most of their total:
+- **UID 3012:** `usr012/output/scratch.c` is about 1.26 GB.
+- **UID 3014:** `usr014/clean/step/old.log` is about 1.23 GB.
+- **UID 3008:** `usr008/.../text_output/text_run.txt` is about 1.11 GB.
+- **UID 3001:** `usr001/.../archive/tests_output.py` is about 1.12 GB.
+- **UID 3002:** `usr002/.../final/trace_cluster-666.txt` is about 0.96 GB.
+
+Apart from those files, each user's data is spread over hundreds of files of up to about 4 MB each.

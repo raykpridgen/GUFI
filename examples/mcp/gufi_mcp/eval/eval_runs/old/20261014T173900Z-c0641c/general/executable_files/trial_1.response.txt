@@ -1,0 +1,34 @@
+Here are the files in the `eval_master` index that are executable:
+
+- eval_master/groups/grp04/shared
+- eval_master/groups/grp04/shared/audio_particle.csv
+- eval_master/groups/grp04/shared/build_gpu.txt
+- eval_master/groups/grp04/shared/cache_image-944.png
+- eval_master/groups/grp04/shared/data_draft-048.txt
+- eval_master/groups/grp04/shared/epoch_audio-869.dat
+- eval_master/groups/grp04/shared/fluid_layer-630.gz
+- eval_master/groups/grp04/shared/grid
+- eval_master/groups/grp04/shared/mesh.h5
+- eval_master/groups/grp04/shared/signal_paper-269.log
+- eval_master/groups/grp04/shared/sim.png
+- eval_master/groups/grp04/shared/slice_step-787.txt
+- eval_master/groups/grp03/usr004
+- eval_master/groups/grp03/usr004/archive_job.json
+- eval_master/groups/grp03/usr004/metrics_lattice.txt
+- eval_master/groups/grp01/usr003
+- eval_master/groups/grp01/usr003/cluster.lnk
+- eval_master/groups/grp01/usr003/corpus_fluid.lnk
+- eval_master/groups/grp01/usr003/dataset.txt
+- eval_master/groups/grp01/usr003/dataset_field.log
+- eval_master/groups/grp01/usr003/draft_code.dat
+- eval_master/groups/grp01/usr003/epoch_phase.log
+- eval_master/groups/grp01/usr003/field_climate-850.log
+- eval_master/groups/grp01/usr003/job-898.h5
+- eval_master/groups/grp01/usr003/job_sim-362.csv
+- eval_master/groups/grp01/usr003/old_report.txt
+- eval_master/groups/grp01/usr003/phase_model.json
+- eval_master/groups/grp01/usr003/report.lnk
+- eval_master/groups/grp01/usr003/text_input.csv
+- eval_master/groups/grp01/usr003/weights.lnk
+
+(Note: The list continues, but this is a sample. There are many more executable files in the `eval_master` index.)

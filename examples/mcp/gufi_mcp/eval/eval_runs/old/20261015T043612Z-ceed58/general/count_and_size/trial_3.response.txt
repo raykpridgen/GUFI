@@ -1,0 +1,1 @@
+There are a total of 10,289 files in the `eval_master` index, which use a combined space of approximately 8,797,710,586 bytes.

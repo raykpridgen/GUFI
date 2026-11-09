@@ -1,0 +1,15 @@
+The following files in the `eval_master` index are executable:
+
+1. eval_master/groups/grp01/shared
+2. eval_master/groups/grp01/shared/analysis-730.json
+3. eval_master/groups/grp01/shared/analysis.csv
+4. eval_master/groups/grp01/shared/cache_slice-982
+5. eval_master/groups/grp01/shared/figures_model.h5
+6. eval_master/groups/grp01/shared/final_raw-600
+7. eval_master/groups/grp01/shared/logs_batch-655.csv
+8. eval_master/groups/grp01/shared/run_dataset.txt
+9. eval_master/groups/grp01/shared/step_job.json
+10. eval_master/groups/grp02/shared
+11. (and many more...)
+
+If you need the full list or details on any specific files, please let me know!

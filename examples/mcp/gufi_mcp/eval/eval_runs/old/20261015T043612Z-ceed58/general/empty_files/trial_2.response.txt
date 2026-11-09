@@ -1,0 +1,19 @@
+In the `eval_master` index, there are a total of **127 empty files** owned by various users. Below are the details of the owners and the number of empty files they possess:
+
+- Owner ID **3001**: 10 empty files
+- Owner ID **3002**: 5 empty files
+- Owner ID **3003**: 2 empty files
+- Owner ID **3004**: 3 empty files
+- Owner ID **3005**: 6 empty files
+- Owner ID **3006**: 7 empty files
+- Owner ID **3007**: 5 empty files
+- Owner ID **3008**: 1 empty file
+- Owner ID **3009**: 2 empty files
+- Owner ID **3010**: 3 empty files
+- Owner ID **3011**: 6 empty files
+- Owner ID **3012**: 4 empty files
+- Owner ID **3013**: 4 empty files
+- Owner ID **3014**: 1 empty file
+- Owner ID **3015**: 3 empty files
+
+If you need further details or another query, feel free to ask!

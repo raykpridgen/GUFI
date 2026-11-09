@@ -1,0 +1,16 @@
+Here are the HDF5 files in the "eval_master" index with 'sim' in their names, along with their paths and sizes:
+
+1. **Path:** `eval_master/groups/grp02/usr012/sim_input.h5`, **Size:** 258,045 bytes
+2. **Path:** `eval_master/groups/grp02/usr013/batch/sim/job-744.h5`, **Size:** 0 bytes
+3. **Path:** `eval_master/groups/grp02/usr013/batch/sim/node_stage.h5`, **Size:** 547 bytes
+4. **Path:** `eval_master/groups/grp02/usr013/batch/sim/protein.h5`, **Size:** 278,682 bytes
+5. **Path:** `eval_master/groups/grp02/usr007/sim_cluster/metrics/batch_part.h5`, **Size:** 545,387 bytes
+6. **Path:** `eval_master/groups/grp02/usr007/sim_cluster/metrics/build-663.h5`, **Size:** 60 bytes
+7. **Path:** `eval_master/groups/grp02/usr007/sim_cluster/image_eval/tests_report-234.h5`, **Size:** 27 bytes
+8. **Path:** `eval_master/groups/grp03/usr004/sim_gpu/output_trace-705.h5`, **Size:** 97 bytes
+9. **Path:** `eval_master/groups/grp02/usr007/sim_cluster/eval/clean.h5`, **Size:** 13,117 bytes
+10. **Path:** `eval_master/groups/grp02/usr007/sim_cluster/image_eval/corpus_figures.h5`, **Size:** 132 bytes
+11. **Path:** `eval_master/groups/grp02/usr007/sim_cluster/metrics/train_sweep.h5`, **Size:** 1 byte
+12. **Path:** `eval_master/groups/grp02/usr007/sim_cluster/image_eval/test_eval-001.h5`, **Size:** 204 bytes
+
+These are all the HDF5 files that match the criteria.

@@ -1,0 +1,12 @@
+It appears that there are no available data entries for the size and file counts of the directories under `groups/` in the `eval_master` index. The query returned zero results.
+
+However, the top-level directories under `groups/` that I found include:
+
+- Downloads
+- eval_master
+- lanl_migrated
+- personal_data
+- vault
+- work
+
+If there are specific directories you would like to investigate further, please let me know!

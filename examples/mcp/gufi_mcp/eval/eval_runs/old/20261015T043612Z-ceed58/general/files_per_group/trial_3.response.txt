@@ -1,0 +1,12 @@
+Here are the counts of files owned by each group in the `eval_master` index:
+
+| Group ID (gid) | Total Files |
+|----------------|-------------|
+| 2002           | 433         |
+| 2005           | 303         |
+| 2001           | 303         |
+| 2004           | 298         |
+| 2003           | 236         |
+| ...            | ...         |
+
+(Note: Only a partial list is shown here; the data contains additional entries beyond those summarized.)

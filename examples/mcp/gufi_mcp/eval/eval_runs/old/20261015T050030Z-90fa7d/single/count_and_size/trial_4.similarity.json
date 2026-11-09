@@ -1,0 +1,43 @@
+{
+  "scenario": "count_and_size",
+  "trial": 4,
+  "pass": false,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "size INT64",
+    "scatter_sql": [
+      "SELECT size FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "n INT64, total INT64",
+    "gather_sql": "SELECT COUNT(*), SUM(size) FROM intermediate",
+    "final_sql": "SELECT SUM(n) AS n, SUM(total) AS total FROM aggregate"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT COUNT(*) AS file_count, SUM(size) AS total_size FROM vrpentries"
+    ],
+    "scatter_shape": "file_count INT64, total_size INT64",
+    "gather_sql": "SELECT SUM(file_count) AS total_files, SUM(total_size) AS total_space FROM intermediate",
+    "gather_shape": "total_files INT64, total_space INT64",
+    "final_sql": "SELECT total_files, total_space FROM aggregate"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT COUNT(*) AS file_count, SUM(size) AS total_size FROM vrpentries"
+      ],
+      "scatter_shape": "file_count INT64, total_size INT64",
+      "gather_sql": "SELECT SUM(file_count) AS total_files, SUM(total_size) AS total_space FROM intermediate",
+      "gather_shape": "total_files INT64, total_space INT64",
+      "final_sql": "SELECT total_files, total_space FROM aggregate"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 12,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "row count 12 != expected 1"
+}

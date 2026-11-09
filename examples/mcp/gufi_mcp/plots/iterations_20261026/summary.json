@@ -1,0 +1,70 @@
+{
+  "20261026T133502Z-28ac34": {
+    "label": "1. baseline",
+    "trials": 60,
+    "pass_rate": 0.45,
+    "one_shot_rate": 0.35,
+    "failure_reasons": {
+      "wrong values": 22,
+      "wrong row count": 6,
+      "wrong column count": 3,
+      "result truncated": 2
+    },
+    "function_use": {
+      "ext": 10,
+      "agecat": 4
+    }
+  },
+  "20261026T134502Z-c3e789": {
+    "label": "2. histogram template",
+    "trials": 60,
+    "pass_rate": 0.433,
+    "one_shot_rate": 0.333,
+    "failure_reasons": {
+      "wrong values": 24,
+      "wrong row count": 5,
+      "result truncated": 3,
+      "wrong column count": 2
+    },
+    "function_use": {
+      "ext": 10,
+      "agecat": 5,
+      "strftime": 1
+    }
+  },
+  "20261026T140520Z-f2769d": {
+    "label": "3. UDF column hints",
+    "trials": 60,
+    "pass_rate": 0.533,
+    "one_shot_rate": 0.433,
+    "failure_reasons": {
+      "wrong values": 18,
+      "result truncated": 5,
+      "wrong row count": 4,
+      "wrong column count": 1
+    },
+    "function_use": {
+      "ext": 10,
+      "agecat": 4,
+      "epochtoage": 1
+    }
+  },
+  "20261026T141318Z-886bc0": {
+    "label": "4. UDF primer lines",
+    "trials": 60,
+    "pass_rate": 0.45,
+    "one_shot_rate": 0.417,
+    "failure_reasons": {
+      "wrong values": 19,
+      "wrong row count": 5,
+      "result truncated": 5,
+      "wrong column count": 3,
+      "every call failed": 1
+    },
+    "function_use": {
+      "ext": 10,
+      "agecat": 4,
+      "epochtoage": 1
+    }
+  }
+}

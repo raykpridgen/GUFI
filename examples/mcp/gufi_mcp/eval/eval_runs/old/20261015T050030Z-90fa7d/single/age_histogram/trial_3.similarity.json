@@ -1,0 +1,43 @@
+{
+  "scenario": "age_histogram",
+  "trial": 3,
+  "pass": false,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "cat TEXT",
+    "scatter_sql": [
+      "SELECT agecat(mtime) FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "cat TEXT, count INT64",
+    "gather_sql": "SELECT cat, COUNT(*) FROM intermediate GROUP BY cat",
+    "final_sql": "SELECT cat, SUM(count) AS count FROM aggregate GROUP BY cat"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT uid, mtime FROM vrpentries"
+    ],
+    "scatter_shape": "uid INT64, mtime INT64",
+    "gather_sql": "SELECT CASE \n    WHEN mtime >= 1791763200 - 86400 * 30 THEN 'Less than 30 days ago' \n    WHEN mtime >= 1791763200 - 86400 * 60 THEN '30 to 60 days ago' \n    WHEN mtime >= 1791763200 - 86400 * 90 THEN '60 to 90 days ago' \n    ELSE 'More than 90 days ago' \nEND AS age_category, COUNT(*) AS file_count \nFROM intermediate \nGROUP BY age_category",
+    "gather_shape": "age_category TEXT, file_count INT64",
+    "final_sql": "SELECT age_category, SUM(file_count) AS total_files FROM aggregate GROUP BY age_category ORDER BY total_files DESC;"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT uid, mtime FROM vrpentries"
+      ],
+      "scatter_shape": "uid INT64, mtime INT64",
+      "gather_sql": "SELECT CASE \n    WHEN mtime >= 1791763200 - 86400 * 30 THEN 'Less than 30 days ago' \n    WHEN mtime >= 1791763200 - 86400 * 60 THEN '30 to 60 days ago' \n    WHEN mtime >= 1791763200 - 86400 * 90 THEN '60 to 90 days ago' \n    ELSE 'More than 90 days ago' \nEND AS age_category, COUNT(*) AS file_count \nFROM intermediate \nGROUP BY age_category",
+      "gather_shape": "age_category TEXT, file_count INT64",
+      "final_sql": "SELECT age_category, SUM(file_count) AS total_files FROM aggregate GROUP BY age_category ORDER BY total_files DESC;"
+    }
+  ],
+  "gt_row_count": 4,
+  "agent_row_count": 4,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "values differ: 4 expected row(s) missing, 4 unexpected"
+}

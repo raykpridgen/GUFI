@@ -1,0 +1,15 @@
+The total size of files in the `eval_master` index is 2,640,151,201 bytes. The total size of files that have not been modified in over a year is 165,403,051 bytes.
+
+To calculate the share of the total space in `eval_master` that is taken up by these files, we can use the following formula:
+
+\[
+\text{Share} = \frac{\text{Size of files not modified in over a year}}{\text{Total size of all files}} \times 100
+\]
+
+Calculating that:
+
+\[
+\text{Share} = \frac{165,403,051}{2,640,151,201} \times 100 \approx 6.26\%
+\]
+
+Therefore, approximately **6.26%** of the total space in `eval_master` is occupied by files that have not been modified in over a year.

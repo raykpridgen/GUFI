@@ -1,0 +1,14 @@
+The largest files in the `eval_master` index have the following sizes (in bytes):
+
+1. 2,412,093,384
+2. 1,423,780,460
+3. 1,380,570,868
+4. 1,304,128,653
+5. 784,427,129
+6. 240,217,504
+7. 237,356,970
+8. 236,128,960
+9. 216,715,418
+10. 192,832,184
+
+If you need more details or specific file paths, let me know!

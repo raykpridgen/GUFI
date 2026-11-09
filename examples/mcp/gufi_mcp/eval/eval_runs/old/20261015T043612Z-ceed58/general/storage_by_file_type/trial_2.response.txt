@@ -1,0 +1,9 @@
+The file types that take up the most space in the `eval_master` index are:
+
+1. **C files (`.c`)**: 1,277,573,776 bytes
+2. **Log files (`.log`)**: 1,252,453,249 bytes
+3. **Python files (`.py`)**: 1,154,958,206 bytes
+4. **Text files (`.txt`)**: 1,140,063,265 bytes
+5. **Data files (`.dat`)**: 592,094,253 bytes
+
+These represent the most significant amounts of disk space consumed by each file type in the index.

@@ -1,0 +1,70 @@
+{
+  "scenario": "age_histogram",
+  "trial": 4,
+  "pass": false,
+  "passed_on_attempt": null,
+  "aggregate_revision_count": 1,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "cat TEXT",
+    "per_directory_sql": [
+      "SELECT agecat(mtime) FROM vrpentries WHERE type = 'f'"
+    ],
+    "partial_shape": "cat TEXT, count INT64",
+    "partial_sql": "SELECT cat, COUNT(*) FROM per_directory GROUP BY cat",
+    "final_sql": "SELECT cat, SUM(count) AS count FROM partial GROUP BY cat"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT mtime FROM vrpentries"
+    ],
+    "per_directory_shape": "mtime INT64",
+    "partial_sql": "SELECT CASE \n    WHEN mtime < 1791763200 - 31536000 THEN ' Over 1 year ago' \n    WHEN mtime < 1791763200 - 2592000 THEN '6 months - 1 year ago' \n    WHEN mtime < 1791763200 - 604800 THEN '1 month - 6 months ago' \n    WHEN mtime < 1791763200 - 86400 THEN '1 week - 1 month ago' \n    WHEN mtime < 1791763200 - 3600 THEN '1 hour - 1 day ago' \n    WHEN mtime < 1791763200 THEN 'Less than 1 hour ago' \n    ELSE 'Just now' \nEND AS time_frame, COUNT(*) FROM per_directory GROUP BY time_frame",
+    "partial_shape": "time_frame TEXT, count INT64",
+    "final_sql": "SELECT time_frame, SUM(count) AS count FROM partial GROUP BY time_frame ORDER BY time_frame DESC"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT (strftime('%Y-%m', 'now', '-' || (extract(epoch from (1791763200 - mtime))) || ' seconds')) as last_modified_time FROM vrpentries"
+      ],
+      "per_directory_shape": "last_modified_time TEXT",
+      "partial_sql": "SELECT last_modified_time, COUNT(*) FROM per_directory GROUP BY last_modified_time",
+      "partial_shape": "last_modified_time TEXT, count INT64",
+      "final_sql": "SELECT last_modified_time, SUM(count) AS count FROM partial GROUP BY last_modified_time ORDER BY last_modified_time DESC"
+    },
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT mtime FROM vrpentries"
+      ],
+      "per_directory_shape": "mtime INT64",
+      "partial_sql": "SELECT CASE \n    WHEN mtime < 1791763200 - 31536000 THEN ' Over 1 year ago' \n    WHEN mtime < 1791763200 - 2592000 THEN '6 months - 1 year ago' \n    WHEN mtime < 1791763200 - 604800 THEN '1 month - 6 months ago' \n    WHEN mtime < 1791763200 - 86400 THEN '1 week - 1 month ago' \n    WHEN mtime < 1791763200 - 3600 THEN '1 hour - 1 day ago' \n    WHEN mtime < 1791763200 THEN 'Less than 1 hour ago' \n    ELSE 'Just now' \nEND AS time_frame, COUNT(*) FROM per_directory GROUP BY time_frame",
+      "partial_shape": "time_frame TEXT, count INT64",
+      "final_sql": "SELECT time_frame, SUM(count) AS count FROM partial GROUP BY time_frame ORDER BY time_frame DESC"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": true,
+      "passed": false,
+      "row_count": 0,
+      "reason": "row count 0 != expected 3"
+    },
+    {
+      "attempt": 2,
+      "ok": true,
+      "passed": false,
+      "row_count": 6,
+      "reason": "row count 6 != expected 3"
+    }
+  ],
+  "gt_row_count": 3,
+  "agent_row_count": 6,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "row count 6 != expected 3 (attempt 2 of 2)"
+}

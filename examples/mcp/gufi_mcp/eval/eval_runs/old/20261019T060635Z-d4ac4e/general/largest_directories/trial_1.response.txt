@@ -1,0 +1,19 @@
+Six directories hold far more data directly inside them than any others. Each has between about 0.56 and 1.28 GB in its own files, not counting subdirectories. After those six, the next one drops to about 49 MB.
+
+| # | Directory (eval_master/groups/…) | Data directly inside | Files |
+|---|---|---|---|
+| 1 | grp05/usr012/output | 1.28 GB | 69 |
+| 2 | grp01/usr014/clean/step | 1.25 GB | 45 |
+| 3 | grp03/usr001/chunk/audio/archive | 1.13 GB | 31 |
+| 4 | grp05/usr008/cache_text/signal_ocean/plots_protein/text_output | 1.12 GB | 46 |
+| 5 | grp02/usr002/src_slice/checkpoint/results_neuron/final | 0.98 GB | 53 |
+| 6 | grp05/usr015/clean/particle_build/src | 0.56 GB | 17 |
+| 7 | grp01/usr003/checkpoint/report/params | 48.7 MB | 126 |
+| 8 | grp01/usr003/checkpoint | 42.5 MB | 127 |
+| 9 | grp01/usr003/text_grid | 38.8 MB | 125 |
+| 10 | grp01/usr003/checkpoint/report | 37.2 MB | 133 |
+
+- **Big but few files:** The top six each have fewer than 70 files, so they likely contain a few very large files.
+- **Small but many files:** Several of the next entries are in `grp01/usr003` (checkpoint, report, params, text_grid). Each has more files (125–133) but only 37–49 MB.
+- **What's counted:** The sizes are regular files only. I also added up every entry in each directory, including symlinks, and got the same ranking; the totals differed by only a few dozen to a few hundred bytes.
+- **Units:** GB and MB here are decimal (1 GB = 10⁹ bytes).

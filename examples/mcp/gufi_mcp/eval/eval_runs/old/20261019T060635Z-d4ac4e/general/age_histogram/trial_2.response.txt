@@ -1,0 +1,21 @@
+I counted the regular files in **eval_master** (9,989 of them, about 8.8 GB in total) and grouped them by how long ago each was last modified, measured back from 2026‑10‑12. Symlinks and directories aren't included.
+
+| Last modified | Files | % of files | Total size | % of size |
+|---|---:|---:|---:|---:|
+| Less than 1 day ago | 15 | 0.2% | 2.6 MB | <0.1% |
+| 1–7 days ago | 51 | 0.5% | 9.1 MB | 0.1% |
+| 7–30 days ago | 195 | 2.0% | 55.1 MB | 0.6% |
+| 30–90 days ago | 571 | 5.7% | 1.25 GB | 14.2% |
+| 90 days to 1 year ago | 2,526 | 25.3% | 1.88 GB | 21.4% |
+| 1–2 years ago | 3,321 | 33.2% | 3.61 GB | 41.1% |
+| 2–5 years ago | 3,310 | 33.1% | 1.98 GB | 22.5% |
+| More than 5 years ago | 0 | 0% | 0 | 0% |
+
+**What stands out:**
+- **Most files haven't changed in a long time.** About 92% of files (and 85% of the data, about 7.5 GB) were last modified more than 90 days ago. Two-thirds of files are over a year old.
+- **Very little has changed recently.** Only 261 files (2.6%, about 67 MB) were modified in the last 30 days.
+- **The 1–2 year group holds the most data**, at 3.6 GB, or 41% of the total.
+- **The 30–90 day files are large.** They're only 5.7% of files but 14% of the data, averaging about 2.2 MB each, compared with about 0.75 MB for 90 days to 1 year.
+- **Date range:** the oldest file was last modified in mid‑October 2023, about 3 years ago, so nothing is older than 5 years. The newest was modified about an hour ago.
+
+If it would help, I can break any of these groups down further by owner, directory or file extension, or do the same breakdown by last access time to find cold data.

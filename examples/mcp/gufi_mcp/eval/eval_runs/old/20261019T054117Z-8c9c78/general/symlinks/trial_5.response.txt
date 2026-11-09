@@ -1,0 +1,14 @@
+Here's a list of some symbolic links in the `eval_master` index and where they point to:
+
+1. `eval_master/groups/grp01/usr014/checkpoint_lattice.lnk` -> `missing_build`
+2. `eval_master/groups/grp01/usr014/climate.lnk` -> `clean/survey_lib.txt`
+3. `eval_master/groups/grp02/usr002/backup.lnk` -> `src_slice/checkpoint/results_neuron/model/cluster_sample/ocean-957.txt`
+4. `eval_master/groups/grp01/usr014/sample_stage.lnk` -> `missing_logs`
+5. `eval_master/groups/grp01/usr014/text.lnk` -> `node_video-843.log`
+6. `eval_master/groups/grp01/usr003/cluster.lnk` -> `text_grid/final_input-479.txt`
+7. `eval_master/groups/grp01/usr003/corpus_fluid.lnk` -> `../shared/model_metrics.json`
+8. `eval_master/groups/grp02/usr007/sim_cluster/stage_paper.lnk` -> `metrics/stage/step-478.dat`
+9. `eval_master/groups/grp01/usr009/output_lib/output.lnk` -> `missing_grid`
+10. `eval_master/groups/grp02/usr013/field.lnk` -> `run_plots-058.log`
+
+Due to the length of the data, this is just a partial list. If you need more entries or a specific section, just let me know!

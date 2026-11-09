@@ -1,0 +1,18 @@
+The total space occupied by different file types in the `eval_master` index is as follows:
+
+### File Types and Their Total Sizes:
+1. **Regular Files (type 'f')**: 8,797,702,315 bytes
+2. **Symbolic Links (type 'l')**: 8,271 bytes
+
+### File Extensions and Their Total Sizes:
+- **.txt**: 2,418,514,021 bytes
+- **.log**: 1,564,962,980 bytes
+- **.py**: 1,415,792,168 bytes
+- **.c**: 1,388,503,795 bytes
+- **.csv**: 273,103,671 bytes
+- **.dat**: 857,898,574 bytes
+- **.h5**: 196,652,558 bytes
+- **.gz**: 116,749,551 bytes
+- Other file types occupy less space, including extensions like `.png`, `.json`, etc.
+
+Thus, the **.txt** files take up the most space, followed by `.log` and `.py` files.

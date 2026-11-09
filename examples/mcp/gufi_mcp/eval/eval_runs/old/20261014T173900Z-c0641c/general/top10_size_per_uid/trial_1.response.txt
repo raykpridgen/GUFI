@@ -1,0 +1,33 @@
+Here are the 10 biggest files for user ID 3001:
+
+1. **Path:** /home/raykprid/search/eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py  
+   **Size:** 1,123,091,592 bytes
+
+2. **Path:** /home/raykprid/search/eval_master/groups/grp03/usr001/chunk/train/code/cache/data-003.json  
+   **Size:** 4,088,609 bytes
+
+3. **Path:** /home/raykprid/search/eval_master/groups/grp03/usr001/chunk/audio/archive/corpus/dataset_run.json  
+   **Size:** 3,816,099 bytes
+
+4. **Path:** /home/raykprid/search/eval_master/groups/grp03/usr001/step_image.log  
+   **Size:** 3,720,491 bytes
+
+5. **Path:** /home/raykprid/search/eval_master/groups/grp03/usr001/chunk/audio/job/.scratch_survey-182.gz  
+   **Size:** 3,696,228 bytes
+
+6. **Path:** /home/raykprid/search/eval_master/groups/grp03/usr001/mesh/particle_input-681.txt  
+   **Size:** 3,685,612 bytes
+
+7. **Path:** /home/raykprid/search/eval_master/groups/grp03/usr001/chunk/audio/archive/gpu_neuron/lattice/batch_raw-954.json  
+   **Size:** 3,377,998 bytes
+
+8. **Path:** /home/raykprid/search/eval_master/groups/grp03/usr001/chunk/fluid_train-444.json  
+   **Size:** 3,362,630 bytes
+
+9. **Path:** /home/raykprid/search/eval_master/groups/grp03/usr001/train/cluster-301.png  
+   **Size:** 3,051,404 bytes
+
+10. **Path:** /home/raykprid/search/eval_master/groups/grp03/usr001/trace/cluster_scratch-745  
+    **Size:** 3,043,312 bytes
+
+Let me know if you need the biggest files for other user IDs!

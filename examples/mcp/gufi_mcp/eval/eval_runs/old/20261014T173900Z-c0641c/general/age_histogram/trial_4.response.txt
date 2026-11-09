@@ -1,0 +1,13 @@
+Here’s a breakdown of the files in the `eval_master` index by how long ago they were last modified:
+
+- **More than 30 days ago**: 996 files
+- **Between 14 and 30 days ago**: 16 files
+- **Between 1 and 7 days ago**: 8 files
+- **Within 1 day**: 5 files
+- **Between 7 and 14 days ago**: 7 files
+
+### Summary
+- **Older files (> 30 days)** are the most common, with 996 files.
+- **Recent files (within 1 day)** are fewer, with only 5 files.
+
+Let me know if you need any additional information!

@@ -1,0 +1,33 @@
+Here are some symbolic links in the `eval_master` index and the paths they point to:
+
+1. **Path:** `eval_master/groups/grp05/usr015/clean-2/image.lnk`  
+   **Points to:** `../clean/signal/output/src/profile/figures.json`
+
+2. **Path:** `eval_master/groups/grp03/usr001/fluid.lnk`  
+   **Points to:** `chunk/audio/job/build_weights-136.txt`
+
+3. **Path:** `eval_master/groups/grp05/usr012/code_params.lnk`  
+   **Points to:** `output/weights/grid_final/audio_part/stage/.slice_epoch-794.txt`
+
+4. **Path:** `eval_master/groups/grp05/usr015/backup/analysis_epoch.lnk`  
+   **Points to:** `../clean/signal/output/output/notes_chunk/part_dataset-656.c`
+
+5. **Path:** `eval_master/groups/grp02/usr002/backup.lnk`  
+   **Points to:** `src_slice/checkpoint/results_neuron/model/cluster_sample/ocean-957.txt`
+
+6. **Path:** `eval_master/groups/grp05/usr015/clean/model.lnk`  
+   **Points to:** `../backup/.scratch-436.gz`
+
+7. **Path:** `eval_master/groups/grp01/usr003/cluster.lnk`  
+   **Points to:** `text_grid/final_input-479.txt`
+
+8. **Path:** `eval_master/groups/grp01/usr003/weights.lnk`  
+   **Points to:** `text_grid/corpus_tmp-123.gz`
+
+9. **Path:** `eval_master/groups/grp03/usr001/chunk/sim_climate.lnk`  
+   **Points to:** `missing_dataset`
+
+10. **Path:** `eval_master/groups/grp03/usr004/stage/protein.lnk`  
+    **Points to:** `../part_epoch/final/gpu/video/shard_profile-143.txt`
+
+This is just a sample of the symbolic links present in the `eval_master` index. If you need more links or specific ones based on criteria, just let me know!

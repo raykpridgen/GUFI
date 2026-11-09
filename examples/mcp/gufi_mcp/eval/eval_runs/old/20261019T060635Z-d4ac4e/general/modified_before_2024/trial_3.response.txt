@@ -1,0 +1,22 @@
+**734 regular files** in eval_master (out of 9,989, about 7%) were last modified before 1 January 2024 UTC. There are also **19 symlinks** with modification times before 2024, which aren't included in the 734.
+
+The oldest file in the index was modified on 2023-10-13, so all of these date from late 2023 (mid-October to December). Nothing is older than that.
+
+The 10 oldest examples (times in UTC):
+
+| Path | Size (bytes) | UID | Last modified |
+|---|---|---|---|
+| eval_master/groups/grp04/usr010/notes.log | 7,866 | 3010 | 2023-10-13 04:58:31 |
+| eval_master/groups/grp04/usr006/ocean/trace_plots/text_metrics.txt | 4 | 3006 | 2023-10-13 05:05:01 |
+| eval_master/groups/grp04/usr005/params/report_draft-782.log | 507,546 | 3005 | 2023-10-13 08:45:52 |
+| eval_master/groups/grp03/usr001/chunk/audio/archive/gpu_neuron/tmp/tmp.py | 71 | 3001 | 2023-10-13 10:11:38 |
+| eval_master/groups/grp02/usr007/sim_cluster/metrics/eval/tests-591.log | 17,418 | 3007 | 2023-10-13 19:27:44 |
+| eval_master/groups/grp02/usr013/batch/sim/results_chunk/output_lib-265.json | 124,831 | 3013 | 2023-10-13 21:55:20 |
+| eval_master/groups/grp04/usr005/params/protein/genome_shard/results_raw/neuron_epoch-740.h5 | 4,061 | 3005 | 2023-10-13 22:14:42 |
+| eval_master/groups/grp01/usr003/checkpoint/field_input.dat | 8 | 3003 | 2023-10-13 23:33:03 |
+| eval_master/groups/grp01/usr003/checkpoint/report/draft_node-267.txt | 405,176 | 3003 | 2023-10-14 00:18:38 |
+| eval_master/groups/grp01/usr014/clean/data/sample_build/final_backup-408.csv | 0 | 3014 | 2023-10-14 01:21:00 |
+
+These files belong to several users across groups grp01 to grp04.
+
+My first attempt reported 0 files. That was wrong: the date conversion I used for the cutoff didn't work in this setup. The count above uses the cutoff as a fixed timestamp (1704067200), and I checked it against the overall date range of the index.

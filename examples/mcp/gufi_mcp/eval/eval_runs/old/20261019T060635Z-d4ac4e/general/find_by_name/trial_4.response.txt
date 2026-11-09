@@ -1,0 +1,23 @@
+I found 15 HDF5 files in eval_master with "sim" in their names. Together they come to 5,665,018 bytes (about 5.4 MiB). All are regular files, and all end in `.h5`. Paths below are relative to `eval_master/groups/`, largest first.
+
+| # | File | Directory | Size (bytes) |
+|---|------|-----------|-------------:|
+| 1 | trace_sim.h5 | grp04/usr010/profile/eval | 3,796,043 (~3.6 MiB) |
+| 2 | sim_climate.h5 | grp01/usr003/checkpoint/report/params | 1,133,031 (~1.1 MiB) |
+| 3 | sample_sim-247.h5 | grp05/usr012/output/weights/lib | 335,519 (~328 KiB) |
+| 4 | sim_input.h5 | grp05/usr012 | 258,045 (~252 KiB) |
+| 5 | sim_cache.h5 | grp03/usr011/lattice/run_protein/archive_params/stage_raw/profile | 106,214 (~104 KiB) |
+| 6 | particle_sim.h5 | grp01/usr014/clean | 27,395 (~27 KiB) |
+| 7 | sim.h5 | grp05/usr012/output/weights/grid_final/audio_part/stage | 7,973 (~7.8 KiB) |
+| 8 | slice_sim-325.h5 | grp01/usr009/output_lib/cluster_batch/output/gpu_sim/notes | 480 |
+| 9 | clean_sim.h5 | grp02/usr002/src_slice/checkpoint/results_neuron | 292 |
+| 10 | report_sim.h5 | grp05/usr015/clean/signal/output/src/phase | 12 |
+| 11 | part_sim.h5 | grp02/usr002/src_slice/final | 4 |
+| 12 | particle_sim-560.h5 | grp02/usr007/sim_cluster/metrics/stage/old | 3 |
+| 13 | sim-704.h5 | grp04/usr010/profile/paper/params | 3 |
+| 14 | sim_lattice.h5 | grp02/shared | 2 |
+| 15 | backup_sim.h5 | grp05/usr012/output/weights/grid_final | 2 |
+
+- **Where the space goes:** the top two files make up about 87% of the total. User usr012 in grp05 has the most of these files, with four.
+- **Very small files:** six files are 12 bytes or less, so they're almost certainly empty placeholders or broken files, not real HDF5 data.
+- **How I searched:** I looked for names ending in `.h5`, `.hdf5`, `.hdf` or `.he5`, ignoring case. Only `.h5` files matched. HDF5 files saved under some other extension would have been missed.

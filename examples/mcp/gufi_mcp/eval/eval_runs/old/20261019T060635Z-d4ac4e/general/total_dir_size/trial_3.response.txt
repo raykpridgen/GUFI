@@ -1,0 +1,7 @@
+The directories themselves take up **1,056,768 bytes (about 1.0 MiB, or 1,032 KiB)** in `eval_master`, not counting the files inside them.
+
+- **Directories:** there are 258 in the index, each with one record.
+- **Size per directory:** 4,096 bytes on average, which is one 4 KiB block each (258 × 4,096 = 1,056,768).
+- **Disk usage:** the directories use 2,064 blocks of 512 bytes, which is also 1,056,768 bytes. So the apparent size and the space actually allocated on disk are the same.
+
+I got these numbers by adding up each directory's own size and block count across the whole index.

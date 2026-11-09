@@ -1,0 +1,9 @@
+The top 5 users who own the most data in the `eval_master` index are as follows:
+
+1. User ID 3012: 1,311,553,322 bytes
+2. User ID 3014: 1,271,677,734 bytes
+3. User ID 3008: 1,157,505,336 bytes
+4. User ID 3001: 1,142,982,432 bytes
+5. User ID 3002: 998,397,454 bytes
+
+These values represent the total data size owned by each user.

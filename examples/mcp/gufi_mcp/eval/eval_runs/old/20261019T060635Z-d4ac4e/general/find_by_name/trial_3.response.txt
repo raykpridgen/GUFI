@@ -1,0 +1,23 @@
+eval_master has 15 HDF5 files with "sim" in their names. All of them end in `.h5` and all are regular files. Together they come to about 5.4 MiB (5,665,018 bytes), and most of that is in the first two files. They're listed from largest to smallest:
+
+| # | File | Location (directory) | Size |
+|---|------|----------------------|------|
+| 1 | trace_sim.h5 | eval_master/groups/grp04/usr010/profile/eval | 3,796,043 B (~3.6 MiB) |
+| 2 | sim_climate.h5 | eval_master/groups/grp01/usr003/checkpoint/report/params | 1,133,031 B (~1.1 MiB) |
+| 3 | sample_sim-247.h5 | eval_master/groups/grp05/usr012/output/weights/lib | 335,519 B (~328 KiB) |
+| 4 | sim_input.h5 | eval_master/groups/grp05/usr012 | 258,045 B (~252 KiB) |
+| 5 | sim_cache.h5 | eval_master/groups/grp03/usr011/lattice/run_protein/archive_params/stage_raw/profile | 106,214 B (~104 KiB) |
+| 6 | particle_sim.h5 | eval_master/groups/grp01/usr014/clean | 27,395 B (~27 KiB) |
+| 7 | sim.h5 | eval_master/groups/grp05/usr012/output/weights/grid_final/audio_part/stage | 7,973 B (~7.8 KiB) |
+| 8 | slice_sim-325.h5 | eval_master/groups/grp01/usr009/output_lib/cluster_batch/output/gpu_sim/notes | 480 B |
+| 9 | clean_sim.h5 | eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron | 292 B |
+| 10 | report_sim.h5 | eval_master/groups/grp05/usr015/clean/signal/output/src/phase | 12 B |
+| 11 | part_sim.h5 | eval_master/groups/grp02/usr002/src_slice/final | 4 B |
+| 12 | particle_sim-560.h5 | eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/old | 3 B |
+| 13 | sim-704.h5 | eval_master/groups/grp04/usr010/profile/paper/params | 3 B |
+| 14 | sim_lattice.h5 | eval_master/groups/grp02/shared | 2 B |
+| 15 | backup_sim.h5 | eval_master/groups/grp05/usr012/output/weights/grid_final | 2 B |
+
+- **Where they are:** usr012 in grp05 has the most of them (4 files). usr010 in grp04 and usr002 in grp02 have 2 each.
+- **Possibly not real HDF5:** Six files (#10–15) are 12 bytes or smaller. A real HDF5 file can't be that small, so these are likely empty or placeholder files.
+- **How I searched:** I treated `.h5`, `.hdf5`, `.he5` and `.hdf` as HDF5 extensions, and the name match ignored upper/lower case.

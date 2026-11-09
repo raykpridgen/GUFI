@@ -1,0 +1,35 @@
+**1,005 of the 9,989 regular files in eval_master (about 10%) are executable.** I counted a file as executable if any execute bit (user, group or other) is set. Every one of them has mode `rwxr-xr-x` (755), so anyone can run them. Together they hold about 281 MB (281,230,598 bytes).
+
+All of them are under `eval_master/groups/`. The full list is too long to show here, so here is the breakdown by area:
+
+| Area | Executable files | Bytes |
+|---|---|---|
+| grp01/shared | 8 | 985,295 |
+| grp01/usr003 | 81 | 13,450,556 |
+| grp01/usr009 | 71 | 20,554,260 |
+| grp01/usr014 | 28 | 22,126,261 |
+| grp02/shared | 12 | 625,400 |
+| grp02/usr002 | 66 | 18,582,053 |
+| grp02/usr007 | 65 | 13,851,396 |
+| grp02/usr013 | 75 | 12,787,341 |
+| grp03/shared | 8 | 25,779 |
+| grp03/usr001 | 68 | 19,168,603 |
+| grp03/usr004 | 56 | 18,937,541 |
+| grp03/usr011 | 71 | 11,829,432 |
+| grp04/shared | 11 | 1,514,200 |
+| grp04/usr005 | 57 | 23,339,406 |
+| grp04/usr006 | 65 | 15,891,618 |
+| grp04/usr010 | 57 | 20,729,748 |
+| grp05/shared | 10 | 4,477,695 |
+| grp05/usr008 | 69 | 18,501,734 |
+| grp05/usr012 | 70 | 27,002,856 |
+| grp05/usr015 | 57 | 16,849,424 |
+
+By owner: uid 3003 has the most (86 files), then 3013 (77), 3012 (74), and 3008, 3009 and 3011 (73 each). uid 3014 has the fewest (29).
+
+Some examples from `grp01/usr003/checkpoint/` are `build`, `protein_output.py`, `lattice_run.c`, `notes.txt` and `node.dat`.
+
+Most of these files look like data, not programs: `.csv`, `.txt`, `.log`, `.json`, `.h5`, `.png`, `.gz`. That suggests the execute bit was set by accident, for example by a blanket `chmod 755`, not because the files are meant to be run.
+
+To list every file, use this query:
+`SELECT path FROM vrpentries WHERE type='f' AND (mode & 73) != 0`. Narrow it with something like `AND path LIKE 'eval_master/groups/grp02/%'`, because the full result is about 1,000 rows. I can also list any one area or owner for you.

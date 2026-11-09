@@ -1,0 +1,18 @@
+The most common file extension in eval_master is **`.log`**, with **1,410 regular files**.
+
+It's only slightly ahead of `.txt`, which has 1,390 files. The rest of the top 10:
+
+| Rank | Extension | Files |
+|---|---|---|
+| 1 | log | 1,410 |
+| 2 | txt | 1,390 |
+| 3 | csv | 1,130 |
+| 4 | dat | 1,125 |
+| 5 | py | 1,054 |
+| 6 | json | 823 |
+| 7 | h5 | 731 |
+| 8 | png | 708 |
+| 9 | c | 544 |
+| 10 | (no extension) | 531 |
+
+The built-in extensions statistic returned nothing, so I counted directly with a SQL query on the index. The count includes only regular files, not symlinks. The extension is the text after the last dot, compared exactly as written, so `.LOG` would be counted separately from `.log`.

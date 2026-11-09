@@ -1,0 +1,15 @@
+Here are the files owned by user 3007 in the `eval_master` directory:
+
+1. eval_master/groups/grp02/usr007/sim_cluster/eval
+2. eval_master/groups/grp02/usr007/sim_cluster/eval/.plots_analysis-840.txt
+3. eval_master/groups/grp02/usr007/sim_cluster/eval/analysis.dat
+4. eval_master/groups/grp02/usr007/sim_cluster/eval/analysis_shard
+5. eval_master/groups/grp02/usr007/sim_cluster/eval/audio_scratch-817.py
+6. eval_master/groups/grp02/usr007/sim_cluster/eval/backup_dataset-039.dat
+7. eval_master/groups/grp02/usr007/sim_cluster/eval/clean.h5
+8. eval_master/groups/grp02/usr007/sim_cluster/eval/cluster_report-441.py
+9. eval_master/groups/grp02/usr007/sim_cluster/eval/code_backup.txt
+10. eval_master/groups/grp02/usr007/sim_cluster/eval/code_input.json
+... (and many more)
+
+Due to the volume of data, this is a truncated output. If you need the complete list or specific files, please let me know!

@@ -1,0 +1,5 @@
+The breakdown of files in the `eval_master` index by size is as follows:
+
+- **Size 0 bytes**: 10,289 files
+
+There are no files with sizes other than 0 bytes in this index.

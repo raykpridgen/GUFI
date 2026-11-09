@@ -1,0 +1,29 @@
+I found **602 file names** in `eval_master` that appear more than once. The index has 10,289 files and symlinks in total, with 9,072 different names. I counted names across the whole index, wherever they sit. Directory names aren't included, because the index stores those separately. Names with no extension, like `stage` and `config`, are regular files.
+
+**9 times (2 names)**
+batch.csv, figures.log
+
+**8 times (4)**
+cache.txt, config.log, plots.csv, sweep.log
+
+**7 times (11)**
+cluster.txt, corpus.log, grid.csv, input.png, lib.py, mesh.txt, neuron.log, old.txt, report.csv, shard.log, weights.txt
+
+**6 times (23)**
+archive.txt, backup.dat, backup.lnk†, bench.py, build.txt, cache.py, chunk.log, clean.dat, clean.log, config.py, final.dat, genome.log, gpu.csv, metrics.png, notes.log, ocean.txt, output.lnk†, params.csv, results.log, run.txt, scratch.dat, src.log, train.dat
+
+**5 times (40)**
+audio.csv, audio.h5, backup.log, batch.txt, checkpoint.dat, chunk.lnk†, climate.txt, corpus.txt, data.log, dataset.dat, eval.csv, field.log, fluid.png, genome.py, input.log, lib.json, neuron.png, node.lnk†, notes.txt, old.py, params.json, part.txt, particle.log, phase.json, profile.lnk†, report.txt, results.h5, results.lnk†, scratch.log, signal.h5, signal.lnk†, slice.py, src.py, stage, step.dat, step.log, step.png, survey.log, text.txt, tmp.py
+
+**4 times (83)**
+analysis.log, audio.py, backup.txt, batch.lnk†, bench.dat, build.dat, build.log, checkpoint.csv, clean.csv, climate.lnk†, climate.log, cluster.h5, cluster.log, cluster.py, code.txt, config, corpus, corpus.dat, data.h5, dataset.txt, draft.csv, draft.py, epoch.png, eval.txt, field.csv, field.h5, field.txt, figures.py, figures.txt, fluid.log, genome.csv, genome.png, gpu.json, gpu.lnk†, gpu.txt, input.c, job.dat, job.h5, job.json, lattice.json, lattice.txt, layer.csv, layer.dat, lib.lnk†, logs.csv, logs.py, mesh.json, metrics.lnk†, model.log, node.csv, old.log, output.log, paper.csv, paper.h5, paper.png, paper.py, params.lnk†, part.dat, phase.csv, phase.log, plots.dat, profile.log, profile.png, protein.json, raw.dat, raw.txt, results.txt, sample.dat, scratch.lnk†, scratch.png, shard.dat, signal.csv, signal.json, sim.dat, sim.log, stage.csv, step.lnk†, survey.dat, survey.py, text.log, tmp.h5, trace.lnk†, video.lnk†
+
+**3 times (144)**
+These are mostly the same base words with other extensions. Examples: analysis.csv, archive, audio.log, bench.json, cache.gz, checkpoint.json, cluster.c, config.json, data.py, eval.gz, final.h5, grid.py, job.txt, model.txt, notes.json, plots.json, run.c, run.gz, signal.c, survey.c, sweep.dat, tests.c, trace_code.csv, video.txt, weights.dat.
+
+**2 times (295)**
+Examples: .build.txt, .particle.py, analysis.c, archive_cache.py, backup.json, build.lnk, chunk-691.log, climate_results.json, data.json, eval_plots.txt, figures_archive.csv, fluid_job.json, gpu.log, lattice_results.py, metrics_logs.dat, ocean_signal.log, particle_batch.h5, shard_model.gz, tests_raw.json, video_bench, weights_metrics.py.
+
+† These names are always symlinks. Every other name above is always a regular file; no name is used by both a file and a symlink.
+
+The full lists for the 3× and 2× names were too long to include here, but I have them all and can give you either one in full.

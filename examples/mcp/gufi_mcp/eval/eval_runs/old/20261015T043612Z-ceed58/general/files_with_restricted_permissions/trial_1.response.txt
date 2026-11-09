@@ -1,0 +1,7 @@
+The following files in the **eval_master** index cannot be read by other users at all:
+
+1. `eval_master/groups/grp01`
+2. `eval_master/groups/grp03/shared`
+3. `eval_master/groups/grp04`
+
+These directories contain files that have permissions set so that they are unreadable by users other than the owner. If you need a specific list of files inside these directories, please let me know!

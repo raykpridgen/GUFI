@@ -1,0 +1,43 @@
+**1,005 of the 9,989 regular files in eval_master (about 10%) are executable.** They add up to about 281 MB (281,230,598 bytes).
+
+I counted a file as executable if its execute bit is set for the owner, the group or others. I left out directories and symlinks. Every one of the 1,005 files has the same permissions, `-rwxr-xr-x` (0755), so anyone can execute them.
+
+**Most of these probably aren't real programs.** The executable files are mostly data and text: `.csv`, `.json`, `.txt`, `.log`, `.dat`, `.h5`, `.gz`, `.png`. Only a few are `.py` or `.c` files, or have no extension, like `build`. The execute bit looks like it was set in bulk, for example by a `chmod -R 755` or a copy that kept the source permissions. If that wasn't intended, it's worth cleaning up.
+
+**By owner (UID):**
+
+| UID | Files | Bytes |
+|---|---|---|
+| 3003 | 86 | 14.3 MB |
+| 3013 | 77 | 12.9 MB |
+| 3012 | 74 | 27.0 MB |
+| 3011 | 73 | 11.8 MB |
+| 3009 | 73 | 20.6 MB |
+| 3008 | 73 | 22.9 MB |
+| 3001 | 72 | 19.2 MB |
+| 3007 | 71 | 14.4 MB |
+| 3006 | 70 | 16.4 MB |
+| 3002 | 70 | 18.6 MB |
+| 3010 | 62 | 21.2 MB |
+| 3015 | 59 | 16.9 MB |
+| 3005 | 58 | 23.9 MB |
+| 3004 | 58 | 18.9 MB |
+| 3014 | 29 | 22.2 MB |
+
+**Directories with the most executable files:**
+- `groups/grp01/usr003/checkpoint/report/notes`: 19
+- `groups/grp01/usr003/checkpoint/report/params`: 15
+- `groups/grp01/usr003/text_grid`: 14
+- `groups/grp04/usr005/params`, `groups/grp02/shared`, `groups/grp01/usr003/checkpoint`: 12 each
+- `groups/grp04/shared`, `groups/grp02/usr013/chunk`, `groups/grp01/usr003/checkpoint/report`: 11 each
+- `groups/grp05/shared`, `groups/grp04/usr005`, `groups/grp01/usr003`: 10 each
+
+**Examples:**
+- `eval_master/groups/grp01/shared/analysis.csv`
+- `eval_master/groups/grp01/usr003/checkpoint/build`
+- `eval_master/groups/grp01/usr003/checkpoint/protein_output.py`
+- `eval_master/groups/grp01/usr003/checkpoint/report/notes/.results_params.json` (a hidden file)
+- `eval_master/groups/grp01/usr009/output_lib/cluster_batch/paper_ocean-411.py` (2.9 MB)
+- `eval_master/groups/grp01/usr009/output_lib/cluster_batch/output/train/input-624.log` (3.4 MB)
+
+The full list is too long to show here; my query output got cut off partway through `grp01`. I can list all 1,005 paths for a particular user, group or directory, or narrow it down, for example to just scripts (`.py`, `.c`) or files with no extension.

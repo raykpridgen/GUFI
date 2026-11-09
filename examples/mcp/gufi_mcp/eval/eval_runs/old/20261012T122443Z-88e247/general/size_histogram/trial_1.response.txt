@@ -1,0 +1,9 @@
+Here are the regular file counts grouped by GUFI's size category in the `eval_master` index:
+
+| Size Category | File Count |
+|---------------|------------|
+| B             | 12         |
+| G             | 3          |
+| K             | 12         |
+| M             | 12         |
+| Zero          | 12         |

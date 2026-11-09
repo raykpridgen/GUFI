@@ -1,0 +1,11 @@
+These are the 5 files in eval_master with the oldest modification times. I counted regular files only, not symlinks or directories.
+
+| # | Full path | Last modified (UTC) |
+|---|-----------|---------------------|
+| 1 | `eval_master/groups/grp04/usr010/notes.log` | 2023-10-13 04:58:31 |
+| 2 | `eval_master/groups/grp04/usr006/ocean/trace_plots/text_metrics.txt` | 2023-10-13 05:05:01 |
+| 3 | `eval_master/groups/grp04/usr005/params/report_draft-782.log` | 2023-10-13 08:45:52 |
+| 4 | `eval_master/groups/grp03/usr001/chunk/audio/archive/gpu_neuron/tmp/tmp.py` | 2023-10-13 10:11:38 |
+| 5 | `eval_master/groups/grp02/usr007/sim_cluster/metrics/eval/tests-591.log` | 2023-10-13 19:27:44 |
+
+All five were last changed on the same day, October 13, 2023, about three years ago (relative to 2026-10-12). Three of the five are under `groups/grp04`. The next-oldest files are also from that day, so many files seem to have stopped being modified around then.

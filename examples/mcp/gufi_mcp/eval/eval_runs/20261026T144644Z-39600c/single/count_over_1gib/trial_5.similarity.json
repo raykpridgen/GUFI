@@ -1,0 +1,53 @@
+{
+  "scenario": "count_over_1gib",
+  "trial": 5,
+  "pass": false,
+  "passed_on_attempt": null,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "size INT64",
+    "per_directory_sql": [
+      "SELECT size FROM vrpentries WHERE type = 'f' AND size > 1073741824"
+    ],
+    "partial_shape": "n INT64",
+    "partial_sql": "SELECT COUNT(*) FROM per_directory",
+    "final_sql": "SELECT SUM(n) AS n FROM partial"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT gid, size FROM vrpentries WHERE size > 1073741824"
+    ],
+    "per_directory_shape": "gid INT64, size INT64",
+    "partial_sql": "SELECT gid, COUNT(*) FROM per_directory GROUP BY gid",
+    "partial_shape": "gid INT64, count INT64",
+    "final_sql": "SELECT gid, SUM(count) AS count FROM partial GROUP BY gid"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT gid, size FROM vrpentries WHERE size > 1073741824"
+      ],
+      "per_directory_shape": "gid INT64, size INT64",
+      "partial_sql": "SELECT gid, COUNT(*) FROM per_directory GROUP BY gid",
+      "partial_shape": "gid INT64, count INT64",
+      "final_sql": "SELECT gid, SUM(count) AS count FROM partial GROUP BY gid"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": true,
+      "passed": false,
+      "row_count": 3,
+      "reason": "column counts differ: expected 1, got 2"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 3,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "column counts differ: expected 1, got 2 (attempt 1 of 1)"
+}

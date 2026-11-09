@@ -1,0 +1,15 @@
+GID 2005 uses the most storage in eval_master, about 3.50 GB. That's twice as much as the next group. These totals add up the apparent sizes of regular files only, not symlinks or directories.
+
+| Rank | GID | Files | Total size |
+|---|---|---|---|
+| 1 | 2005 | 2,100 | 3,497,973,533 bytes (~3.50 GB / 3.26 GiB) |
+| 2 | 2001 | 1,838 | 1,730,852,644 bytes (~1.73 GB / 1.61 GiB) |
+| 3 | 2003 | 1,879 | 1,560,356,675 bytes (~1.56 GB / 1.45 GiB) |
+| 4 | 2002 | 2,175 | 1,510,437,987 bytes (~1.51 GB / 1.41 GiB) |
+| 5 | 2004 | 1,997 | 498,081,476 bytes (~0.50 GB / 0.46 GiB) |
+
+- **GID 2005** holds about 40% of the roughly 8.8 GB in total.
+- **GID 2002** has the most files (2,175) but ranks only 4th by size, so its files are smaller on average.
+- **GID 2004** uses the least storage by a wide margin, under 0.5 GB.
+
+I can only give numeric GIDs because this system can't look up the group names. Directory names suggest a mapping: files under `eval_master/groups/grp01` belong to GID 2001, so the others are probably grp02–grp05 for 2002–2005. I only confirmed that for grp01.

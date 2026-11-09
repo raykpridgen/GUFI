@@ -1,0 +1,113 @@
+Below are the 10 largest regular files (symlinks excluded) for each of the 15 users in `eval_master`. Sizes are in bytes, largest first.
+
+**Overview:** Six users each have one very large file (between 0.5 and 1.2 GiB): 3001, 3002, 3008, 3012, 3014 and 3015. Apart from those, every file in the top 10 lists is under about 4.2 MB. A few users' lists include files under their group's `shared/` folder: 3007, 3008, 3011, 3013 and 3014.
+
+**UID 3001**
+| Path | Size |
+|---|---|
+| eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py | 1,123,091,592 |
+| eval_master/groups/grp03/usr001/chunk/train/code/cache/data-003.json | 4,088,609 |
+| eval_master/groups/grp03/usr001/chunk/audio/archive/corpus/dataset_run.json | 3,816,099 |
+| eval_master/groups/grp03/usr001/step_image.log | 3,720,491 |
+| eval_master/groups/grp03/usr001/chunk/audio/job/.scratch_survey-182.gz | 3,696,228 |
+| eval_master/groups/grp03/usr001/mesh/particle_input-681.txt | 3,685,612 |
+| eval_master/groups/grp03/usr001/chunk/audio/archive/gpu_neuron/lattice/batch_raw-954.json | 3,377,998 |
+| eval_master/groups/grp03/usr001/chunk/fluid_train-444.json | 3,362,630 |
+| eval_master/groups/grp03/usr001/train/cluster-301.png | 3,051,404 |
+| eval_master/groups/grp03/usr001/trace/cluster_scratch-745 | 3,043,312 |
+
+**UID 3002**
+| Path | Size |
+|---|---|
+| eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/final/trace_cluster-666.txt | 959,252,531 |
+| eval_master/groups/grp02/usr002/genome/survey_node-615.txt | 3,989,839 |
+| eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/model/phase-338 | 3,823,227 |
+| eval_master/groups/grp02/usr002/src_slice/checkpoint/logs-474.py | 3,656,960 |
+| eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/model/metrics.dat | 3,527,749 |
+| eval_master/groups/grp02/usr002/src_slice/final/src_weights-385.log | 3,521,933 |
+| eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/model/cluster_sample/fluid_sample.dat | 3,503,970 |
+| eval_master/groups/grp02/usr002/src_slice/final/run/scratch_tests | 3,472,474 |
+| eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/model/cluster_sample/old-591 | 3,471,541 |
+| eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/slice/config_shard-272.py | 3,421,080 |
+
+**UID 3003**
+| Path | Size |
+|---|---|
+| eval_master/groups/grp01/usr003/checkpoint/report/params/ocean_tmp-832.log | 4,163,171 |
+| eval_master/groups/grp01/usr003/checkpoint/report/params/particle_slice-938.log | 4,043,846 |
+| eval_master/groups/grp01/usr003/checkpoint/report/params/node_grid.csv | 3,854,989 |
+| eval_master/groups/grp01/usr003/checkpoint/report_run-037.log | 3,847,781 |
+| eval_master/groups/grp01/usr003/checkpoint/video.py | 3,808,937 |
+| eval_master/groups/grp01/usr003/text_grid/scratch_params-691.py | 3,682,020 |
+| eval_master/groups/grp01/usr003/text_grid/particle-2.txt | 3,629,821 |
+| eval_master/groups/grp01/usr003/checkpoint/report/profile_particle-329 | 3,539,633 |
+| eval_master/groups/grp01/usr003/checkpoint/report/params/report_build-368.h5 | 3,490,658 |
+| eval_master/groups/grp01/usr003/climate-915.png | 3,439,479 |
+
+**UID 3004**
+| Path | Size |
+|---|---|
+| eval_master/groups/grp03/usr004/train/model_report/.train.txt | 4,186,836 |
+| eval_master/groups/grp03/usr004/part_epoch/dataset_archive/shard-057.dat | 4,059,464 |
+| eval_master/groups/grp03/usr004/part_epoch/final/ocean_phase.log | 3,955,231 |
+| eval_master/groups/grp03/usr004/field_lattice.csv | 3,915,817 |
+| eval_master/groups/grp03/usr004/stage/batch_genome/layer_mesh.png | 3,868,829 |
+| eval_master/groups/grp03/usr004/part_epoch/backup.dat | 3,480,491 |
+| eval_master/groups/grp03/usr004/train/tests_protein/particle/text.png | 3,465,164 |
+| eval_master/groups/grp03/usr004/scratch_stage/mesh.txt | 3,334,664 |
+| eval_master/groups/grp03/usr004/sim_gpu/epoch_node-484.csv | 3,286,447 |
+| eval_master/groups/grp03/usr004/part_epoch/batch-162.py | 3,010,787 |
+
+**UID 3005**
+| Path | Size |
+|---|---|
+| eval_master/groups/grp04/usr005/params/protein/genome_shard/gpu_signal.csv | 4,129,725 |
+| eval_master/groups/grp04/usr005/params/protein/raw_lattice-886.png | 4,101,620 |
+| eval_master/groups/grp04/usr005/params/protein/genome_shard/profile/grid-665.dat | 4,030,164 |
+| eval_master/groups/grp04/usr005/params/protein/genome_shard/results_raw/config-797.csv | 3,635,987 |
+| eval_master/groups/grp04/usr005/params/protein/genome_shard/results_raw/sample_data-121.c | 3,475,122 |
+| eval_master/groups/grp04/usr005/params/protein/genome_shard/profile/backup_video.log | 3,403,084 |
+| eval_master/groups/grp04/usr005/params/protein/video_dataset-999 | 3,239,908 |
+| eval_master/groups/grp04/usr005/params/protein/genome_shard/results_raw/slice_audio.dat | 3,140,237 |
+| eval_master/groups/grp04/usr005/params/particle_survey.dat | 3,136,406 |
+| eval_master/groups/grp04/usr005/params/protein/genome_shard/results_raw/mesh.json | 2,950,606 |
+
+**UID 3006**
+| Path | Size |
+|---|---|
+| eval_master/groups/grp04/usr006/layer_video-322.h5 | 4,194,001 |
+| eval_master/groups/grp04/usr006/figures.png | 4,177,565 |
+| eval_master/groups/grp04/usr006/ocean/phase/params/text_build/src_genome | 4,117,199 |
+| eval_master/groups/grp04/usr006/ocean/phase/params/train_part/bench-711.dat | 4,046,582 |
+| eval_master/groups/grp04/usr006/ocean/phase/field/cluster/report_slice/chunk_clean.csv | 3,939,167 |
+| eval_master/groups/grp04/usr006/ocean/phase/field/cluster/tmp-328.dat | 3,907,727 |
+| eval_master/groups/grp04/usr006/ocean/phase/field/cache-672.png | 3,896,252 |
+| eval_master/groups/grp04/usr006/ocean/chunk_final.dat | 3,758,506 |
+| eval_master/groups/grp04/usr006/ocean/phase/field/sim_figures.txt | 3,752,701 |
+| eval_master/groups/grp04/usr006/ocean/phase/params/text_build/run_bench.csv | 3,557,468 |
+
+**UID 3007**
+| Path | Size |
+|---|---|
+| eval_master/groups/grp02/usr007/metrics_image/gpu_raw/neuron_dataset/neuron_profile-854.dat | 3,974,168 |
+| eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/chunk-838.gz | 3,781,979 |
+| eval_master/groups/grp02/usr007/sim_cluster/eval/tests/clean.txt | 3,728,646 |
+| eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/old/neuron.txt | 3,720,722 |
+| eval_master/groups/grp02/usr007/metrics_image/run_archive/archive/node_data-020.png | 3,700,655 |
+| eval_master/groups/grp02/shared/neuron.py | 3,650,338 |
+| eval_master/groups/grp02/usr007/sim_cluster/metrics/eval/neuron_part.json | 3,626,622 |
+| eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/train/results_final.json | 3,618,962 |
+| eval_master/groups/grp02/usr007/metrics_image/checkpoint_report/text-447.py | 3,533,774 |
+| eval_master/groups/grp02/shared/cluster_epoch-264.h5 | 3,513,056 |
+
+**UID 3008**
+| Path | Size |
+|---|---|
+| eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt | 1,113,310,933 |
+| eval_master/groups/grp05/usr008/cache_text/climate_part.txt | 4,157,025 |
+| eval_master/groups/grp05/usr008/cache_text/signal_ocean/analysis/tmp_scratch-552.png | 4,042,893 |
+| eval_master/groups/grp05/usr008/cluster_build.log | 4,007,750 |
+| eval_master/groups/grp05/shared/src-824.csv | 3,950,736 |
+| eval_master/groups/grp05/usr008/cache_text/signal_ocean/analysis/job_old-058.dat | 3,941,974 |
+| eval_master/groups/grp05/usr008/cache_text/paper/logs-278.txt | 3,658,977 |
+| eval_master/groups/grp05/usr008/cache_text/signal_

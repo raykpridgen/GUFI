@@ -1,0 +1,14 @@
+I found **4 files** over 1 GB in `eval_master`. All four are also over 1 GiB (1,073,741,824 bytes), so it doesn't matter which definition of "GB" you use.
+
+| Owner UID | GID | Size | Path |
+|---|---|---|---|
+| 3012 | 2005 | 1,261,921,083 B (~1.18 GiB) | `eval_master/groups/grp05/usr012/output/scratch.c` |
+| 3014 | 2001 | 1,228,550,276 B (~1.14 GiB) | `eval_master/groups/grp01/usr014/clean/step/old.log` |
+| 3001 | 2003 | 1,123,091,592 B (~1.05 GiB) | `eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py` |
+| 3008 | 2005 | 1,113,310,933 B (~1.04 GiB) | `eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt` |
+
+**Owners:** Each file belongs to a different user (UIDs 3012, 3014, 3001 and 3008). Each one sits in that user's own home directory (usr012, usr014, usr001, usr008), under the group folder that matches its GID. Two of the four are in group 2005 (grp05).
+
+**Usernames:** I can only give numeric UIDs. These IDs don't match any account on the system the index is on, so the lookup failed.
+
+**Worth checking:** For three of these files, the extension doesn't fit the size. A `.c` file, a `.py` file and a `.txt` file over 1 GB are unusual, so they may be misnamed data or output files. They're good candidates to review if you're freeing up space.

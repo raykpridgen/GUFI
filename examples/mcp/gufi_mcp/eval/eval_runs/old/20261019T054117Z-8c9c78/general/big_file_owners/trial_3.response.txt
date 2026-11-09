@@ -1,0 +1,19 @@
+The following users own files larger than 1 GB in the `eval_master` index, along with the paths to those files:
+
+1. **User ID 3014**
+   - **File Path:** `eval_master/groups/grp01/usr014/clean/step/old.log`
+   - **File Size:** 1,228,550,276 bytes
+
+2. **User ID 3012**
+   - **File Path:** `eval_master/groups/grp05/usr012/output/scratch.c`
+   - **File Size:** 1,261,921,083 bytes
+
+3. **User ID 3008**
+   - **File Path:** `eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt`
+   - **File Size:** 1,113,310,933 bytes
+
+4. **User ID 3001**
+   - **File Path:** `eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py`
+   - **File Size:** 1,123,091,592 bytes
+
+This represents a total of 4 files across these user IDs.

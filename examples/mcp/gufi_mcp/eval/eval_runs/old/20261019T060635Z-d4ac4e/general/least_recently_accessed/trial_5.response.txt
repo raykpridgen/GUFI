@@ -1,0 +1,30 @@
+These are the 20 regular files in **eval_master** that have gone longest without being accessed, oldest first. Each was last accessed about 364 days ago, between 12 and 13 October 2025 (UTC).
+
+| # | File | Last accessed (UTC) | Size (bytes) | UID |
+|---|------|---------------------|-------------:|-----|
+| 1 | eval_master/groups/grp05/usr008/cache_text/signal_ocean/shard-604.dat | 2025-10-12 00:34:17 | 517,341 | 3008 |
+| 2 | eval_master/groups/grp02/usr007/sim_cluster/eval/tests/sweep_model-186.h5 | 2025-10-12 01:03:35 | 38,965 | 3007 |
+| 3 | eval_master/groups/grp04/shared/signal_plots.py | 2025-10-12 03:11:37 | 8 | 3010 |
+| 4 | eval_master/groups/grp03/usr011/lattice/shard_lattice/survey_final/scratch_model.json | 2025-10-12 04:18:15 | 54,555 | 3011 |
+| 5 | eval_master/groups/grp01/usr014/clean/stage.h5 | 2025-10-12 04:25:53 | 2,553,512 | 3014 |
+| 6 | eval_master/groups/grp04/usr006/ocean/phase/params/train_part/image-088.txt | 2025-10-12 05:02:58 | 3 | 3006 |
+| 7 | eval_master/groups/grp03/usr004/train/model_report/code.log | 2025-10-12 06:11:15 | 18 | 3004 |
+| 8 | eval_master/groups/grp04/usr010/mesh/model_clean/slice_corpus-207.py | 2025-10-12 06:41:08 | 5 | 3010 |
+| 9 | eval_master/groups/grp02/usr002/clean-925.c | 2025-10-12 07:57:11 | 22,227 | 3002 |
+| 10 | eval_master/groups/grp01/usr003/checkpoint/lib_src.txt | 2025-10-12 08:30:54 | 6 | 3003 |
+| 11 | eval_master/groups/grp02/usr002/src_slice/checkpoint/results_neuron/slice/output.py | 2025-10-12 09:20:27 | 5,374 | 3002 |
+| 12 | eval_master/groups/grp02/usr007/sim_cluster/image_eval/gpu_genome-457.h5 | 2025-10-12 10:52:59 | 15 | 3007 |
+| 13 | eval_master/groups/grp05/usr012/output/weights/grid_final/cache_text-348.txt | 2025-10-12 13:56:51 | 466,091 | 3012 |
+| 14 | eval_master/groups/grp02/shared/model_particle-936.py | 2025-10-12 15:29:12 | 1,493 | 3007 |
+| 15 | eval_master/groups/grp04/usr006/ocean/phase/params/text_build/.results.txt | 2025-10-12 15:44:36 | 489 | 3006 |
+| 16 | eval_master/groups/grp03/usr011/lattice/run_protein/results/paper.txt | 2025-10-12 15:46:50 | 54 | 3011 |
+| 17 | eval_master/groups/grp04/usr006/particle.dat | 2025-10-12 16:03:26 | 2 | 3006 |
+| 18 | eval_master/groups/grp05/shared/lib.py | 2025-10-12 16:45:40 | 30,547 | 3012 |
+| 19 | eval_master/groups/grp02/usr007/sim_cluster/metrics/stage/step-478.dat | 2025-10-12 19:15:13 | 0 | 3007 |
+| 20 | eval_master/groups/grp02/usr013/batch/sim/output/code_plots.dat | 2025-10-12 19:22:04 | 8,354 | 3013 |
+
+- **Oldest file:** `grp05/usr008/cache_text/signal_ocean/shard-604.dat` (about 517 KB), last accessed 2025-10-12 at 00:34 UTC.
+- **Largest file in the list:** `grp01/usr014/clean/stage.h5` (about 2.5 MB). Most of the others are small, and several are under 100 bytes.
+- **Many owners:** the files are spread across groups grp01 to grp05 and many users. UID 3007 (usr007) has the most entries, four of them.
+
+The access times stop at almost exactly one year ago and are packed closely together. That suggests the index only goes back about a year, so the list is cut off at 20 and more files probably have similar dates. The list covers regular files only, not symlinks. If you want, I can count every file not accessed in, say, the last 300 days, or total them up by user or group.

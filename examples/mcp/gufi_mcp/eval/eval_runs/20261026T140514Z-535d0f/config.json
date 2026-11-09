@@ -1,0 +1,26 @@
+{
+  "run_id": "20261026T140514Z-535d0f",
+  "mode": "single",
+  "trials": 1,
+  "agent": {
+    "agent": "replay"
+  },
+  "openrouter_model": null,
+  "concurrency": 4,
+  "max_tool_calls": 15,
+  "max_attempts": 3,
+  "timeout_s": 180.0,
+  "scenario_filter": [],
+  "scenario_files": {
+    "single": "/home/raykprid/omniverse/work/mcp/stripped/examples/mcp/gufi_mcp/scenarios.single.yaml"
+  },
+  "indexes": {
+    "eval_master": {
+      "index_name": "eval_master",
+      "seed": 476442330,
+      "fixed_now": 1791763200,
+      "fixed_now_iso": "2026-10-12T00:00:00+00:00",
+      "manifest": "/home/raykprid/search/eval_master.manifest.json"
+    }
+  }
+}

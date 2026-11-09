@@ -1,0 +1,21 @@
+Here are the users who have put files in the shared directory "grp03" in the `eval_master` index, along with the total amount of data each has contributed:
+
+| User ID | File Count | Total Size (Bytes) |
+|---------|------------|---------------------|
+| 3012    | 783        | 1,486,218,563       |
+| 3014    | 359        | 1,345,751,245       |
+| 3008    | 756        | 1,307,551,424       |
+| 3001    | 600        | 1,265,869,222       |
+| 3002    | 635        | 1,121,611,465       |
+| 3015    | 561        | 704,203,546         |
+| 3003    | 794        | 228,075,159         |
+| 3013    | 770        | 201,927,903         |
+| 3010    | 694        | 190,066,865         |
+| 3007    | 770        | 186,898,619         |
+| 3006    | 729        | 168,992,484         |
+| 3009    | 685        | 157,026,240         |
+| 3011    | 712        | 155,447,703         |
+| 3004    | 567        | 139,039,750         |
+| 3005    | 574        | 139,022,127         |
+
+If you need more specific details or further analysis, feel free to ask!

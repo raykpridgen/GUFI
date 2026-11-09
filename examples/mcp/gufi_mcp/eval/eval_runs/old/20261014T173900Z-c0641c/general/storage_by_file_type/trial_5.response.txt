@@ -1,0 +1,6 @@
+In the `eval_master` index, the file types and their respective total sizes are as follows:
+
+- Regular files (`f`): 8,797,702,315 bytes
+- Symbolic links (`l`): 8,271 bytes
+
+Regular files take up the most space in the index.

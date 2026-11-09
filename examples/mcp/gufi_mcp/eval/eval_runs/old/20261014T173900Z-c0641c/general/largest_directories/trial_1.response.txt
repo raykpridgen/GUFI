@@ -1,0 +1,14 @@
+The directories in the `eval_master` index that hold the most data directly inside them, based on the total sizes computed, are as follows:
+
+1. Total Size: 2,473,035,300 bytes
+2. Total Size: 1,472,642,337 bytes
+3. Total Size: 1,341,484,302 bytes
+4. Total Size: 1,321,015,342 bytes
+5. Total Size: 732,739,587 bytes
+6. Total Size: 683,707,440 bytes
+7. Total Size: 183,194,814 bytes
+8. Total Size: 168,061,145 bytes
+9. Total Size: 1,386,944 bytes
+10. Total Size: 256,894 bytes
+
+Please let me know if you need additional information or specific paths for these sizes.

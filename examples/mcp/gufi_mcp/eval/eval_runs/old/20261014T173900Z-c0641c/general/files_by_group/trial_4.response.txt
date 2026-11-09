@@ -1,0 +1,36 @@
+The users with files in group 2003 in the `eval_master` index and the number of files each has are as follows:
+
+- User ID 3011: 132 files
+- User ID 3001: 119 files
+- User ID 3001: 114 files
+- User ID 3011: 109 files
+- User ID 3011: 105 files
+- User ID 3004: 102 files
+- User ID 3011: 91 files
+- User ID 3001: 87 files
+- User ID 3011: 79 files
+- User ID 3004: 67 files
+- User ID 3004: 63 files
+- User ID 3004: 58 files
+- User ID 3011: 56 files
+- User ID 3001: 56 files
+- User ID 3001: 54 files
+- User ID 3001: 54 files
+- User ID 3011: 51 files
+- User ID 3004: 50 files
+- User ID 3004: 49 files
+- User ID 3011: 49 files
+- User ID 3004: 46 files
+- User ID 3004: 42 files
+- User ID 3001: 38 files
+- User ID 3011: 33 files
+- User ID 3001: 33 files
+- User ID 3001: 32 files
+- User ID 3001: 31 files
+- User ID 3004: 30 files
+- User ID 3011: 28 files
+- User ID 3004: 28 files
+- User ID 3004: 28 files
+- User ID 3004: 21 files
+
+(Note: IDs 3001 and 3011 appear multiple times with different counts, which suggests they have had files counted in different contexts or directories. This shows a rich set of data from different locations.)

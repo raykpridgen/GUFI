@@ -1,0 +1,14 @@
+Four files in eval_master are over 1 GB. Each one has a different owner, and each sits inside its owner's own directory.
+
+| Size | Owner UID | GID | Path |
+|---|---|---|---|
+| ~1.26 GB (1,261,921,083 B) | 3012 | 2005 | eval_master/groups/grp05/usr012/output/scratch.c |
+| ~1.23 GB (1,228,550,276 B) | 3014 | 2001 | eval_master/groups/grp01/usr014/clean/step/old.log |
+| ~1.12 GB (1,123,091,592 B) | 3001 | 2003 | eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py |
+| ~1.11 GB (1,113,310,933 B) | 3008 | 2005 | eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt |
+
+- **Owners:** The index only stores numeric IDs, not user names. The UIDs line up with the directory names (UID 3012 is in `usr012`, and so on), so the owners are probably usr012, usr014, usr001 and usr008. The group IDs also match the group folders (GID 2005 is in `grp05`, and so on).
+- **Where they are:** Two of the four are in grp05 (usr012 and usr008). The other two are in grp01 and grp03.
+- **Odd file types:** For their names, these files are unusually large. `scratch.c` and `tests_output.py` look like source files, and `old.log` and `text_run.txt` look like logs or text output. They may be misnamed output or scratch data, so they could be good candidates for cleanup.
+
+All four files are also over 1 GiB (1,073,741,824 bytes), so the list is the same whichever definition of a gigabyte you use.

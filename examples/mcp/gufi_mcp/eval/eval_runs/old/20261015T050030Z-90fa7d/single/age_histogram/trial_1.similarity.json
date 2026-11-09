@@ -1,0 +1,43 @@
+{
+  "scenario": "age_histogram",
+  "trial": 1,
+  "pass": false,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "cat TEXT",
+    "scatter_sql": [
+      "SELECT agecat(mtime) FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "cat TEXT, count INT64",
+    "gather_sql": "SELECT cat, COUNT(*) FROM intermediate GROUP BY cat",
+    "final_sql": "SELECT cat, SUM(count) AS count FROM aggregate GROUP BY cat"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT CASE WHEN (1791763200 - mtime) < 86400 THEN 'Less than a day' WHEN (1791763200 - mtime) < 604800 THEN 'Less than a week' WHEN (1791763200 - mtime) < 2592000 THEN 'Less than a month' WHEN (1791763200 - mtime) < 31536000 THEN 'Less than a year' ELSE 'More than a year' END AS modification_period, COUNT(*) AS file_count FROM vrpentries WHERE type = 'f' GROUP BY modification_period"
+    ],
+    "scatter_shape": "modification_period TEXT, file_count INT64",
+    "gather_sql": "SELECT modification_period, SUM(file_count) AS total_files FROM intermediate GROUP BY modification_period",
+    "gather_shape": "modification_period TEXT, total_files INT64",
+    "final_sql": "SELECT modification_period, total_files FROM aggregate ORDER BY total_files DESC"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT CASE WHEN (1791763200 - mtime) < 86400 THEN 'Less than a day' WHEN (1791763200 - mtime) < 604800 THEN 'Less than a week' WHEN (1791763200 - mtime) < 2592000 THEN 'Less than a month' WHEN (1791763200 - mtime) < 31536000 THEN 'Less than a year' ELSE 'More than a year' END AS modification_period, COUNT(*) AS file_count FROM vrpentries WHERE type = 'f' GROUP BY modification_period"
+      ],
+      "scatter_shape": "modification_period TEXT, file_count INT64",
+      "gather_sql": "SELECT modification_period, SUM(file_count) AS total_files FROM intermediate GROUP BY modification_period",
+      "gather_shape": "modification_period TEXT, total_files INT64",
+      "final_sql": "SELECT modification_period, total_files FROM aggregate ORDER BY total_files DESC"
+    }
+  ],
+  "gt_row_count": 4,
+  "agent_row_count": 56,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "row count 56 != expected 4"
+}

@@ -1,0 +1,53 @@
+{
+  "scenario": "count_and_size",
+  "trial": 1,
+  "pass": false,
+  "passed_on_attempt": null,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "size INT64",
+    "per_directory_sql": [
+      "SELECT size FROM vrpentries WHERE type = 'f'"
+    ],
+    "partial_shape": "n INT64, total INT64",
+    "partial_sql": "SELECT COUNT(*), SUM(size) FROM per_directory",
+    "final_sql": "SELECT SUM(n) AS n, SUM(total) AS total FROM partial"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT '' AS gid, size FROM vrpentries"
+    ],
+    "per_directory_shape": "gid TEXT, size INT64",
+    "partial_sql": "SELECT gid, COUNT(*) AS count, SUM(size) AS total_size FROM per_directory GROUP BY gid",
+    "partial_shape": "gid TEXT, count INT64, total_size INT64",
+    "final_sql": "SELECT SUM(count) AS total_files, SUM(total_size) AS total_space FROM partial"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT '' AS gid, size FROM vrpentries"
+      ],
+      "per_directory_shape": "gid TEXT, size INT64",
+      "partial_sql": "SELECT gid, COUNT(*) AS count, SUM(size) AS total_size FROM per_directory GROUP BY gid",
+      "partial_shape": "gid TEXT, count INT64, total_size INT64",
+      "final_sql": "SELECT SUM(count) AS total_files, SUM(total_size) AS total_space FROM partial"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": true,
+      "passed": false,
+      "row_count": 1,
+      "reason": "values differ: 1 expected row(s) missing, 1 unexpected"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 1,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "values differ: 1 expected row(s) missing, 1 unexpected (attempt 1 of 1)"
+}

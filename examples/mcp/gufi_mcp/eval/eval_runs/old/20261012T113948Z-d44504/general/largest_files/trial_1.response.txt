@@ -1,0 +1,14 @@
+The largest files in the `eval_master` index are as follows:
+
+1. Inode: **5796088** - Size: **1,261,921,083 bytes**
+2. Inode: **5797805** - Size: **1,228,550,276 bytes**
+3. Inode: **5788756** - Size: **1,123,091,592 bytes**
+4. Inode: **5793017** - Size: **1,113,310,933 bytes**
+5. Inode: **5789423** - Size: **959,252,531 bytes**
+6. Inode: **5798205** - Size: **564,253,616 bytes**
+7. Inode: **5792072** - Size: **4,194,001 bytes**
+8. Inode: **5790727** - Size: **4,186,836 bytes**
+9. Inode: **5791710** - Size: **4,177,565 bytes**
+10. Inode: **5795529** - Size: **4,164,923 bytes**
+
+These files are listed by their inode numbers and respective sizes.

@@ -1,0 +1,15 @@
+Group **2005** uses the most storage by a wide margin: about **3.50 GB**, roughly 40% of the index's total. These totals add up file sizes for regular files only, and groups are shown by numeric GID because the index doesn't record group names.
+
+| Rank | GID | Files | Total size | Share |
+|---|---|---|---|---|
+| 1 | 2005 | 2,100 | 3,497,973,533 B (~3.50 GB) | ~39.8% |
+| 2 | 2001 | 1,838 | 1,730,852,644 B (~1.73 GB) | ~19.7% |
+| 3 | 2003 | 1,879 | 1,560,356,675 B (~1.56 GB) | ~17.7% |
+| 4 | 2002 | 2,175 | 1,510,437,987 B (~1.51 GB) | ~17.2% |
+| 5 | 2004 | 1,997 | 498,081,476 B (~0.50 GB) | ~5.7% |
+
+Total: about 8.80 GB across 9,989 files.
+
+- **2005** holds about twice as much as the next group.
+- **2002** has the most files (2,175) but ranks only fourth by size, so its files are smaller on average.
+- **2001**'s usage comes mostly from one file: `eval_master/groups/grp01/usr014/clean/step/old.log` (~1.23 GB) is about 71% of that group's total. That file is a good candidate to check if you're looking to free up space.

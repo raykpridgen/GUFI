@@ -1,0 +1,5 @@
+The 9,989 regular files in **eval_master** add up to **8,797,702,315 bytes**, which is about 8.80 GB (8.19 GiB).
+
+That figure is the total of the files' recorded sizes. The index also has 300 symlinks that take up 8,271 bytes, so files and symlinks together come to 8,797,710,586 bytes.
+
+I also tried GUFI's built-in `total-filesize` statistic to check the total, but it failed because it couldn't look up a user name for one of the owner IDs. So the total above comes from a direct query of the index only.

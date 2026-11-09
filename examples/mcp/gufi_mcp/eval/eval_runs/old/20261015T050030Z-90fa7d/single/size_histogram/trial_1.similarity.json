@@ -1,0 +1,43 @@
+{
+  "scenario": "size_histogram",
+  "trial": 1,
+  "pass": false,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "scatter_shape": "cat TEXT",
+    "scatter_sql": [
+      "SELECT bytecat(size) FROM vrpentries WHERE type = 'f'"
+    ],
+    "gather_shape": "cat TEXT, count INT64",
+    "gather_sql": "SELECT cat, COUNT(*) FROM intermediate GROUP BY cat",
+    "final_sql": "SELECT cat, SUM(count) AS count FROM aggregate GROUP BY cat"
+  },
+  "agent": {
+    "index": "eval_master",
+    "scatter_sql": [
+      "SELECT size FROM vrpentries"
+    ],
+    "scatter_shape": "size INT64",
+    "gather_sql": "SELECT size, COUNT(*) AS count FROM intermediate GROUP BY size",
+    "gather_shape": "size INT64, count INT64",
+    "final_sql": "SELECT size, SUM(count) AS count FROM aggregate GROUP BY size ORDER BY size"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "scatter_sql": [
+        "SELECT size FROM vrpentries"
+      ],
+      "scatter_shape": "size INT64",
+      "gather_sql": "SELECT size, COUNT(*) AS count FROM intermediate GROUP BY size",
+      "gather_shape": "size INT64, count INT64",
+      "final_sql": "SELECT size, SUM(count) AS count FROM aggregate GROUP BY size ORDER BY size"
+    }
+  ],
+  "gt_row_count": 5,
+  "agent_row_count": 5000,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "agent result was truncated"
+}

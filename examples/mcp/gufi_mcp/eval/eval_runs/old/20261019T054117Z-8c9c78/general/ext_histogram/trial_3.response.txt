@@ -1,0 +1,35 @@
+Here is the count of files for each extension in the `eval_master` index:
+
+| Extension           | Count |
+|---------------------|-------|
+| log                 | 1410  |
+| txt                 | 1390  |
+| csv                 | 1130  |
+| dat                 | 1125  |
+| py                  | 1054  |
+| json                | 823   |
+| h5                  | 731   |
+| png                 | 708   |
+| c                   | 544   |
+| (empty)             | 531   |
+| gz                  | 525   |
+| weights_field       | 1     |
+| weights-772         | 1     |
+| trace-369           | 1     |
+| text_video-388      | 1     |
+| shard-078           | 1     |
+| run_lib-668         | 1     |
+| run-379             | 1     |
+| plots_config-665    | 1     |
+| ocean_grid-645      | 1     |
+| metrics             | 1     |
+| logs_chunk-014      | 1     |
+| image_paper         | 1     |
+| fluid_epoch         | 1     |
+| figures-206         | 1     |
+| draft               | 1     |
+| chunk_final-439     | 1     |
+| build_field-564     | 1     |
+| audio-855           | 1     |
+
+This count includes a variety of extensions, with the most common being "log" and "txt".

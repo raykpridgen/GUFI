@@ -1,0 +1,71 @@
+**261 regular files in eval_master were modified in the past month**, between 2026-09-12 and 2026-10-11, adding up to about 66.8 MB (66,830,885 bytes).
+
+I went by modification time (mtime). The status-change time (ctime) couldn't help: every file in the index has the same ctime, 2026-10-12 08:36:43 UTC, which is later than the "now" you gave me. It looks like the time the files were copied or the index was built, not real changes.
+
+Paths below start after `eval_master/groups/`, with the modification date (MM-DD, 2026) in parentheses.
+
+**grp01**
+- shared/: notes_neuron-753.py (09-26), plots_build-840.dat (09-17), run_dataset.txt (09-30)
+- usr003/checkpoint/: backup.dat (10-01), sweep_notes-388.h5 (09-14)
+- usr003/checkpoint/report/: .src_signal.dat (09-25), raw-561.txt (09-30), survey_config-964.csv (09-27), tests_job-788.h5 (09-19)
+  - notes/: params_config-392.png (10-02), stage_notes-602.png (09-25), tests.py (09-24), train_analysis-485.txt (09-13), video_tests.py (09-24)
+  - params/: eval_metrics-419.py (09-19), old_config.dat (09-30), sweep.log (09-26), trace-840.png (09-27)
+- usr003/text_grid/: .sim_tmp-260.json (09-15), cluster_lattice-929.py (09-18), config-034.csv (09-22), node_eval.py (10-05), paper_output-764.c (09-30), profile_metrics.gz (09-23), report_mesh-606.gz (10-06)
+- usr009/: audio_job.h5 (10-07), input/audio_shard-907.dat (10-05), output_lib/sim-150.log (10-04)
+  - results/: cluster_checkpoint-028.gz (09-14), code_model-588.dat (10-06), draft_sample-478.log (10-05)
+  - output_lib/cluster_batch/: data_archive.txt (10-09), bench/dataset_results-113.dat (09-13), bench/image_raw-657.txt (09-26), output/paper_build-563.csv (09-26), output/slice/report/logs_model-719.dat (09-29), output/climate_clean/job_notes.log (09-24), output/climate_clean/trace-738.txt (10-07), video_old/protein/metrics/archive_weights.gz (10-07), video_old/protein/metrics/report.csv (10-07)
+  - output_lib/cluster_batch/output/gpu_sim/: step_video-819.json (09-26), logs_input/.text_data-495.py (10-04), notes/layer_phase.c (09-19), stage/genome_epoch-591.h5 (09-15), stage/job.py (09-14), train_tmp/logs_clean-252.py (09-18), train_tmp/protein.log (10-06)
+- usr014/clean/: bench/backup.log (09-28), mesh_genome-931.py (09-12)
+  - data/: checkpoint_config-384.csv (09-16), lattice-679.log (10-03), sample_build/figures-309.csv (09-12)
+  - step/: chunk_model.json (09-23), figures_particle-185.h5 (10-02), run/chunk_fluid-645.csv (09-16)
+
+**grp02**
+- shared/code_signal.csv (10-06)
+- usr002/: figures_lattice.py (10-06), mesh_audio-632.c (09-14), phase_text-118.py (09-24)
+  - genome/: layer.dat (10-06), survey.csv (09-26), node/params.csv (09-18)
+- usr002/src_slice/: final-513.dat (10-08), node-273.json (09-20), raw_scratch-246.dat (09-24)
+  - final/: dataset_scratch-524.h5 (10-07), params-364.dat (10-05)
+- usr002/src_slice/checkpoint/results_neuron/: .results-184.json (09-12), plots_config-430.log (09-13), slice/layer_dataset.h5 (09-30)
+  - model/: dataset_tmp-077.c (10-04), part_grid-407.c (09-20)
+  - model/cluster_sample/: data.log (10-10), layer-958.dat (09-28), sweep_cache.csv (09-27)
+- usr007/: audio-792.txt (10-07), audio_archive/grid/.job_phase-699.txt (09-14)
+- usr007/metrics_image/: lattice_node.png (09-24), results_mesh.gz (09-12)
+  - checkpoint_report/: node.csv (09-23), particle_text-957.json (10-09)
+  - gpu_raw/: neuron_dataset/neuron_profile-854.dat (09-19), neuron_dataset/report_metrics.c (09-23), stage_metrics/mesh_notes-207.csv (09-30)
+- usr007/sim_cluster/: protein_image-802.json (09-22), eval/tests/climate.py (09-28), image_eval/neuron_run-157.csv (10-08)
+  - metrics/: build_genome-858.log (09-20), chunk_eval-556.json (10-06), eval/batch_chunk-878 (09-20), phase_trace-560.dat (09-13)
+  - metrics/stage/: report.log (09-15), old/draft_model.log (10-06), old/profile_old-066.h5 (10-02), train/.audio.log (09-22), train/archive.py (09-12)
+- usr013/: mesh_video-207.json (10-02), run.gz (09-16)
+  - chunk/: video_figures.h5 (09-14), chunk_bench/cluster_audio.log (09-16)
+  - batch/: backup_job.csv (09-27), step/dataset_lib.json (09-25), step/tmp_particle/input_scratch-280.dat (09-17)
+  - batch/sim/: output/code-138 (09-24), output/code_lib-315.csv (09-22), results_chunk/params-561.dat (09-22)
+
+**grp03**
+- shared/: fluid-881.txt (09-21), neuron.py (09-21), tmp_archive-543.txt (10-03), video_weights.txt (09-12)
+- usr001/: profile-158.dat (10-01), step_image.log (09-27), trace/scratch_trace.csv (10-10), train/neuron.log (10-02), mesh/survey_lattice/scratch-154 (09-26)
+  - chunk/train/: code/run.log (10-02), slice_image-671.log (09-20)
+  - chunk/audio/: text-548.dat (10-08), job/output.csv (09-27), stage/clean_text-692.log (09-18)
+  - chunk/audio/archive/: sim_weights.txt (09-22), corpus/old_corpus-188.csv (09-22), weights_profile/corpus_sim-271 (10-06)
+- usr004/climate_survey/: figures-010.csv (10-02), old_backup/genome.py (10-07)
+- usr004/part_epoch/: climate_particle.png (10-11), dataset_archive/mesh_ocean.dat (09-29), final/gpu/lattice_gpu-244.gz (10-09)
+  - draft/: clean_raw.csv (09-21), phase_figures/draft_fluid/input.log (10-04)
+- usr004/scratch_stage/: run_checkpoint.gz (10-11), tests_clean-005.dat (10-09)
+- usr004/train/: job_tmp-456.txt (10-02), tests-620.png (10-07), model_report/gpu.csv (09-21)
+  - tests_protein/: .dataset_profile-880.dat (09-26), old_chunk/model_archive.h5 (09-17), particle/shard_audio-902.log (09-13)
+- usr011/lattice/: phase_sample.h5 (09-28), scratch_part.txt (09-29), audio_tests/lattice.png (10-10)
+  - shard_lattice/: stage_genome/clean_analysis-687.csv (09-12), survey_final/.text_audio.log (09-30), survey_final/run_trace-038.csv (10-07)
+- usr011/lattice/run_protein/: tmp_bench-935.c (10-10), results/run-230.c (09-28)
+  - notes/: protein_config.json (09-18), shard.dat (10-07), stage.png (10-11)
+- usr011/lattice/run_protein/archive_params/: image_layer.dat (10-07), shard_analysis.py (09-27)
+  - archive_checkpoint/: layer-345.log (09-18), batch_metrics/bench_fluid.log (10-01), batch_metrics/sample_data-659.csv (09-25)
+  - stage_raw/: signal_image.log (09-24), profile/batch.log (10-09), profile/cache.py (09-20), profile/image.csv (10-07), tests/figures_paper.log (09-19), tests/raw-650.py (09-24)
+- usr011/scratch/: node_report.dat (09-18), report/analysis.json (10-09), report/phase-949.json (09-21)
+
+**grp04**
+- shared/: signal_paper-269.log (09-15), video_fluid-210.c (09-19)
+- usr005/: cache_part-979.py (09-29), job_data.txt (10-11)
+  - params/: audio.py (10-11), corpus_old.json (10-11)
+  - params/protein/: mesh-427.py (09-20), node_logs/config.log (09-29), weights_fluid-348.dat (09-27)
+  - params/protein/genome_shard/results_raw/: config_field-056.log (10-06), plots-285.gz (09-18), profile.csv (10-11)
+- usr006/: run_chunk.log (10-04)
+  - ocean/: corpus_clean-

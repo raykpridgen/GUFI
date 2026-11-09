@@ -1,0 +1,124 @@
+{
+  "scenario": "age_histogram",
+  "trial": 3,
+  "pass": false,
+  "passed_on_attempt": null,
+  "aggregate_revision_count": 4,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "cat TEXT",
+    "per_directory_sql": [
+      "SELECT agecat(mtime) FROM vrpentries WHERE type = 'f'"
+    ],
+    "partial_shape": "cat TEXT, count INT64",
+    "partial_sql": "SELECT cat, COUNT(*) FROM per_directory GROUP BY cat",
+    "final_sql": "SELECT cat, SUM(count) AS count FROM partial GROUP BY cat"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT CASE WHEN (1791763200 - mtime) >= 10*365*24*3600 THEN 'Older than 10 years' WHEN (1791763200 - mtime) >= 5*365*24*3600 THEN 'Older than 5 years' WHEN (1791763200 - mtime) >= 365*24*3600 THEN 'Older than 1 year' ELSE 'Recent' END AS age_band FROM vrpentries"
+    ],
+    "per_directory_shape": "age_band TEXT",
+    "partial_sql": "SELECT age_band, COUNT(*) FROM per_directory GROUP BY age_band",
+    "partial_shape": "age_band TEXT, count INT64",
+    "final_sql": "SELECT age_band, SUM(count) AS count FROM partial GROUP BY age_band"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT strftime('%Y-%m', mtime) AS age_band, COUNT(*) FROM vrpentries GROUP BY age_band"
+      ],
+      "per_directory_shape": "age_band TEXT",
+      "partial_sql": "SELECT age_band, COUNT(*) FROM per_directory GROUP BY age_band",
+      "partial_shape": "age_band TEXT, count INT64",
+      "final_sql": "SELECT age_band, SUM(count) AS count FROM partial GROUP BY age_band"
+    },
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT mtime < now - 10*365*24*3600 AS age_band_older_than_10_years FROM vrpentries",
+        "SELECT mtime < now - 5*365*24*3600 AND mtime >= now - 10*365*24*3600 AS age_band_older_than_5_years FROM vrpentries",
+        "SELECT mtime < now - 365*24*3600 AND mtime >= now - 5*365*24*3600 AS age_band_older_than_1_year FROM vrpentries",
+        "SELECT mtime >= now - 365*24*3600 AS age_band_recent FROM vrpentries"
+      ],
+      "per_directory_shape": "age_band_older_than_10_years INT64, age_band_older_than_5_years INT64, age_band_older_than_1_year INT64, age_band_recent INT64",
+      "partial_sql": "SELECT SUM(age_band_older_than_10_years) AS older_than_10_years, SUM(age_band_older_than_5_years) AS older_than_5_years, SUM(age_band_older_than_1_year) AS older_than_1_year, SUM(age_band_recent) AS recent FROM per_directory",
+      "partial_shape": "older_than_10_years INT64, older_than_5_years INT64, older_than_1_year INT64, recent INT64",
+      "final_sql": "SELECT older_than_10_years, older_than_5_years, older_than_1_year, recent FROM partial"
+    },
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT CASE WHEN mtime < now - 10*365*24*3600 THEN 'Older than 10 years' WHEN mtime < now - 5*365*24*3600 THEN 'Older than 5 years' WHEN mtime < now - 365*24*3600 THEN 'Older than 1 year' ELSE 'Recent' END AS age_band FROM vrpentries"
+      ],
+      "per_directory_shape": "age_band TEXT",
+      "partial_sql": "SELECT age_band, COUNT(*) FROM per_directory GROUP BY age_band",
+      "partial_shape": "age_band TEXT, count INT64",
+      "final_sql": "SELECT age_band, SUM(count) AS count FROM partial GROUP BY age_band"
+    },
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT CASE WHEN (now - mtime) >= 10*365*24*3600 THEN 'Older than 10 years' WHEN (now - mtime) >= 5*365*24*3600 THEN 'Older than 5 years' WHEN (now - mtime) >= 365*24*3600 THEN 'Older than 1 year' ELSE 'Recent' END AS age_band FROM vrpentries"
+      ],
+      "per_directory_shape": "age_band TEXT",
+      "partial_sql": "SELECT age_band, COUNT(*) FROM per_directory GROUP BY age_band",
+      "partial_shape": "age_band TEXT, count INT64",
+      "final_sql": "SELECT age_band, SUM(count) AS count FROM partial GROUP BY age_band"
+    },
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT CASE WHEN (1791763200 - mtime) >= 10*365*24*3600 THEN 'Older than 10 years' WHEN (1791763200 - mtime) >= 5*365*24*3600 THEN 'Older than 5 years' WHEN (1791763200 - mtime) >= 365*24*3600 THEN 'Older than 1 year' ELSE 'Recent' END AS age_band FROM vrpentries"
+      ],
+      "per_directory_shape": "age_band TEXT",
+      "partial_sql": "SELECT age_band, COUNT(*) FROM per_directory GROUP BY age_band",
+      "partial_shape": "age_band TEXT, count INT64",
+      "final_sql": "SELECT age_band, SUM(count) AS count FROM partial GROUP BY age_band"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": false,
+      "passed": false,
+      "row_count": 0,
+      "reason": "call failed: Error executing tool aggregate_sql_query: 1 validation error for aggregate_sql_queryArguments\nquery\n  Value error, per_directory_sql[0]: SELECT returns 2 column(s) but per_directory_shape has 1 [type=value_error, input_value={'index': 'eval_master', ...tial GROUP BY age_band'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+    },
+    {
+      "attempt": 2,
+      "ok": false,
+      "passed": false,
+      "row_count": 0,
+      "reason": "call failed: Error executing tool aggregate_sql_query: 1 validation error for aggregate_sql_queryArguments\nquery.per_directory_sql\n  List should have at most 3 items after validation, not 4 [type=too_long, input_value=['SELECT mtime < now - 10...recent FROM vrpentries'], input_type=list]\n    For further information visit https://errors.pydantic.dev/2.13/v/too_long"
+    },
+    {
+      "attempt": 3,
+      "ok": false,
+      "passed": false,
+      "row_count": 0,
+      "reason": "call failed: Error executing tool aggregate_sql_query: 1 validation error for aggregate_sql_queryArguments\nquery\n  Value error, per_directory_sql[0]: column(s) now do not exist in vrpentries [type=value_error, input_value={'index': 'eval_master', ...tial GROUP BY age_band'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+    },
+    {
+      "attempt": 4,
+      "ok": false,
+      "passed": false,
+      "row_count": 0,
+      "reason": "call failed: Error executing tool aggregate_sql_query: 1 validation error for aggregate_sql_queryArguments\nquery\n  Value error, per_directory_sql[0]: column(s) now do not exist in vrpentries [type=value_error, input_value={'index': 'eval_master', ...tial GROUP BY age_band'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+    },
+    {
+      "attempt": 5,
+      "ok": true,
+      "passed": false,
+      "row_count": 2,
+      "reason": "row count 2 != expected 3"
+    }
+  ],
+  "gt_row_count": 3,
+  "agent_row_count": 2,
+  "ordered_compare": false,
+  "column_permutation": null,
+  "reason": "row count 2 != expected 3 (attempt 5 of 5)"
+}

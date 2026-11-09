@@ -1,0 +1,141 @@
+There are **300 symbolic links** in `eval_master`, all under `eval_master/groups/`. **69 of them point to targets named `missing_*`**, which suggests they're deliberately broken. I only read the index, though, so I haven't checked whether any target actually exists on disk.
+
+Paths below are relative to `eval_master/groups/`, written as `link → target`. Targets are shown exactly as stored, so relative targets resolve from the link's own directory.
+
+### grp01
+**usr003**
+- checkpoint/cache.lnk → missing_protein
+- checkpoint/climate_code.lnk → report/draft_node-267.txt
+- checkpoint/node_dataset.lnk → weights-535.h5
+- checkpoint/report/corpus.lnk → missing_gpu
+- checkpoint/report/input_src.lnk → climate_corpus-020.log
+- checkpoint/report/notes/analysis.lnk → ../../../text_grid/final_input-479.txt
+- checkpoint/report/notes/old.lnk → ../../cache_particle.log
+- checkpoint/report/notes/part.lnk → ../params/profile-847.gz
+- checkpoint/report/paper_params.lnk → params/eval_checkpoint.dat
+- checkpoint/report/params/chunk_train.lnk → ../notes/logs.csv
+- checkpoint/report/params/part.lnk → ../../../text_grid/final-199.png
+- checkpoint/report/profile.lnk → missing_particle
+- checkpoint/report/run.lnk → params/bench_plots-011.json
+- checkpoint/report/src_part.lnk → notes/ocean-386.log
+- cluster.lnk → text_grid/final_input-479.txt
+- corpus_fluid.lnk → ../shared/model_metrics.json
+- report.lnk → checkpoint/report/notes/ocean-828.txt
+- text_grid/genome.lnk → ../checkpoint/report/params/genome-275.csv
+- text_grid/grid.lnk → ../survey.log
+- text_grid/input.lnk → ../checkpoint/report/params/protein_chunk.csv
+- text_grid/logs_slice.lnk → ../lattice_mesh-567.txt
+- text_grid/neuron_epoch.lnk → ../checkpoint/report/notes/corpus_mesh-999.gz
+- text_grid/tests.lnk → ../checkpoint/report/params/input_old-184.png
+- weights.lnk → text_grid/corpus_tmp-123.gz
+
+**usr009** (OL = output_lib/cluster_batch)
+- input/ocean/epoch.lnk → missing_trace
+- OL/output/climate_clean/protein_src.lnk → ../../image_lib.csv
+- OL/output/climate_clean/train_signal.lnk → ../../../../../shared/output.json
+- OL/output/dataset.lnk → gpu_sim/field_grid-197.csv
+- OL/output/gpu_sim/lib.lnk → notes/bench.json
+- OL/output/gpu_sim/logs_input/src.lnk → ../notes/field.log
+- OL/output/gpu_sim/stage-2.lnk → missing_code
+- OL/output/gpu_sim/train_tmp/particle.lnk → ../../../step.dat
+- OL/output/gpu_sim/train_tmp/particle_params.lnk → ../../train/survey_mesh.h5
+- OL/output/gpu_sim/train_tmp/train.lnk → missing_lattice
+- OL/output/node.lnk → missing_phase
+- OL/output/slice/report/backup.lnk → ../../train/video_chunk.csv
+- OL/output/train/sample_src.lnk → ../../video_old/backup/build_corpus-473.txt
+- OL/particle.lnk → missing_slice
+- OL/video_old/audio_plots/metrics.lnk → ../../../../raw.txt
+- OL/video_old/audio_plots/output.lnk → ../../bench/.checkpoint-827.txt
+- OL/video_old/protein/backup.lnk → ../../output/gpu_sim/paper_lib.csv
+- OL/video_old/protein/cache_code.lnk → ../../output/gpu_sim/notes/layer_phase.c
+- OL/video_old/protein/checkpoint_train/protein_corpus.lnk → ../../../../../../shared/sim_cluster.txt
+- OL/video_old/protein/part_stage.lnk → ../../output/slice/layer_part-801.c
+- output_lib/output.lnk → missing_grid
+
+**usr014**
+- checkpoint_lattice.lnk → missing_build
+- clean/bench/profile.lnk → ../../code_cluster-136.gz
+- clean/bench/signal.lnk → ../protein.py
+- clean/data/dataset.lnk → ../step/run/cache_data.log
+- clean/data/sample_build/notes_cache.lnk → ../../../climate-527.py
+- clean/step/fluid.lnk → gpu_tests.csv
+- clean/step/run/draft.lnk → analysis.c
+- clean/step/text_bench.lnk → run/image-697.png
+- climate.lnk → clean/survey_lib.txt
+- sample_stage.lnk → missing_logs
+- text.lnk → node_video-843.log
+
+### grp02
+**usr002** (RN = src_slice/checkpoint/results_neuron)
+- backup.lnk → src_slice/checkpoint/results_neuron/model/cluster_sample/ocean-957.txt
+- genome/chunk.lnk → ../src_slice/checkpoint/results_neuron/final/gpu.txt
+- genome/cluster.lnk → ../src_slice/checkpoint/results_neuron/lib-921
+- genome/node-2.lnk → ../.trace_grid.txt
+- genome/node/audio.lnk → fluid_build-928.dat
+- genome/train.lnk → ../src_slice/checkpoint/results_neuron/slice/node.h5
+- scratch.lnk → missing_layer
+- src_slice/checkpoint/build_field.lnk → ../final/run/cluster_dataset-689.dat
+- RN/chunk.lnk → metrics_code.dat
+- RN/final/step.lnk → ../lattice_src-921.dat
+- RN/model/cluster_sample/profile.lnk → missing_scratch
+- RN/notes_metrics.lnk → model/cluster_sample/cluster_climate-770.dat
+- RN/profile_mesh.lnk → missing_analysis
+- RN/sample_layer.lnk → slice/output.py
+- RN/slice/protein_fluid.lnk → missing_step
+- src_slice/final/field.lnk → missing_signal
+- src_slice/final/phase.lnk → ../checkpoint/trace_tests.dat
+- src_slice/final/run/data.lnk → ../../checkpoint/results_neuron/model/cluster_sample/run_data.gz
+- src_slice/metrics.lnk → checkpoint/results_neuron/final/.weights_config-188.csv
+
+**usr007**
+- audio_archive/batch.lnk → missing_step
+- audio_archive/field.lnk → grid/results-703.png
+- audio_archive/grid/corpus_batch.lnk → video-898
+- audio_archive/grid/image.lnk → ../../metrics_image/gpu_raw/stage_metrics/code_step-996.png
+- audio_archive/grid/phase.lnk → ../../sim_cluster/eval/tests/cache-760.dat
+- metrics_image/checkpoint_report/final/signal.lnk → ../../../sim_cluster/metrics/build_genome-858.log
+- metrics_image/checkpoint_report/part.lnk → missing_batch
+- metrics_image/checkpoint_report/run.lnk → ../../audio_archive/grid/.climate_archive-123.h5
+- metrics_image/checkpoint_report/sim_notes.lnk → ../../sim_cluster/metrics/field-479.dat
+- metrics_image/gpu_raw/build.lnk → ../image/plots_job-916.dat
+- metrics_image/image/node_checkpoint.lnk → missing_final
+- metrics_image/run_archive/archive/epoch_slice.lnk → ../../../../shared/chunk_eval.py
+- metrics_image/run_archive/eval_report.lnk → missing_output
+- metrics_image/text.lnk → gpu_raw/data-910.txt
+- sim_cluster/eval/tests/results_cluster.lnk → ../../../../shared/lattice_step.log
+- sim_cluster/eval/tests/shard.lnk → batch_plots-155.dat
+- sim_cluster/image_eval/cache.lnk → ../metrics/stage/node-956.log
+- sim_cluster/metrics/stage/genome/scratch.lnk → missing_figures
+- sim_cluster/metrics/stage/genome/step.lnk → ../../../../metrics_image/sample_stage.json
+- sim_cluster/metrics/stage/train/chunk.lnk → ../genome/report.png
+- sim_cluster/metrics/stage/train/lattice.lnk → lattice_model-474.csv
+- sim_cluster/metrics/stage/train/node_figures.lnk → missing_text
+- sim_cluster/stage_paper.lnk → metrics/stage/step-478.dat
+
+**usr013** (TL = batch/step/tmp_particle/lattice)
+- batch/data.lnk → sim/backup
+- batch/fluid_part.lnk → step/chunk_data-949.json
+- batch/lattice.lnk → step/tmp_particle/lattice/train/mesh_notes-308.json
+- batch/logs.lnk → missing_params
+- batch/params.lnk → ../cluster_code/video_slice-386.log
+- batch/sim/results_chunk/ocean_data/cache_sim.lnk → lib_phase.png
+- batch/sim/results_chunk/ocean_data/field_job.lnk → ../../../../cluster_code/draft-728.dat
+- batch/sim/results_chunk/output/src.lnk → ../../../../chunk/chunk_bench/notes-159.txt
+- batch/sim/results_chunk/video_bench/draft_paper.lnk → missing_lattice
+- batch/sim/scratch.lnk → ../../chunk/epoch_cache.log
+- batch/sim/stage_lattice.lnk → ../../cluster_code/climate_params-780.log
+- batch/sim_neuron.lnk → missing_src
+- TL/params.lnk → ../../../sim/results_chunk/output/batch_final-084.h5
+- TL/train/lattice_text.lnk → ../../gpu/input_job.gz
+- TL/train/train.lnk → ../../../../sim/survey_bench-248.png
+- TL/train/weights_cluster.lnk → ../../../../sim/results_chunk/profile_dataset-779.py
+- batch/step/tmp_particle/signal.lnk → ../../sim/results_chunk/output/data-320
+- batch/step/tmp_particle/trace.lnk → old.txt
+- chunk/chunk_bench/old_notes.lnk → ../../cluster_code/final_train-745.dat
+- chunk/input_neuron.lnk → missing_figures
+- chunk/profile.lnk → missing_archive
+- field.lnk → run_plots-058.log
+- lib_image.lnk → batch/step/tmp_particle/gpu/data.json
+
+### grp03
+**usr001

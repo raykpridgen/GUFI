@@ -1,0 +1,20 @@
+In the `eval_master` index, the largest file types by total size are as follows:
+
+1. Regular files (type 'f') are the predominant file type, taking up significantly more space than symlinks (type 'l'). The largest sizes for the largest regular files are:
+   - 2,465,615,735 bytes
+   - 1,519,825,026 bytes
+   - 1,304,332,531 bytes
+   - 1,213,105,038 bytes
+   - 768,742,165 bytes
+   - 299,528,609 bytes
+   - 280,230,722 bytes
+   - 226,763,848 bytes
+   - 196,461,775 bytes
+   - 188,398,079 bytes
+   - 175,914,601 bytes
+   - 158,784,186 bytes
+
+2. The symlink files (type 'l') have much smaller sizes:
+   - The largest size for symlinks is 1,047 bytes.
+
+Overall, regular files take up a vast majority of the space in the `eval_master` index compared to symlinks.

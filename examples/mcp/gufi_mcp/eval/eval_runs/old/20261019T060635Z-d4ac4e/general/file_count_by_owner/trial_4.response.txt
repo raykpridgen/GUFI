@@ -1,0 +1,16 @@
+These are the 10 users who own the most regular files in eval_master. The index stores numeric user IDs, not usernames.
+
+| Rank | UID | Files |
+|---|---|---|
+| 1 | 3003 | 794 |
+| 2 | 3012 | 783 |
+| 3 (tie) | 3013 | 770 |
+| 3 (tie) | 3007 | 770 |
+| 5 | 3008 | 756 |
+| 6 | 3006 | 729 |
+| 7 | 3011 | 712 |
+| 8 | 3010 | 694 |
+| 9 | 3009 | 685 |
+| 10 | 3002 | 635 |
+
+The next user, UID 3001, has 600 files, so there's no tie at the 10th spot. The count includes only regular files; symlinks and directories are left out.

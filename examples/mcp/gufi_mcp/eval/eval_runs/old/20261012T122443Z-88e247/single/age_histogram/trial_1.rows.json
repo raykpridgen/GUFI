@@ -1,0 +1,54 @@
+{
+  "ordered_compare": false,
+  "row_order": "compared order (both sides sorted)",
+  "expected": [
+    [
+      "Days",
+      53
+    ],
+    [
+      "Hrs",
+      7
+    ],
+    [
+      "Mos",
+      3093
+    ],
+    [
+      "Wks",
+      198
+    ],
+    [
+      "Yrs",
+      6638
+    ]
+  ],
+  "actual": [
+    [
+      "Days",
+      53
+    ],
+    [
+      "Hrs",
+      7
+    ],
+    [
+      "Mos",
+      3093
+    ],
+    [
+      "Wks",
+      198
+    ],
+    [
+      "Yrs",
+      6638
+    ]
+  ],
+  "missing_from_actual": [],
+  "unexpected_in_actual": [],
+  "expected_row_count": 5,
+  "actual_row_count": 5,
+  "gt_duration_ms": 28.821678999520373,
+  "agent_duration_ms": 30.489
+}

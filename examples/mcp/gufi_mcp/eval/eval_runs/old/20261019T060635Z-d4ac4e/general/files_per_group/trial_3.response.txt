@@ -1,0 +1,11 @@
+Five groups own regular files in eval_master, 9,989 files in total:
+
+| GID  | Files |
+|------|------:|
+| 2002 | 2,175 |
+| 2005 | 2,100 |
+| 2004 | 1,997 |
+| 2003 | 1,879 |
+| 2001 | 1,838 |
+
+These counts are regular files only, so symlinks and directories aren't included. The index stores group IDs as numbers, not group names.

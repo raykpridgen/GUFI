@@ -1,0 +1,53 @@
+{
+  "scenario": "ext_winner",
+  "trial": 1,
+  "pass": false,
+  "passed_on_attempt": null,
+  "aggregate_revision_count": 0,
+  "ground_truth": {
+    "index": "eval_master",
+    "per_directory_shape": "ext TEXT",
+    "per_directory_sql": [
+      "SELECT ext(name) FROM vrpentries WHERE type = 'f'"
+    ],
+    "partial_shape": "ext TEXT, count INT64",
+    "partial_sql": "SELECT ext, COUNT(*) FROM per_directory GROUP BY ext",
+    "final_sql": "SELECT ext, SUM(count) AS count FROM partial GROUP BY ext ORDER BY count DESC LIMIT 1"
+  },
+  "agent": {
+    "index": "eval_master",
+    "per_directory_sql": [
+      "SELECT ext(name) AS ext FROM vrpentries"
+    ],
+    "per_directory_shape": "ext TEXT",
+    "partial_sql": "SELECT ext, COUNT(*) AS count FROM per_directory GROUP BY ext",
+    "partial_shape": "ext TEXT, count INT64",
+    "final_sql": "SELECT ext, count FROM partial ORDER BY count DESC LIMIT 1"
+  },
+  "agent_attempts": [
+    {
+      "index": "eval_master",
+      "per_directory_sql": [
+        "SELECT ext(name) AS ext FROM vrpentries"
+      ],
+      "per_directory_shape": "ext TEXT",
+      "partial_sql": "SELECT ext, COUNT(*) AS count FROM per_directory GROUP BY ext",
+      "partial_shape": "ext TEXT, count INT64",
+      "final_sql": "SELECT ext, count FROM partial ORDER BY count DESC LIMIT 1"
+    }
+  ],
+  "attempt_results": [
+    {
+      "attempt": 1,
+      "ok": true,
+      "passed": false,
+      "row_count": 1,
+      "reason": "values differ: 1 expected row(s) missing, 1 unexpected"
+    }
+  ],
+  "gt_row_count": 1,
+  "agent_row_count": 1,
+  "ordered_compare": true,
+  "column_permutation": null,
+  "reason": "values differ: 1 expected row(s) missing, 1 unexpected (attempt 1 of 1)"
+}

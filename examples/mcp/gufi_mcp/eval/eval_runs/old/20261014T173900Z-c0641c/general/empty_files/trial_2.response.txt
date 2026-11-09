@@ -1,0 +1,6 @@
+There are no empty files in the `eval_master` index. The ownership details for the directories in this index are as follows:
+
+- The owner of `eval_master` is `root` with UID 0.
+- The owner of all subdirectories reported earlier (which contain files) is also `root` with GID 0.
+
+Thus, the empty file count is 0, and the owner of all relevant directories (which is likely the same for any files) is `root`.

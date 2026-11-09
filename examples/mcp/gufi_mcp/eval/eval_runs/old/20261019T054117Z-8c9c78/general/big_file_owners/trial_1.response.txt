@@ -1,0 +1,16 @@
+The files larger than 1 GB in the `eval_master` index are associated with the following group IDs (GIDs) and their respective file paths:
+
+1. **GID 2005**
+   - File 1: `eval_master/groups/grp05/usr012/output/scratch.c` (Size: 1,261,921,083 bytes)
+   - File 2: `eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt` (Size: 1,126,192,108 bytes)
+
+2. **GID 2003**
+   - File: `eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py` (Size: 1,123,091,592 bytes)
+
+3. **GID 2001**
+   - File: `eval_master/groups/grp01/usr014/clean/step/old.log` (Size: 1,228,550,276 bytes)
+
+In summary:
+- GID 2001 owns the file `old.log`.
+- GID 2003 owns the file `tests_output.py`.
+- GID 2005 owns the files `scratch.c` and `text_run.txt`.

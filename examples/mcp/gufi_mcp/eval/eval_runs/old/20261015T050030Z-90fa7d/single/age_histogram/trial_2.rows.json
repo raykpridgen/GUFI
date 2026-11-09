@@ -1,0 +1,80 @@
+{
+  "ordered_compare": false,
+  "row_order": "compared order (both sides sorted)",
+  "expected": [
+    [
+      "Days",
+      30
+    ],
+    [
+      "Mos",
+      3088
+    ],
+    [
+      "Wks",
+      204
+    ],
+    [
+      "Yrs",
+      6667
+    ]
+  ],
+  "actual": [
+    [
+      "Modified in last 30 days",
+      199
+    ],
+    [
+      "Modified in last 7 days",
+      70
+    ],
+    [
+      "Modified in last 90 days",
+      590
+    ],
+    [
+      "Older than 90 days",
+      9430
+    ]
+  ],
+  "missing_from_actual": [
+    [
+      "Days",
+      30
+    ],
+    [
+      "Mos",
+      3088
+    ],
+    [
+      "Wks",
+      204
+    ],
+    [
+      "Yrs",
+      6667
+    ]
+  ],
+  "unexpected_in_actual": [
+    [
+      "Modified in last 30 days",
+      199
+    ],
+    [
+      "Modified in last 7 days",
+      70
+    ],
+    [
+      "Modified in last 90 days",
+      590
+    ],
+    [
+      "Older than 90 days",
+      9430
+    ]
+  ],
+  "expected_row_count": 4,
+  "actual_row_count": 4,
+  "gt_duration_ms": 29.99299300063285,
+  "agent_duration_ms": 32.257
+}

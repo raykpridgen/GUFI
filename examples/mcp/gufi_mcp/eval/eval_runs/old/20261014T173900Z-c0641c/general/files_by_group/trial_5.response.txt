@@ -1,0 +1,5 @@
+The following users have files in group 2003 in the `eval_master` index, along with the count of files each has:
+
+- User ID 3001: 618 files
+- User ID 3004: 584 files
+- User ID 3011: 733 files

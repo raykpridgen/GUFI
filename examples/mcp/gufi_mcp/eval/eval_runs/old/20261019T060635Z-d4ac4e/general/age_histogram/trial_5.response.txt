@@ -1,0 +1,19 @@
+I counted the regular files in eval_master (symlinks left out) and grouped them by how long ago they were last modified, measured from 2026-10-12:
+
+| Last modified | Files | % of files | Total size |
+|---|---:|---:|---:|
+| Less than 1 day ago | 15 | 0.2% | 2.6 MB |
+| 1–7 days ago | 51 | 0.5% | 9.1 MB |
+| 7–30 days ago | 195 | 2.0% | 55.1 MB |
+| 30–90 days ago | 571 | 5.7% | 1.25 GB |
+| 90 days – 1 year ago | 2,526 | 25.3% | 1.88 GB |
+| 1–2 years ago | 3,321 | 33.2% | 3.61 GB |
+| 2–5 years ago | 3,310 | 33.1% | 1.98 GB |
+| **Total** | **9,989** | 100% | **8.80 GB** |
+
+- **Most files haven't changed in a long time.** About 66% of the files (6,631) were last modified more than a year ago. They hold about 5.6 GB, roughly 64% of all the data.
+- **Few files are changed often.** Only 261 files (2.6%) were modified in the last 30 days, and they add up to just 67 MB.
+- **The 30–90 day group has big files.** It's only 571 files but 1.25 GB, about 2.2 MB per file. That's well above the overall average of about 0.9 MB.
+- **The oldest file is about 3 years old** (last changed in October 2023). So the "2–5 years ago" row really only covers 2 to 3 years. No file is dated in the future, and none is older than 5 years.
+
+If it helps for cleanup, I can split the files that are over a year old by owner, directory or file extension.

@@ -1,0 +1,3 @@
+**4 files** in eval_master are bigger than 1 GiB.
+
+That counts regular files whose size is more than 1,073,741,824 bytes. Symlinks and directories aren't included.

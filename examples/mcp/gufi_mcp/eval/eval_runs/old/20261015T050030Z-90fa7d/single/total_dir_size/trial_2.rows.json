@@ -1,0 +1,65 @@
+{
+  "ordered_compare": false,
+  "row_order": "compared order (both sides sorted)",
+  "expected": [
+    [
+      1056768
+    ]
+  ],
+  "actual": [
+    [
+      21,
+      86016
+    ],
+    [
+      22,
+      90112
+    ],
+    [
+      22,
+      90112
+    ],
+    [
+      22,
+      90112
+    ],
+    [
+      23,
+      94208
+    ],
+    [
+      21,
+      86016
+    ],
+    [
+      23,
+      94208
+    ],
+    [
+      22,
+      90112
+    ],
+    [
+      21,
+      86016
+    ],
+    [
+      22,
+      90112
+    ],
+    [
+      20,
+      81920
+    ],
+    [
+      19,
+      77824
+    ]
+  ],
+  "missing_from_actual": [],
+  "unexpected_in_actual": [],
+  "expected_row_count": 1,
+  "actual_row_count": 12,
+  "gt_duration_ms": 27.1143750014744,
+  "agent_duration_ms": 22.079
+}

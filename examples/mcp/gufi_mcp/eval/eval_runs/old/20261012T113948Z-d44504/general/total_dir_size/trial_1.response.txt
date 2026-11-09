@@ -1,0 +1,1 @@
+The combined size in bytes of every directory in the `eval_master` index, including the index's top-level directory, is **1,056,768 bytes**.

@@ -1,0 +1,6 @@
+In the `eval_master` index, the file types taking up the most space are as follows:
+
+- **Regular files (`f`)**: 8,797,702,315 bytes
+- **Symbolic links (`l`)**: 8,271 bytes
+
+Regular files significantly dominate the disk space usage compared to symbolic links.

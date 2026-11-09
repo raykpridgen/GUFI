@@ -1,0 +1,13 @@
+Four files in eval_master are over 1 GB. All four are also over 1 GiB (1,073,741,824 bytes), so the count is the same either way.
+
+| Owner UID | GID | Size | Path |
+|---|---|---|---|
+| 3012 | 2005 | 1,261,921,083 B (~1.18 GiB) | eval_master/groups/grp05/usr012/output/scratch.c |
+| 3014 | 2001 | 1,228,550,276 B (~1.14 GiB) | eval_master/groups/grp01/usr014/clean/step/old.log |
+| 3001 | 2003 | 1,123,091,592 B (~1.05 GiB) | eval_master/groups/grp03/usr001/chunk/audio/archive/tests_output.py |
+| 3008 | 2005 | 1,113,310,933 B (~1.04 GiB) | eval_master/groups/grp05/usr008/cache_text/signal_ocean/plots_protein/text_output/text_run.txt |
+
+- **Owners:** Four different users each own one file: UIDs 3012, 3014, 3001 and 3008. Each file sits in that user's own folder (for example, usr012 holds the file owned by UID 3012).
+- **Locations:** All four are under `eval_master/groups/`. Two are in group grp05 (GID 2005), and grp01 and grp03 have one each.
+- **Names:** The system has no user or group names for these UIDs and GIDs, so I can only give the numbers. A second search that tried to show names returned an error for each of these four files.
+- **Worth checking:** A ~1.2 GB `.c` file and a ~1.1 GB `.py` file are unusually large for source code. They may be data or output files with misleading names.

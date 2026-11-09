@@ -1,0 +1,25 @@
+Here’s a list of file names that appear more than once in the `eval_master` index, along with their counts:
+
+- `.build.txt`: 2
+- `.particle.py`: 2
+- `analysis.c`: 2
+- `analysis.csv`: 3
+- `analysis.dat`: 3
+- `analysis.gz`: 2
+- `analysis.log`: 4
+- `analysis.py`: 2
+- `analysis.txt`: 2
+- `analysis_stage`: 2
+- `archive`: 3
+- `archive.c`: 2
+- `archive.csv`: 3
+- `archive.dat`: 2
+- `archive.h5`: 2
+- `archive.json`: 2
+- `archive.log`: 2
+- `archive.png`: 2
+- `archive.py`: 3
+- `archive.txt`: 6
+- ...
+
+There are many more entries; if you need the count for specific files or a smaller subset of this data, please let me know.

@@ -1,0 +1,1 @@
+The total number of regular files (type 'f') in the eval_master index is 9,989, with a combined size of 8,797,702,315 bytes.

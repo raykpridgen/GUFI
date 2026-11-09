@@ -1,0 +1,1 @@
+The `eval_master` index contains a total of **1191 files** which collectively occupy **40,322,253,734 bytes** (approximately 40.3 GB).

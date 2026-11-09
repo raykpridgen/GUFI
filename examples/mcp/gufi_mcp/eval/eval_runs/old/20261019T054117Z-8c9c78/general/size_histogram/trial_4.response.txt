@@ -1,0 +1,46 @@
+Here's a breakdown of the files in the `eval_master` index by size, rounded to the nearest kilobyte (KB):
+
+| Size (KB) | Count |
+|-----------|-------|
+| 0         | 503   |
+| 1         | 438   |
+| 2         | 266   |
+| 3         | 183   |
+| 4         | 132   |
+| 5         | 107   |
+| 6         | 94    |
+| 7         | 79    |
+| 8         | 76    |
+| 9         | 45    |
+| 10        | 71    |
+| 11        | 64    |
+| 12        | 64    |
+| 13        | 83    |
+| 14        | 61    |
+| 15        | 56    |
+| 16        | 51    |
+| 17        | 47    |
+| 18        | 40    |
+| 19        | 53    |
+| 20        | 44    |
+| 21        | 38    |
+| 22        | 29    |
+| 23        | 32    |
+| 24        | 29    |
+| 25        | 28    |
+| 26        | 33    |
+| 27        | 23    |
+| 28        | 25    |
+| 29        | 27    |
+| 30        | 24    |
+| 31        | 29    |
+| 32        | 24    |
+| 33        | 25    |
+| 34        | 36    |
+| 35        | 24    |
+| 36        | 20    |
+| 37        | 24    |
+| 38        | 27    |
+| 39        | 22    |
+
+The data goes on with various sizes and corresponding counts. If you need further details or specific ranges, please let me know!

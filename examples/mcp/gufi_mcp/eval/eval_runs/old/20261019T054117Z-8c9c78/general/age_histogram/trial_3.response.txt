@@ -1,0 +1,7 @@
+Here is the breakdown of the files in the `eval_master` index by how long ago they were last modified:
+
+- **Modified within the last month (Mos)**: 3,179 files
+- **Modified within the last week (Wks)**: 211 files
+- **Modified over a year ago (Yrs)**: 6,899 files
+
+This categorization gives insight into the recency of modifications to the files in the index.

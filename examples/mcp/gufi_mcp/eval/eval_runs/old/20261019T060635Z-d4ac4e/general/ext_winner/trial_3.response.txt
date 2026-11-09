@@ -1,0 +1,13 @@
+The most common file extension in eval_master is **`.log`**, with **1,410 regular files**.
+
+It's only slightly ahead of the next few:
+
+| Rank | Extension | Files |
+|---|---|---|
+| 1 | `.log` | 1,410 |
+| 2 | `.txt` | 1,390 |
+| 3 | `.csv` | 1,130 |
+| 4 | `.dat` | 1,125 |
+| 5 | `.py` | 1,054 |
+
+These counts come from querying the index directly, because the built-in `gufi_stats` extensions statistic returned nothing. Only regular files were counted, not symlinks or directories. Another 531 files have no extension. Extensions were counted exactly as written, so if any upper-case versions like `.LOG` exist, they were counted separately.
