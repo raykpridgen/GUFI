@@ -1,0 +1,28 @@
+{
+  "run": "20261019T060635Z-d4ac4e",
+  "trials": 200,
+  "graded_trials": 60,
+  "correct": 44,
+  "incorrect": 16,
+  "ungraded": 140,
+  "grade_threshold": 0.9,
+  "correct_by_scenario": {
+    "age_histogram": "0/5",
+    "count_and_size": "5/5",
+    "count_over_1gib": "5/5",
+    "ext_histogram": "4/5",
+    "ext_winner": "5/5",
+    "not_modified_n_days": "5/5",
+    "oldest_k": "5/5",
+    "size_histogram": "0/5",
+    "top10_size_global": "5/5",
+    "top10_size_per_uid": "0/5",
+    "total_dir_size": "5/5",
+    "total_file_size": "5/5"
+  },
+  "error_categories": {
+    "unknown column": 9,
+    "other": 6,
+    "ORDER/LIMIT outside final": 1
+  }
+}
