@@ -1,0 +1,298 @@
+{
+  "20261014T173900Z-c0641c": {
+    "label": "G1. full tools / sname paths",
+    "mode": "general",
+    "all_trials": 200,
+    "user_facing_trials_excluded": 64,
+    "graded_trials": 49,
+    "pass_rate": 0.408,
+    "one_shot_rate": null,
+    "pass_by_scenario": {
+      "age_histogram": 0.0,
+      "count_over_1gib": 0.8,
+      "ext_histogram": 1.0,
+      "ext_winner": 0.0,
+      "not_modified_n_days": 0.0,
+      "oldest_k": 0.8,
+      "size_histogram": 0.0,
+      "top10_size_global": 1.0,
+      "top10_size_per_uid": 0.0,
+      "total_dir_size": 0.5
+    },
+    "failure_reasons": {},
+    "function_use": {}
+  },
+  "20261015T043612Z-ceed58": {
+    "label": "G2. path columns",
+    "mode": "general",
+    "all_trials": 200,
+    "user_facing_trials_excluded": 29,
+    "graded_trials": 51,
+    "pass_rate": 0.392,
+    "one_shot_rate": null,
+    "pass_by_scenario": {
+      "age_histogram": 0.0,
+      "count_and_size": 0.0,
+      "count_over_1gib": 1.0,
+      "ext_histogram": 0.6,
+      "ext_winner": 0.0,
+      "not_modified_n_days": 0.0,
+      "oldest_k": 1.0,
+      "size_histogram": 0.0,
+      "top10_size_global": 1.0,
+      "top10_size_per_uid": 0.0,
+      "total_dir_size": 0.4,
+      "total_file_size": 0.0
+    },
+    "failure_reasons": {},
+    "function_use": {}
+  },
+  "20261015T050030Z-90fa7d": {
+    "label": "S0. first single suite",
+    "mode": "single",
+    "all_trials": 60,
+    "user_facing_trials_excluded": 0,
+    "graded_trials": 60,
+    "pass_rate": 0.35,
+    "one_shot_rate": 0.0,
+    "pass_by_scenario": {
+      "age_histogram": 0.0,
+      "count_and_size": 0.0,
+      "count_over_1gib": 0.8,
+      "ext_histogram": 0.4,
+      "ext_winner": 0.2,
+      "not_modified_n_days": 0.0,
+      "oldest_k": 1.0,
+      "size_histogram": 0.0,
+      "top10_size_global": 1.0,
+      "top10_size_per_uid": 0.4,
+      "total_dir_size": 0.2,
+      "total_file_size": 0.2
+    },
+    "failure_reasons": {
+      "wrong row count": 19,
+      "wrong values": 13,
+      "result truncated": 4,
+      "wrong column count": 3
+    },
+    "function_use": {}
+  },
+  "20261019T054117Z-8c9c78": {
+    "label": "G3. primer / path fixes",
+    "mode": "general",
+    "all_trials": 200,
+    "user_facing_trials_excluded": 33,
+    "graded_trials": 54,
+    "pass_rate": 0.5,
+    "one_shot_rate": null,
+    "pass_by_scenario": {
+      "age_histogram": 0.0,
+      "count_and_size": 0.667,
+      "count_over_1gib": 1.0,
+      "ext_histogram": 1.0,
+      "ext_winner": 0.2,
+      "not_modified_n_days": 0.2,
+      "oldest_k": 1.0,
+      "size_histogram": 0.0,
+      "top10_size_global": 1.0,
+      "top10_size_per_uid": 0.0,
+      "total_dir_size": 0.6,
+      "total_file_size": 0.0
+    },
+    "failure_reasons": {},
+    "function_use": {}
+  },
+  "20261019T060635Z-d4ac4e": {
+    "label": "G4. cleaner aggregate path",
+    "mode": "general",
+    "all_trials": 200,
+    "user_facing_trials_excluded": 42,
+    "graded_trials": 43,
+    "pass_rate": 0.721,
+    "one_shot_rate": null,
+    "pass_by_scenario": {
+      "age_histogram": 0.0,
+      "count_and_size": 1.0,
+      "count_over_1gib": 1.0,
+      "not_modified_n_days": 1.0,
+      "oldest_k": 1.0,
+      "size_histogram": 0.0,
+      "top10_size_global": 1.0,
+      "top10_size_per_uid": 0.0,
+      "total_dir_size": 1.0,
+      "total_file_size": 1.0
+    },
+    "failure_reasons": {},
+    "function_use": {}
+  },
+  "20261026T133502Z-28ac34": {
+    "label": "S1. baseline (new grading)",
+    "mode": "single",
+    "all_trials": 60,
+    "user_facing_trials_excluded": 0,
+    "graded_trials": 60,
+    "pass_rate": 0.45,
+    "one_shot_rate": 0.35,
+    "pass_by_scenario": {
+      "age_histogram": 0.0,
+      "count_and_size": 0.0,
+      "count_over_1gib": 1.0,
+      "ext_histogram": 0.6,
+      "ext_winner": 0.4,
+      "not_modified_n_days": 0.0,
+      "oldest_k": 1.0,
+      "size_histogram": 0.0,
+      "top10_size_global": 1.0,
+      "top10_size_per_uid": 0.6,
+      "total_dir_size": 0.8,
+      "total_file_size": 0.0
+    },
+    "failure_reasons": {
+      "wrong values": 22,
+      "wrong row count": 6,
+      "wrong column count": 3,
+      "result truncated": 2
+    },
+    "function_use": {
+      "ext": 10,
+      "agecat": 4
+    }
+  },
+  "20261026T134502Z-c3e789": {
+    "label": "S2. histogram template",
+    "mode": "single",
+    "all_trials": 60,
+    "user_facing_trials_excluded": 0,
+    "graded_trials": 60,
+    "pass_rate": 0.433,
+    "one_shot_rate": 0.333,
+    "pass_by_scenario": {
+      "age_histogram": 0.0,
+      "count_and_size": 0.0,
+      "count_over_1gib": 1.0,
+      "ext_histogram": 0.8,
+      "ext_winner": 0.8,
+      "not_modified_n_days": 0.0,
+      "oldest_k": 1.0,
+      "size_histogram": 0.0,
+      "top10_size_global": 1.0,
+      "top10_size_per_uid": 0.6,
+      "total_dir_size": 0.0,
+      "total_file_size": 0.0
+    },
+    "failure_reasons": {
+      "wrong values": 24,
+      "wrong row count": 5,
+      "result truncated": 3,
+      "wrong column count": 2
+    },
+    "function_use": {
+      "ext": 10,
+      "agecat": 5,
+      "strftime": 1
+    }
+  },
+  "20261026T140520Z-f2769d": {
+    "label": "S3. UDF column hints",
+    "mode": "single",
+    "all_trials": 60,
+    "user_facing_trials_excluded": 0,
+    "graded_trials": 60,
+    "pass_rate": 0.533,
+    "one_shot_rate": 0.433,
+    "pass_by_scenario": {
+      "age_histogram": 0.0,
+      "count_and_size": 0.0,
+      "count_over_1gib": 1.0,
+      "ext_histogram": 0.8,
+      "ext_winner": 1.0,
+      "not_modified_n_days": 0.0,
+      "oldest_k": 1.0,
+      "size_histogram": 0.0,
+      "top10_size_global": 1.0,
+      "top10_size_per_uid": 0.8,
+      "total_dir_size": 0.8,
+      "total_file_size": 0.0
+    },
+    "failure_reasons": {
+      "wrong values": 18,
+      "result truncated": 5,
+      "wrong row count": 4,
+      "wrong column count": 1
+    },
+    "function_use": {
+      "ext": 10,
+      "agecat": 4,
+      "epochtoage": 1
+    }
+  },
+  "20261026T141318Z-886bc0": {
+    "label": "S4. UDF primer lines",
+    "mode": "single",
+    "all_trials": 60,
+    "user_facing_trials_excluded": 0,
+    "graded_trials": 60,
+    "pass_rate": 0.45,
+    "one_shot_rate": 0.417,
+    "pass_by_scenario": {
+      "age_histogram": 0.0,
+      "count_and_size": 0.0,
+      "count_over_1gib": 1.0,
+      "ext_histogram": 1.0,
+      "ext_winner": 1.0,
+      "not_modified_n_days": 0.0,
+      "oldest_k": 0.8,
+      "size_histogram": 0.0,
+      "top10_size_global": 1.0,
+      "top10_size_per_uid": 0.4,
+      "total_dir_size": 0.2,
+      "total_file_size": 0.0
+    },
+    "failure_reasons": {
+      "wrong values": 19,
+      "wrong row count": 5,
+      "result truncated": 5,
+      "wrong column count": 3,
+      "every call failed": 1
+    },
+    "function_use": {
+      "ext": 10,
+      "agecat": 4,
+      "epochtoage": 1
+    }
+  },
+  "20261026T144644Z-39600c": {
+    "label": "S5. expanded column tags",
+    "mode": "single",
+    "all_trials": 60,
+    "user_facing_trials_excluded": 0,
+    "graded_trials": 60,
+    "pass_rate": 0.417,
+    "one_shot_rate": 0.317,
+    "pass_by_scenario": {
+      "age_histogram": 0.0,
+      "count_and_size": 0.0,
+      "count_over_1gib": 0.8,
+      "ext_histogram": 0.6,
+      "ext_winner": 0.8,
+      "not_modified_n_days": 0.0,
+      "oldest_k": 1.0,
+      "size_histogram": 0.0,
+      "top10_size_global": 1.0,
+      "top10_size_per_uid": 0.2,
+      "total_dir_size": 0.6,
+      "total_file_size": 0.0
+    },
+    "failure_reasons": {
+      "wrong values": 15,
+      "wrong row count": 10,
+      "wrong column count": 5,
+      "result truncated": 5
+    },
+    "function_use": {
+      "ext": 10,
+      "strftime": 3,
+      "agecat": 2
+    }
+  }
+}

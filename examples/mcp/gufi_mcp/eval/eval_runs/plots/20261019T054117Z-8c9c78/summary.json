@@ -1,0 +1,33 @@
+{
+  "run": "20261019T054117Z-8c9c78",
+  "trials": 200,
+  "graded_trials": 60,
+  "correct": 28,
+  "incorrect": 32,
+  "ungraded": 140,
+  "grade_threshold": 0.9,
+  "correct_by_scenario": {
+    "age_histogram": "0/5",
+    "count_and_size": "3/5",
+    "count_over_1gib": "5/5",
+    "ext_histogram": "5/5",
+    "ext_winner": "1/5",
+    "not_modified_n_days": "1/5",
+    "oldest_k": "5/5",
+    "size_histogram": "0/5",
+    "top10_size_global": "5/5",
+    "top10_size_per_uid": "0/5",
+    "total_dir_size": "3/5",
+    "total_file_size": "0/5"
+  },
+  "error_categories": {
+    "other": 15,
+    "ORDER/LIMIT outside final": 11,
+    "unknown column": 4,
+    "path column not carried": 2,
+    "path column on wrong table": 2,
+    "column count mismatch": 2,
+    "SQLite runtime error": 1,
+    "SQL parse error": 1
+  }
+}
