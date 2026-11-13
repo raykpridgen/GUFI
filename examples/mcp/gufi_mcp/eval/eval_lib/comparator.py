@@ -14,12 +14,20 @@ FLOAT_DIGITS = 6
 MAX_PERMUTED_COLUMNS = 6
 
 
-def normalize_value(value: Any) -> Any:
-    """Make equal values compare equal regardless of how SQLite or JSON typed them."""
+def normalize_value(value: Any, path_root: Optional[str] = None) -> Any:
+    """Make equal values compare equal regardless of how SQLite or JSON typed them.
+
+    path_root (the index root directory) is stripped from absolute paths, so a path built with GUFI's
+    rpath() (/root/myindex/dir/f) equals the server's path column form (myindex/dir/f).
+    """
     if isinstance(value, bool):
         return int(value)
     if isinstance(value, str):
         text = value.strip()
+        if path_root:
+            prefix = path_root.rstrip("/") + "/"
+            if text.startswith(prefix):
+                return text[len(prefix):]
         try:
             value = int(text)
         except ValueError:
@@ -34,8 +42,8 @@ def normalize_value(value: Any) -> Any:
     return value
 
 
-def normalize_rows(rows: list[list[Any]]) -> list[tuple]:
-    return [tuple(normalize_value(v) for v in row) for row in rows]
+def normalize_rows(rows: list[list[Any]], path_root: Optional[str] = None) -> list[tuple]:
+    return [tuple(normalize_value(v, path_root) for v in row) for row in rows]
 
 
 def _sort_key(row: tuple) -> tuple:
@@ -75,14 +83,15 @@ def _diff(want: list[tuple], got: list[tuple]) -> tuple[list[tuple], list[tuple]
     return missing, extra
 
 
-def compare_rows(expected: list[list[Any]], actual: list[list[Any]], ordered: bool) -> Comparison:
+def compare_rows(expected: list[list[Any]], actual: list[list[Any]], ordered: bool,
+                 path_root: Optional[str] = None) -> Comparison:
     """Rows must match after normalization; column names are ignored, column order may differ.
 
     Unordered compares sort both sides first. The returned expected/actual are in compared order (actual with
     the best column permutation applied) so reports can show them side by side with missing/extra rows.
     """
-    want = normalize_rows(expected)
-    got = normalize_rows(actual)
+    want = normalize_rows(expected, path_root)
+    got = normalize_rows(actual, path_root)
     if not ordered:
         want = sorted(want, key=_sort_key)
     widths = {len(r) for r in want} | {len(r) for r in got}

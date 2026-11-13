@@ -31,6 +31,7 @@ import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE / "eval"))  # eval_lib lives under eval/
 
 import gufi_mcp_util as util  # noqa: E402
 from eval_lib.registry import load_manifest, load_registry, render_scenario  # noqa: E402
@@ -42,6 +43,10 @@ COLORS = {"correct": "#2e7d32", "incorrect": "#c62828", "ungraded": "#757575",
 
 # First matching pattern names the error; order matters.
 ERROR_CATEGORIES = [
+    ("plain command form", r"Usage: gufi_query|give exactly one index|unsupported flag|must be CREATE TABLE|"
+                           r"must be INSERT INTO|inserts into \w+, but|leave out the column list|cannot split the command|"
+                           r"give -[IKJG] exactly once|at least one of -T, -S, -E"),
+    ("no path columns (rpath mode)", r"There are no path columns"),
     ("bare sname/sroll", r"is not a path and is only valid as an argument to rpath|is internal rollup bookkeeping"),
     ("sname/sroll carried in shape", r"cannot be carried between stages"),
     ("rpath outside per_directory", r"rpath\(\) only works in per_directory_sql"),
@@ -168,7 +173,10 @@ def load_single_grade(run: Path, row: dict[str, Any], trace: dict[str, Any], t: 
     t.aggregate_calls = len(calls)
     for call in calls:
         query = call.get("query") or {}
-        sql = " ".join([*query.get("per_directory_sql", []), query.get("partial_sql", ""), query.get("final_sql", "")])
+        if isinstance(query, str):  # plain gufi_query command (ablation submission=plain)
+            sql = query
+        else:
+            sql = " ".join([*query.get("per_directory_sql", []), query.get("partial_sql", ""), query.get("final_sql", "")])
         t.functions_used.update(m.lower() for m in _FUNCTION_RE.findall(sql))
     if not row["pass"]:
         similarity = run / row["similarity_path"] if row.get("similarity_path") else None

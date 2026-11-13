@@ -32,12 +32,25 @@ class Scenario(BaseModel):
     parameters: dict[str, Any]
     ground_truth: Optional[dict[str, Any]]
     notes: str
+    # Other answers that also pass, for prompts with more than one fair reading (e.g. whether "files"
+    # includes symlinks). Same form as ground_truth; single-query only.
+    alternates: list[dict[str, Any]] = Field(default_factory=list)
+    # Server parts this scenario is expected to depend on, declared before any ablation run:
+    # primer, schema, functions, path, submission.
+    stresses: list[Literal["primer", "schema", "functions", "path", "submission"]] = Field(default_factory=list)
 
     @field_validator("ground_truth")
     @classmethod
     def ground_truth_is_query(cls, value: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
         if value is not None and "index" in value:
             raise ValueError("ground_truth must not set index; it is taken from the scenario's index")
+        return value
+
+    @field_validator("alternates")
+    @classmethod
+    def alternates_are_queries(cls, value: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        if any("index" in alt for alt in value):
+            raise ValueError("alternates must not set index; it is taken from the scenario's index")
         return value
 
 
@@ -96,6 +109,18 @@ class RenderedScenario(BaseModel):
     scenario: Scenario
     prompt: str
     ground_truth: Optional[dict[str, Any]]
+    alternates: list[dict[str, Any]] = []
+
+
+def _render_query(query: dict[str, Any], index: str, values: dict[str, Any], where: str) -> dict[str, Any]:
+    rendered: dict[str, Any] = {"index": index}
+    for key, value in query.items():
+        if isinstance(value, str):
+            value = render(value, values, f"{where}.{key}")
+        elif isinstance(value, list):
+            value = [render(v, values, f"{where}.{key}") if isinstance(v, str) else v for v in value]
+        rendered[key] = value
+    return rendered
 
 
 def render_scenario(scenario: Scenario, mode: Mode, manifest: IndexManifest) -> RenderedScenario:
@@ -104,14 +129,11 @@ def render_scenario(scenario: Scenario, mode: Mode, manifest: IndexManifest) -> 
     prompt = render(scenario.prompt, values, f"{where} prompt")
     ground_truth = None
     if scenario.ground_truth is not None:
-        ground_truth = {"index": scenario.index}
-        for key, value in scenario.ground_truth.items():
-            if isinstance(value, str):
-                value = render(value, values, f"{where} ground_truth.{key}")
-            elif isinstance(value, list):
-                value = [render(v, values, f"{where} ground_truth.{key}") if isinstance(v, str) else v for v in value]
-            ground_truth[key] = value
-    return RenderedScenario(mode=mode, scenario=scenario, prompt=prompt, ground_truth=ground_truth)
+        ground_truth = _render_query(scenario.ground_truth, scenario.index, values, f"{where} ground_truth")
+    alternates = [_render_query(alt, scenario.index, values, f"{where} alternates[{i}]")
+                  for i, alt in enumerate(scenario.alternates)]
+    return RenderedScenario(mode=mode, scenario=scenario, prompt=prompt, ground_truth=ground_truth,
+                            alternates=alternates)
 
 
 def load_registry(path: Path, mode: Mode) -> list[Scenario]:
@@ -138,6 +160,8 @@ def load_registry(path: Path, mode: Mode) -> list[Scenario]:
             errors.append(f"{scenario.id}: single-query scenarios need a ground_truth")
         if mode == "general" and scenario.ground_truth is not None:
             errors.append(f"{scenario.id}: general scenarios must have ground_truth: null")
+        if mode == "general" and scenario.alternates:
+            errors.append(f"{scenario.id}: general scenarios must not have alternates")
         scenarios.append(scenario)
 
     ids = [s.id for s in scenarios]
@@ -153,10 +177,12 @@ def validate_ground_truth(rendered: RenderedScenario) -> None:
     """Check rendered ground truth with the server's own model (needs the GUFI environment)."""
     from gufi_mcp_util import GufiAggregateQuery
 
-    try:
-        GufiAggregateQuery.model_validate(rendered.ground_truth)
-    except ValidationError as e:
-        raise RegistryError(f"scenario {rendered.scenario.id!r}: ground_truth is not a valid aggregate query:\n{e}") from e
+    for label, query in [("ground_truth", rendered.ground_truth),
+                         *((f"alternates[{i}]", alt) for i, alt in enumerate(rendered.alternates))]:
+        try:
+            GufiAggregateQuery.model_validate(query)
+        except ValidationError as e:
+            raise RegistryError(f"scenario {rendered.scenario.id!r}: {label} is not a valid aggregate query:\n{e}") from e
 
 
 def file_sha256(path: Path) -> str:

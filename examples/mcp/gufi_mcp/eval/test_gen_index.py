@@ -7,7 +7,11 @@ from pathlib import Path
 
 import pytest
 
-import gen_index as gen
+import sys  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "synthetic_index"))  # gen_index.py lives there
+
+import gen_index as gen  # noqa: E402
 
 FIXED_NOW = 1790812800  # 2026-10-01T00:00:00Z
 

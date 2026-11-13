@@ -357,13 +357,13 @@ def test_primer_covers_core_guidance() -> None:
     import gufi_mcp_server
     import gufi_mcp_util as util
 
-    os.environ.setdefault("SCHEMAFILE", str(HERE / "schema_hints.json"))
+    os.environ.setdefault("SCHEMAFILE", str(HERE.parent / "schema_hints.json"))
     util.get_static_schema.cache_clear()
     util.path_column_hints.cache_clear()
 
     primer = gufi_mcp_server.PRIMER
     assert gufi_mcp_server.mcp.instructions == primer
-    for needle in ("gufi://indexes", "gufi://schemas/all", "vrpentries",
+    for needle in ("gufi_indexes", "gufi_schemas", "vrpentries",
                    "per_directory_sql", "partial_sql", "FROM partial", "rollup", "ORDER BY", "treesummary",
                    "SUM counts"):
         assert needle in primer, needle
@@ -377,13 +377,13 @@ def test_primer_covers_core_guidance() -> None:
     assert "myindex/dir/file.txt" in paths["path"] and "LIKE" in paths["dirpath"]
 
 
-PRIMER_BUDGET_CHARS = 4000
+PRIMER_BUDGET_CHARS = 5500  # grew with the Paths section added for the path ablation
 
 
 def test_primer_points_to_functions_within_budget() -> None:
     import gufi_mcp_server
 
-    assert "gufi://functions" in gufi_mcp_server.PRIMER
+    assert "gufi_functions" in gufi_mcp_server.PRIMER
     assert len(gufi_mcp_server.PRIMER) < PRIMER_BUDGET_CHARS
     for name in ("bytecat", "agecat", "uidtouser"):
         assert name not in gufi_mcp_server.PRIMER, name
@@ -392,7 +392,7 @@ def test_primer_points_to_functions_within_budget() -> None:
 def _fresh_catalog() -> None:
     import gufi_mcp_util as util
 
-    os.environ.setdefault("SCHEMAFILE", str(HERE / "schema_hints.json"))
+    os.environ.setdefault("SCHEMAFILE", str(HERE.parent / "schema_hints.json"))
     for cached in (util.get_static_schema, util.path_column_hints, util.function_catalog, util._column_tags):
         cached.cache_clear()
 
@@ -450,7 +450,7 @@ def test_function_catalog_matches_schema_and_hides_shell_functions() -> None:
 
 def test_function_catalog_leaks_no_ground_truth() -> None:
     _fresh_catalog()
-    catalog = json.loads((HERE / "schema_hints.json").read_text())["functions"]
+    catalog = json.loads((HERE.parent / "schema_hints.json").read_text())["functions"]
     text = " ".join(json.dumps(catalog).lower().split())
     for item in _rendered_single():
         for sql in [*item.ground_truth["per_directory_sql"], item.ground_truth["final_sql"]]:

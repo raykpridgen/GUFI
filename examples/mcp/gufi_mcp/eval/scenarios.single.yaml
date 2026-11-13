@@ -1,176 +1,433 @@
-# Single-query scenarios (eval_design.md Part 3). The agent only sees aggregate_sql_query
-# plus resources; its last successful aggregate result is compared to ground_truth's rows.
+# Single-query scenarios (eval_design.md Part 3). The agent sees every tool its server config
+# registers (gufi_ablation); only aggregate_sql_query calls are graded: the last successful
+# aggregate result is compared to ground_truth's rows (or an alternate's).
 #
 # ground_truth is a GufiAggregateQuery without "index" (the scenario's index is used).
 # Prompts and ground-truth strings may use {fixed_now}, {fixed_now_iso}, {fixed_now_date},
 # {index}, and {parameters.NAME}; values come from the index manifest and parameters.
 # Rows are compared after sorting unless final_sql has a top-level ORDER BY. Column names
 # are ignored, and a permutation of the same columns is accepted.
+#
+# stresses: server parts the scenario is expected to depend on (primer, schema, functions, path,
+# submission), declared before any ablation run so analysis can test them.
+# alternates: other accepted answers for prompts with more than one fair reading; most read
+# "files" as regular files plus symlinks. Any match passes; the summary records which one.
 
-- id: total_file_size
-  prompt: "How many bytes do all the files in {index} take up?"
-  tags: [size, total]
+- id: "count_and_size"
+  prompt: "How many files are in {index}, and how much space do they use altogether?"
+  tags:
+  - "size"
+  - "total"
   enabled: true
-  index: eval_master
+  index: "eval_master"
   parameters: {}
+  stresses:
+  - "primer"
   ground_truth:
     per_directory_shape: "size INT64"
-    per_directory_sql: ["SELECT size FROM vrpentries WHERE type = 'f'"]
-    partial_shape: "total INT64"
-    partial_sql: "SELECT SUM(size) FROM per_directory"
-    final_sql: "SELECT SUM(total) AS total FROM partial"
-  notes: "eval_plan example 1."
+    per_directory_sql:
+    - "SELECT size FROM vrpentries WHERE type = 'f'"
+    partial_shape: "n INT64, total INT64"
+    partial_sql: "SELECT COUNT(*), SUM(size) FROM per_directory"
+    final_sql: "SELECT SUM(n) AS n, SUM(total) AS total FROM partial"
+  alternates:
+  - per_directory_shape: "size INT64"
+    per_directory_sql:
+    - "SELECT size FROM vrpentries"
+    partial_shape: "n INT64, total INT64"
+    partial_sql: "SELECT COUNT(*), SUM(size) FROM per_directory"
+    final_sql: "SELECT SUM(n) AS n, SUM(total) AS total FROM partial"
+  notes: "Canonical ground truth is one query with two columns (eval_design.md framework notes). Alternate: 'files' read as regular files plus symlinks (no type filter)."
 
-- id: total_dir_size
+- id: "total_dir_size"
   prompt: "How much space do the directories themselves take up in {index}, not counting the files inside them?"
-  tags: [size, total, directories]
+  tags:
+  - "size"
+  - "total"
+  - "directories"
   enabled: true
-  index: eval_master
+  index: "eval_master"
   parameters: {}
+  stresses:
+  - "schema"
   ground_truth:
     per_directory_shape: "size INT64"
-    per_directory_sql: ["SELECT size FROM summary WHERE isroot = 1"]
+    per_directory_sql:
+    - "SELECT size FROM summary WHERE isroot = 1"
     partial_shape: "total INT64"
     partial_sql: "SELECT SUM(size) FROM per_directory"
     final_sql: "SELECT SUM(total) AS total FROM partial"
   notes: "eval_plan example 2. Directories live in summary, not entries; isroot = 1 avoids counting rolled-up rows."
 
-- id: ext_histogram
-  prompt: "How many files of each extension are there in {index}?"
-  tags: [name, histogram]
-  enabled: true
-  index: eval_master
-  parameters: {}
-  ground_truth:
-    per_directory_shape: "ext TEXT"
-    per_directory_sql: ["SELECT ext(name) FROM vrpentries WHERE type = 'f'"]
-    partial_shape: "ext TEXT, count INT64"
-    partial_sql: "SELECT ext, COUNT(*) FROM per_directory GROUP BY ext"
-    final_sql: "SELECT ext, SUM(count) AS count FROM partial GROUP BY ext"
-  notes: "eval_plan example 3, restricted to regular files. GUFI ext() treats a hidden name without a dot-suffix (.metrics) as its own extension."
-
-- id: size_histogram
+- id: "size_histogram"
   prompt: "Give me a breakdown of the files in {index} by size."
-  tags: [size, histogram]
+  tags:
+  - "size"
+  - "histogram"
   enabled: true
-  index: eval_master
+  index: "eval_master"
   parameters: {}
+  stresses:
+  - "functions"
   ground_truth:
     per_directory_shape: "cat TEXT"
-    per_directory_sql: ["SELECT bytecat(size) FROM vrpentries WHERE type = 'f'"]
+    per_directory_sql:
+    - "SELECT bytecat(size) FROM vrpentries WHERE type = 'f'"
     partial_shape: "cat TEXT, count INT64"
     partial_sql: "SELECT cat, COUNT(*) FROM per_directory GROUP BY cat"
     final_sql: "SELECT cat, SUM(count) AS count FROM partial GROUP BY cat"
-  notes: "eval_plan example 4. Natural wording: ground truth uses GUFI's bytecat categories, which the prompt does not name, so other bucketings fail."
+  alternates:
+  - per_directory_shape: "cat TEXT"
+    per_directory_sql:
+    - "SELECT bytecat(size) FROM vrpentries"
+    partial_shape: "cat TEXT, count INT64"
+    partial_sql: "SELECT cat, COUNT(*) FROM per_directory GROUP BY cat"
+    final_sql: "SELECT cat, SUM(count) AS count FROM partial GROUP BY cat"
+  notes: "eval_plan example 4. Natural wording: ground truth uses GUFI's bytecat categories, which the prompt does not name, so other bucketings fail. Alternate: 'files' read as regular files plus symlinks\
+    \ (no type filter)."
 
-- id: age_histogram
+- id: "age_histogram"
   prompt: "Give me a breakdown of the files in {index} by how long ago they were last modified."
-  tags: [time, histogram]
+  tags:
+  - "time"
+  - "histogram"
   enabled: true
-  index: eval_master
+  index: "eval_master"
   parameters: {}
+  stresses:
+  - "functions"
   ground_truth:
     per_directory_shape: "cat TEXT"
-    per_directory_sql: ["SELECT agecat(mtime) FROM vrpentries WHERE type = 'f'"]
+    per_directory_sql:
+    - "SELECT agecat(mtime) FROM vrpentries WHERE type = 'f'"
     partial_shape: "cat TEXT, count INT64"
     partial_sql: "SELECT cat, COUNT(*) FROM per_directory GROUP BY cat"
     final_sql: "SELECT cat, SUM(count) AS count FROM partial GROUP BY cat"
-  notes: "eval_plan example 5. Natural wording: ground truth uses GUFI's agecat categories, which the prompt does not name. agecat is relative to the wall clock, so ground truth and agent must run close together (they do within a trial)."
+  alternates:
+  - per_directory_shape: "cat TEXT"
+    per_directory_sql:
+    - "SELECT agecat(mtime) FROM vrpentries"
+    partial_shape: "cat TEXT, count INT64"
+    partial_sql: "SELECT cat, COUNT(*) FROM per_directory GROUP BY cat"
+    final_sql: "SELECT cat, SUM(count) AS count FROM partial GROUP BY cat"
+  notes: "eval_plan example 5. Natural wording: ground truth uses GUFI's agecat categories, which the prompt does not name. agecat is relative to the wall clock, so ground truth and agent must run close\
+    \ together (they do within a trial). Alternate: 'files' read as regular files plus symlinks (no type filter)."
 
-- id: top10_size_global
-  prompt: "What are the 10 biggest files in {index}? Show their full paths and sizes."
-  tags: [size, top-k]
-  enabled: true
-  index: eval_master
-  parameters: {}
-  ground_truth:
-    per_directory_shape: "path TEXT, size INT64"
-    per_directory_sql: ["SELECT path, size FROM vrpentries WHERE type = 'f'"]
-    partial_shape: "path TEXT, size INT64"
-    partial_sql: "SELECT path, size FROM per_directory"
-    final_sql: "SELECT path, size FROM partial ORDER BY size DESC LIMIT 10"
-  notes: "eval_plan example 6. Full path is the vrpentries path column (index name first, as gufi_find prints it)."
-
-- id: top10_size_per_uid
-  prompt: "For each user in {index}, what are their 10 biggest files? Show the user ID, the full path, and the size."
-  tags: [size, top-k, uid, window]
-  enabled: true
-  index: eval_master
-  parameters: {}
-  ground_truth:
-    per_directory_shape: "uid INT64, path TEXT, size INT64"
-    per_directory_sql: ["SELECT uid, path, size FROM vrpentries WHERE type = 'f'"]
-    partial_shape: "uid INT64, path TEXT, size INT64"
-    partial_sql: "SELECT uid, path, size FROM per_directory"
-    final_sql: "SELECT uid, path, size FROM (SELECT uid, path, size, ROW_NUMBER() OVER (PARTITION BY uid ORDER BY size DESC) AS rn FROM partial) WHERE rn <= 10"
-  notes: "eval_plan example 7. No outer ORDER BY, so rows are compared as a set."
-
-- id: ext_winner
+- id: "ext_winner"
   prompt: "What is the most common file extension in {index}, and how many files have it?"
-  tags: [name, top-k]
+  tags:
+  - "name"
+  - "top-k"
   enabled: true
-  index: eval_master
+  index: "eval_master"
   parameters: {}
+  stresses:
+  - "functions"
+  - "primer"
   ground_truth:
     per_directory_shape: "ext TEXT"
-    per_directory_sql: ["SELECT ext(name) FROM vrpentries WHERE type = 'f'"]
+    per_directory_sql:
+    - "SELECT ext(name) FROM vrpentries WHERE type = 'f'"
     partial_shape: "ext TEXT, count INT64"
     partial_sql: "SELECT ext, COUNT(*) FROM per_directory GROUP BY ext"
     final_sql: "SELECT ext, SUM(count) AS count FROM partial GROUP BY ext ORDER BY count DESC LIMIT 1"
-  notes: "From eval/eval_plan.md templates."
+  alternates:
+  - per_directory_shape: "ext TEXT"
+    per_directory_sql:
+    - "SELECT ext(name) FROM vrpentries"
+    partial_shape: "ext TEXT, count INT64"
+    partial_sql: "SELECT ext, COUNT(*) FROM per_directory GROUP BY ext"
+    final_sql: "SELECT ext, SUM(count) AS count FROM partial GROUP BY ext ORDER BY count DESC LIMIT 1"
+  notes: "From eval/eval_plan.md templates. Alternate: 'files' read as regular files plus symlinks (no type filter)."
 
-- id: count_over_1gib
-  prompt: "How many files in {index} are bigger than 1 GiB?"
-  tags: [size, threshold]
+- id: "top10_size_global"
+  prompt: "What are the 10 biggest files in {index}? Show their full paths and sizes."
+  tags:
+  - "size"
+  - "top-k"
   enabled: true
-  index: eval_master
-  parameters: {threshold: 1073741824}
+  index: "eval_master"
+  parameters: {}
+  stresses:
+  - "primer"
+  - "path"
   ground_truth:
-    per_directory_shape: "size INT64"
-    per_directory_sql: ["SELECT size FROM vrpentries WHERE type = 'f' AND size > {parameters.threshold}"]
-    partial_shape: "n INT64"
-    partial_sql: "SELECT COUNT(*) FROM per_directory"
-    final_sql: "SELECT SUM(n) AS n FROM partial"
-  notes: "Threshold size template."
+    per_directory_shape: "path TEXT, size INT64"
+    per_directory_sql:
+    - "SELECT path, size FROM vrpentries WHERE type = 'f'"
+    partial_shape: "path TEXT, size INT64"
+    partial_sql: "SELECT path, size FROM per_directory"
+    final_sql: "SELECT path, size FROM partial ORDER BY size DESC LIMIT 10"
+  alternates:
+  - per_directory_shape: "path TEXT, size INT64"
+    per_directory_sql:
+    - "SELECT path, size FROM vrpentries"
+    partial_shape: "path TEXT, size INT64"
+    partial_sql: "SELECT path, size FROM per_directory"
+    final_sql: "SELECT path, size FROM partial ORDER BY size DESC LIMIT 10"
+  notes: "eval_plan example 6. Full path is the vrpentries path column (index name first, as gufi_find prints it). Alternate: 'files' read as regular files plus symlinks (no type filter)."
 
-- id: oldest_k
-  prompt: "Which {parameters.k} files in {index} have gone the longest without being modified? Show their full paths and when they were last modified."
-  tags: [time, top-k]
+- id: "top10_size_per_uid"
+  prompt: "For each user in {index}, what are their 10 biggest files? Show the user ID, the full path, and the size."
+  tags:
+  - "size"
+  - "top-k"
+  - "uid"
+  - "window"
   enabled: true
-  index: eval_master
-  parameters: {k: 5}
+  index: "eval_master"
+  parameters: {}
+  stresses:
+  - "primer"
+  - "path"
   ground_truth:
-    per_directory_shape: "path TEXT, mtime INT64"
-    per_directory_sql: ["SELECT path, mtime FROM vrpentries WHERE type = 'f'"]
-    partial_shape: "path TEXT, mtime INT64"
-    partial_sql: "SELECT path, mtime FROM per_directory"
-    final_sql: "SELECT path, mtime FROM partial ORDER BY mtime ASC LIMIT {parameters.k}"
-  notes: "K-oldest template, by mtime rather than ctime: ctime is the index build time for every entry. Natural wording: an answer with dates instead of epoch seconds fails the row compare."
+    per_directory_shape: "uid INT64, path TEXT, size INT64"
+    per_directory_sql:
+    - "SELECT uid, path, size FROM vrpentries WHERE type = 'f'"
+    partial_shape: "uid INT64, path TEXT, size INT64"
+    partial_sql: "SELECT uid, path, size FROM per_directory"
+    final_sql: "SELECT uid, path, size FROM (SELECT uid, path, size, ROW_NUMBER() OVER (PARTITION BY uid ORDER BY size DESC) AS rn FROM partial) WHERE rn <= 10"
+  alternates:
+  - per_directory_shape: "uid INT64, path TEXT, size INT64"
+    per_directory_sql:
+    - "SELECT uid, path, size FROM vrpentries"
+    partial_shape: "uid INT64, path TEXT, size INT64"
+    partial_sql: "SELECT uid, path, size FROM per_directory"
+    final_sql: "SELECT uid, path, size FROM (SELECT uid, path, size, ROW_NUMBER() OVER (PARTITION BY uid ORDER BY size DESC) AS rn FROM partial) WHERE rn <= 10"
+  notes: "eval_plan example 7. No outer ORDER BY, so rows are compared as a set. Alternate: 'files' read as regular files plus symlinks (no type filter)."
 
-- id: not_modified_n_days
+- id: "not_modified_n_days"
   prompt: "How many files in {index} haven't been modified in the last {parameters.days} days?"
-  tags: [time, threshold]
+  tags:
+  - "time"
+  - "threshold"
   enabled: true
-  index: eval_master
-  parameters: {days: 60}
+  index: "eval_master"
+  parameters:
+    days: 60
+  stresses:
+  - "primer"
   ground_truth:
     per_directory_shape: "mtime INT64"
-    per_directory_sql: ["SELECT mtime FROM vrpentries WHERE type = 'f' AND mtime < {fixed_now} - {parameters.days} * 86400"]
+    per_directory_sql:
+    - "SELECT mtime FROM vrpentries WHERE type = 'f' AND mtime < {fixed_now} - {parameters.days} * 86400"
     partial_shape: "n INT64"
     partial_sql: "SELECT COUNT(*) FROM per_directory"
     final_sql: "SELECT SUM(n) AS n FROM partial"
-  notes: "Uses the manifest fixed_now (midnight UTC of the reference date), not the wall clock."
+  alternates:
+  - per_directory_shape: "mtime INT64"
+    per_directory_sql:
+    - "SELECT mtime FROM vrpentries WHERE mtime < {fixed_now} - {parameters.days} * 86400"
+    partial_shape: "n INT64"
+    partial_sql: "SELECT COUNT(*) FROM per_directory"
+    final_sql: "SELECT SUM(n) AS n FROM partial"
+  notes: "Uses the manifest fixed_now (midnight UTC of the reference date), not the wall clock. Alternate: 'files' read as regular files plus symlinks (no type filter)."
 
-- id: count_and_size
-  prompt: "How many files are in {index}, and how much space do they use altogether?"
-  tags: [size, total]
+- id: "files_and_bytes_per_user"
+  prompt: "How many files does each user own in {index}, and how much space do they take up?"
+  tags:
+  - "size"
+  - "total"
+  - "uid"
+  - "group-by"
   enabled: true
-  index: eval_master
+  index: "eval_master"
   parameters: {}
+  stresses:
+  - "primer"
+  ground_truth:
+    per_directory_shape: "uid INT64, size INT64"
+    per_directory_sql:
+    - "SELECT uid, size FROM vrpentries WHERE type = 'f'"
+    partial_shape: "uid INT64, n INT64, total INT64"
+    partial_sql: "SELECT uid, COUNT(*), SUM(size) FROM per_directory GROUP BY uid"
+    final_sql: "SELECT uid, SUM(n) AS n, SUM(total) AS total FROM partial GROUP BY uid"
+  alternates:
+  - per_directory_shape: "uid INT64, size INT64"
+    per_directory_sql:
+    - "SELECT uid, size FROM vrpentries"
+    partial_shape: "uid INT64, n INT64, total INT64"
+    partial_sql: "SELECT uid, COUNT(*), SUM(size) FROM per_directory GROUP BY uid"
+    final_sql: "SELECT uid, SUM(n) AS n, SUM(total) AS total FROM partial GROUP BY uid"
+  notes: "Plain GROUP BY owner, the most common real question. Per user, not per group, so it is not a copy of the primer's per-gid example. Count rows once, then SUM counts (primer rule). Alternate: 'files' read as regular files plus symlinks (no type filter)."
+
+- id: "avg_size_per_user"
+  prompt: "What is the average file size for each user in {index}, in bytes rounded to the nearest whole byte?"
+  tags:
+  - "size"
+  - "average"
+  - "uid"
+  - "group-by"
+  enabled: true
+  index: "eval_master"
+  parameters: {}
+  stresses:
+  - "primer"
+  - "submission"
+  ground_truth:
+    per_directory_shape: "uid INT64, size INT64"
+    per_directory_sql:
+    - "SELECT uid, size FROM vrpentries WHERE type = 'f'"
+    partial_shape: "uid INT64, n INT64, total INT64"
+    partial_sql: "SELECT uid, COUNT(*), SUM(size) FROM per_directory GROUP BY uid"
+    final_sql: "SELECT uid, ROUND(SUM(total) * 1.0 / SUM(n)) AS avg_size FROM partial GROUP BY uid"
+  alternates:
+  - per_directory_shape: "uid INT64, size INT64"
+    per_directory_sql:
+    - "SELECT uid, size FROM vrpentries WHERE type = 'f'"
+    partial_shape: "uid INT64, n INT64, total INT64"
+    partial_sql: "SELECT uid, COUNT(*), SUM(size) FROM per_directory GROUP BY uid"
+    final_sql: "SELECT uid, SUM(total) / SUM(n) AS avg_size FROM partial GROUP BY uid"
+  - per_directory_shape: "uid INT64, size INT64"
+    per_directory_sql:
+    - "SELECT uid, size FROM vrpentries"
+    partial_shape: "uid INT64, n INT64, total INT64"
+    partial_sql: "SELECT uid, COUNT(*), SUM(size) FROM per_directory GROUP BY uid"
+    final_sql: "SELECT uid, ROUND(SUM(total) * 1.0 / SUM(n)) AS avg_size FROM partial GROUP BY uid"
+  - per_directory_shape: "uid INT64, size INT64"
+    per_directory_sql:
+    - "SELECT uid, size FROM vrpentries"
+    partial_shape: "uid INT64, n INT64, total INT64"
+    partial_sql: "SELECT uid, COUNT(*), SUM(size) FROM per_directory GROUP BY uid"
+    final_sql: "SELECT uid, SUM(total) / SUM(n) AS avg_size FROM partial GROUP BY uid"
+  notes: "Average across threads must be SUM(total)/SUM(n); AVG of per-thread AVGs is wrong (primer: re-combine partials). Alternate accepts integer division (truncation instead of rounding). Alternate:\
+    \ 'files' read as regular files plus symlinks (no type filter)."
+
+- id: "users_per_group"
+  prompt: "How many different users own files in each group in {index}?"
+  tags:
+  - "uid"
+  - "gid"
+  - "distinct"
+  enabled: true
+  index: "eval_master"
+  parameters: {}
+  stresses:
+  - "primer"
+  ground_truth:
+    per_directory_shape: "gid INT64, uid INT64"
+    per_directory_sql:
+    - "SELECT gid, uid FROM vrpentries WHERE type = 'f'"
+    partial_shape: "gid INT64, uid INT64"
+    partial_sql: "SELECT DISTINCT gid, uid FROM per_directory"
+    final_sql: "SELECT gid, COUNT(DISTINCT uid) AS users FROM partial GROUP BY gid"
+  alternates:
+  - per_directory_shape: "gid INT64, uid INT64"
+    per_directory_sql:
+    - "SELECT gid, uid FROM vrpentries"
+    partial_shape: "gid INT64, uid INT64"
+    partial_sql: "SELECT DISTINCT gid, uid FROM per_directory"
+    final_sql: "SELECT gid, COUNT(DISTINCT uid) AS users FROM partial GROUP BY gid"
+  notes: "Distinct counts cannot be summed across threads: deduplicate per thread, COUNT(DISTINCT) once in final_sql. Alternate: 'files' read as regular files plus symlinks (no type filter)."
+
+- id: "subtree_usage"
+  prompt: "How many files are under groups/grp01/usr003/checkpoint in {index} (including its subdirectories), and how much space do they use?"
+  tags:
+  - "size"
+  - "total"
+  - "path"
+  - "subtree"
+  enabled: true
+  index: "eval_master"
+  parameters: {}
+  stresses:
+  - "path"
   ground_truth:
     per_directory_shape: "size INT64"
-    per_directory_sql: ["SELECT size FROM vrpentries WHERE type = 'f'"]
+    per_directory_sql:
+    - "SELECT size FROM vrpentries WHERE type = 'f' AND path LIKE '{index}/groups/grp01/usr003/checkpoint/%'"
     partial_shape: "n INT64, total INT64"
     partial_sql: "SELECT COUNT(*), SUM(size) FROM per_directory"
     final_sql: "SELECT SUM(n) AS n, SUM(total) AS total FROM partial"
-  notes: "Canonical ground truth is one query with two columns (eval_design.md framework notes)."
+  alternates:
+  - per_directory_shape: "size INT64"
+    per_directory_sql:
+    - "SELECT size FROM vrpentries WHERE path LIKE '{index}/groups/grp01/usr003/checkpoint/%'"
+    partial_shape: "n INT64, total INT64"
+    partial_sql: "SELECT COUNT(*), SUM(size) FROM per_directory"
+    final_sql: "SELECT SUM(n) AS n, SUM(total) AS total FROM partial"
+  notes: "Path filter in WHERE. The subtree is part of one user's tree, so uid/gid filters give the wrong answer (522 of usr003's 753 files). Alternate: 'files' read as regular files plus symlinks (no\
+    \ type filter)."
+
+- id: "dirs_many_files"
+  prompt: "Which directories in {index} have more than 100 files directly in them? Show each directory's full path and how many files it has."
+  tags:
+  - "directories"
+  - "count"
+  - "path"
+  - "threshold"
+  enabled: true
+  index: "eval_master"
+  parameters: {}
+  stresses:
+  - "schema"
+  - "path"
+  ground_truth:
+    per_directory_shape: "path TEXT, n INT64"
+    per_directory_sql:
+    - "SELECT path, totfiles FROM vrsummary WHERE totfiles > 100"
+    partial_shape: "path TEXT, n INT64"
+    partial_sql: "SELECT path, n FROM per_directory"
+    final_sql: "SELECT path, n FROM partial"
+  alternates:
+  - per_directory_shape: "dirpath TEXT"
+    per_directory_sql:
+    - "SELECT dirpath FROM vrpentries WHERE type = 'f'"
+    partial_shape: "dirpath TEXT, n INT64"
+    partial_sql: "SELECT dirpath, COUNT(*) FROM per_directory GROUP BY dirpath"
+    final_sql: "SELECT dirpath, SUM(n) AS n FROM partial GROUP BY dirpath HAVING SUM(n) > 100"
+  - per_directory_shape: "dirpath TEXT"
+    per_directory_sql:
+    - "SELECT dirpath FROM vrpentries"
+    partial_shape: "dirpath TEXT, n INT64"
+    partial_sql: "SELECT dirpath, COUNT(*) FROM per_directory GROUP BY dirpath"
+    final_sql: "SELECT dirpath, SUM(n) AS n FROM partial GROUP BY dirpath HAVING SUM(n) > 100"
+  notes: "Directory paths (vrsummary path) plus totfiles from the schema hints. Alternate: counting vrpentries per dirpath gives the same rows."
+
+- id: "executable_count"
+  prompt: "How many files in {index} are executable by someone (any execute permission bit set)?"
+  tags:
+  - "mode"
+  - "permissions"
+  - "count"
+  enabled: true
+  index: "eval_master"
+  parameters: {}
+  stresses:
+  - "schema"
+  ground_truth:
+    per_directory_shape: "mode INT64"
+    per_directory_sql:
+    - "SELECT mode FROM vrpentries WHERE type = 'f' AND (mode & 73) != 0"
+    partial_shape: "n INT64"
+    partial_sql: "SELECT COUNT(*) FROM per_directory"
+    final_sql: "SELECT SUM(n) AS n FROM partial"
+  alternates:
+  - per_directory_shape: "mode INT64"
+    per_directory_sql:
+    - "SELECT mode FROM vrpentries WHERE (mode & 73) != 0"
+    partial_shape: "n INT64"
+    partial_sql: "SELECT COUNT(*) FROM per_directory"
+    final_sql: "SELECT SUM(n) AS n FROM partial"
+  notes: "mode is decimal st_mode; execute bits are mode & 73 (0o111). Only the schema hint for mode says so. Alternate: 'files' read as regular files plus symlinks (no type filter)."
+
+- id: "symlink_targets"
+  prompt: "List every symbolic link in {index} with its full path and the path it points to."
+  tags:
+  - "links"
+  - "path"
+  - "list"
+  enabled: true
+  index: "eval_master"
+  parameters: {}
+  stresses:
+  - "schema"
+  - "path"
+  ground_truth:
+    per_directory_shape: "path TEXT, target TEXT"
+    per_directory_sql:
+    - "SELECT path, linkname FROM vrpentries WHERE type = 'l'"
+    partial_shape: "path TEXT, target TEXT"
+    partial_sql: "SELECT path, target FROM per_directory"
+    final_sql: "SELECT path, target FROM partial"
+  notes: "Symlinks are type 'l'; the target is linkname. 300 rows."

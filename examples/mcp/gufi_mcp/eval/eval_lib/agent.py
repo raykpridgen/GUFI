@@ -29,6 +29,7 @@ class TrialContext:
     fixed_now: int
     fixed_now_iso: str
     ground_truth: Optional[dict[str, Any]] = None
+    ablation: dict[str, Any] = field(default_factory=dict)  # server factors (gufi_ablation); empty = full server
 
 
 @dataclass
@@ -47,7 +48,14 @@ class AggregateCall:
 
     @property
     def index(self) -> Optional[str]:
-        return self.query.get("index") if isinstance(self.query, dict) else None
+        """Index the call queried: the structured query's index, or the plain gufi_query command's index argument."""
+        if isinstance(self.query, dict):
+            return self.query.get("index")
+        if isinstance(self.query, str):
+            from gufi_plain import parse_index
+
+            return parse_index(self.query)
+        return None
 
 
 @dataclass
@@ -62,6 +70,9 @@ class AgentResult:
     error: Optional[str] = None
     usage: dict[str, Any] = field(default_factory=dict)
     transcript: list[dict[str, Any]] = field(default_factory=list)
+    # True when the trial was cut short by the harness (model API outage, rate limit, credits, or a broken
+    # MCP server connection), not by the agent. Such trials are not graded; the harness reruns them.
+    infrastructure_error: bool = False
 
 
 class AgentDriver(Protocol):

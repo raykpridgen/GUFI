@@ -24,9 +24,11 @@ from typing import Any, Iterator, Optional
 import sqlglot
 from dotenv import load_dotenv
 from mcp.server.mcpserver.exceptions import ToolError
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, create_model, field_validator, model_validator
 from sqlglot import exp
 from sqlglot.errors import SqlglotError
+
+from gufi_ablation import CONFIG, FULL  # noqa: F401  (read as util.CONFIG at call time so tests can swap it)
 
 logger = logging.getLogger(__name__)
 
@@ -322,12 +324,18 @@ def describe_schema_object(name: str) -> dict[str, dict[str, str]]:
     """Columns of one table or view, with types and hints from the schema file."""
     objects = list_schema_objects()
     if name not in objects:
-        raise GufiError(f"Unknown table or view {name!r}. Read gufi_schemas/all for valid names")
-    rows = table_columns(name)
+        raise GufiError(f"Unknown table or view {name!r}. Call gufi_schemas with 'all' for valid names")
+    rows = [row for row in table_columns(name) if row[0].lower() not in hidden_columns()]
+    if CONFIG.schema == "naive":
+        paths = {column: {"type": "TEXT"} for column in path_columns(name.lower())}
+        return {**paths, **{column: {"type": col_type} for column, col_type in rows}}
     paths = {column: {"type": "TEXT", "hint": hint} for column, hint in path_columns(name.lower()).items()}
-    described = {**paths, **load_schema_hints(name, [row for row in rows if row[0].lower() not in HIDDEN_COLUMNS])}
+    described = {**paths, **load_schema_hints(name, rows)}
+    if CONFIG.path == "rpath":
+        for column, info in described.items():
+            info["hint"] = RPATH_COLUMN_HINTS.get(column.lower(), _rpath_hint_text(info["hint"]))
     for column, info in described.items():
-        tags = functions_for_column(column)
+        tags = functions_for_column(column) if CONFIG.functions else []
         if tags:
             hint = info["hint"].rstrip()
             if hint and not hint.endswith("."):
@@ -355,7 +363,7 @@ def schema_columns(table: str) -> set[str]:
     schema = get_static_schema()
     if table not in schema:
         raise GufiError(f"Table {table!r} is not described in the schema file")
-    return (set(schema[table]["columns"]) - HIDDEN_COLUMNS) | set(path_columns(table))
+    return (set(schema[table]["columns"]) - hidden_columns()) | set(path_columns(table))
 
 
 #
@@ -374,9 +382,31 @@ DIRECTORY_PATH_TABLES = frozenset({"vrsummary", "vrsummarylong"})
 PATH_TABLES_TEXT = "vrpentries (path, dirpath) and vrsummary (path)"
 PATH_FORM = "the index name followed by the path inside the index"
 
+# Ablation path mode "rpath": no synthetic path columns; the agent builds paths itself
+# with GUFI's own functions, which only work in per-directory SQL.
+RPATH_HIDDEN_COLUMNS = frozenset({"srollsubdirs"})
+RPATH_USAGE = ("Build full paths in per_directory_sql with rpath(sname, sroll) for a directory or "
+               "rpath(sname, sroll, name) for a file or link in it; they return the absolute path in the index")
+RPATH_COLUMN_HINTS = {
+    "sname": f"Name of the summary row this row belongs to; an input to rpath(). {RPATH_USAGE}.",
+    "sroll": f"Rollup bookkeeping; an input to rpath(). {RPATH_USAGE}.",
+}
+
+
+def hidden_columns() -> frozenset[str]:
+    """Columns agents may not see or reference in the current path mode."""
+    return RPATH_HIDDEN_COLUMNS if CONFIG.path == "rpath" else HIDDEN_COLUMNS
+
+
+def _rpath_hint_text(hint: str) -> str:
+    """Rewrite hints that point at the synthetic path column for rpath mode."""
+    return re.sub(r"\(use path( on vrsummary)?\)", "(build the full path with rpath())", hint)
+
 
 def path_columns(table: str) -> dict[str, str]:
-    """{column: hint} of the path columns the server adds to table."""
+    """{column: hint} of the path columns the server adds to table (none in rpath mode)."""
+    if CONFIG.path == "rpath":
+        return {}
     if table in ENTRY_PATH_TABLES:
         columns = {
             "path": f"Full path of the file or link, e.g. myindex/dir/file.txt: {PATH_FORM}.",
@@ -459,7 +489,7 @@ def describe_function(name: str) -> dict[str, Any]:
         raise GufiError(f"{key}() runs shell commands and is not available")
     entry = function_catalog().get(key)
     if entry is None:
-        raise GufiError(f"Unknown function {name!r}. Read gufi://functions for the list")
+        raise GufiError(f"Unknown function {name!r}. Call gufi_functions for the list")
     return {field: entry[field] for field in ("signature", "detail", "columns", "example") if entry.get(field)}
 
 
@@ -594,10 +624,31 @@ TABLE_PATH_HINT = f"Path columns exist only in {PATH_TABLES_TEXT}"
 CARRY_PATH_HINT = (f"Path columns come from {PATH_TABLES_TEXT} in per_directory_sql; select them there and declare them "
                    "as TEXT in per_directory_shape (and partial_shape) to use them in later stages")
 USE_PATH_COLUMNS = f"Use the path columns instead: {PATH_TABLES_TEXT}"
+RPATH_CARRY_HINT = (f"There are no path columns. {RPATH_USAGE}, then declare the result as TEXT in "
+                    "per_directory_shape (and partial_shape) to use it in later stages")
 
 
-def _reject_path_internals(tree: exp.Expression, context: str) -> None:
-    """sname/sroll are not paths and GUFI's path functions return index-internal forms; both are hidden."""
+def table_path_hint() -> str:
+    return RPATH_CARRY_HINT if CONFIG.path == "rpath" else TABLE_PATH_HINT
+
+
+def carry_path_hint() -> str:
+    return RPATH_CARRY_HINT if CONFIG.path == "rpath" else CARRY_PATH_HINT
+
+
+def _reject_path_internals(tree: exp.Expression, context: str, per_directory: bool = False) -> None:
+    """sname/sroll are not paths and GUFI's path functions return index-internal forms; both are hidden.
+
+    In rpath mode they are the agent's way to build paths, but only per-directory SQL runs inside a
+    directory, so path functions are still rejected in partial_sql and final_sql.
+    """
+    if CONFIG.path == "rpath":
+        if not per_directory:
+            for call in tree.find_all(exp.Anonymous):
+                if call.name.lower() in PATH_FUNCTIONS:
+                    raise GufiError(f"{context}: {call.name.lower()}() only works in per_directory_sql. "
+                                    f"{RPATH_CARRY_HINT}")
+        return
     for column in tree.find_all(exp.Column):
         if column.name.lower() in HIDDEN_COLUMNS:
             raise GufiError(f"{context}: {column.name} is internal rollup bookkeeping, not a path, and is not "
@@ -853,22 +904,26 @@ def _phase_for_table(table: str) -> str:
 # Aggregate query model
 #
 
-class GufiAggregateQuery(BaseModel):
-    """An index-wide GUFI aggregate pipeline (gufi_query -I, -T/-S/-E, -K, -J, -G)."""
+def query_descriptions(cfg) -> dict[str, str]:
+    """Field descriptions of GufiAggregateQuery for an ablation config.
 
-    model_config = ConfigDict(extra="forbid")
-
-    index: str = Field(
-        description=(
-            "Name of the index to query, exactly as listed by the gufi_indexes resource. "
+    They only name tools and path forms that exist under cfg, so a disabled part does not
+    leak back in through the tool's input schema.
+    """
+    if cfg.path == "rpath":
+        paths = f"{RPATH_USAGE}; this is the only stage that can build them. "
+        top_n_example = "SELECT rpath(sname, sroll, name), mtime FROM vrpentries ORDER BY mtime DESC LIMIT 5"
+    else:
+        paths = f"Full paths are the path columns of {PATH_TABLES_TEXT}; this is the only stage that can read them. "
+        top_n_example = "SELECT path, mtime FROM vrpentries ORDER BY mtime DESC LIMIT 5"
+    discovery = ("Call gufi_schemas with 'all' for table names and with a table name for its column names before "
+                 "writing it. ") if cfg.schema != "none" else ""
+    return {
+        "index": (
+            "Name of the index to query, exactly as listed by the gufi_indexes tool. "
             "per_directory_sql that reads treesummary tables requires an index whose gufi_indexes entry has treesummary true."
         ),
-    )
-
-    per_directory_sql: list[str] = Field(
-        min_length=1,
-        max_length=3,
-        description=(
+        "per_directory_sql": (
             "Per-directory stage: one to three SELECT statements that GUFI runs in parallel threads, once per directory; "
             "each result row is inserted into that thread's per_directory table. Each statement reads exactly one "
             "table, which decides its phase: treesummary/vtsummary* (once per tree), summary/vsummary*/vrsummary* "
@@ -876,24 +931,17 @@ class GufiAggregateQuery(BaseModel):
             "phase. Each must return exactly the columns of per_directory_shape, in order. ORDER BY, LIMIT and OFFSET "
             "would apply per directory only and are rejected, except a top-N prefilter: a statement without aggregates "
             "may end with ORDER BY <selected columns> LIMIT n when final_sql repeats that ORDER BY with LIMIT at most "
-            "n and partial_sql passes rows through (e.g. SELECT path, size FROM vrpentries ORDER BY size DESC LIMIT 10 "
-            "for the 10 largest files). "
-            f"Full paths are the path columns of {PATH_TABLES_TEXT}; this is the only stage that can read them. "
-            "Read gufi_schemas/all for table names and gufi_schemas/<table> for column names before writing it. "
+            f"n and partial_sql passes rows through (e.g. {top_n_example} "
+            "for the 5 most recently modified entries). "
+            f"{paths}{discovery}"
             "Example: SELECT gid, size FROM vrpentries WHERE type = 'l'"
         ),
-    )
-
-    per_directory_shape: str = Field(
-        description=(
+        "per_directory_shape": (
             "Columns of the per_directory table that per_directory_sql rows are inserted into, as comma-separated 'name TYPE' "
             "pairs (TYPE: INT64, INTEGER, INT, BIGINT, REAL, FLOAT, DOUBLE, NUMERIC, TEXT, BLOB). "
             "Example: 'gid INT64, size INT64'"
         ),
-    )
-
-    partial_sql: str = Field(
-        description=(
+        "partial_sql": (
             "Partial stage: SELECT run against each thread's per_directory table; its rows are inserted into the shared "
             "partial table. Must read only from per_directory and return exactly the columns of partial_shape, in order. "
             "It runs once per thread, so the partial table holds one partial result per thread. ORDER BY, LIMIT "
@@ -902,25 +950,33 @@ class GufiAggregateQuery(BaseModel):
             "GROUP BY, DISTINCT or aggregates, and the sort columns selected unchanged. "
             "Example: SELECT gid, COUNT(*), SUM(size) FROM per_directory GROUP BY gid"
         ),
-    )
-
-    partial_shape: str = Field(
-        description=(
+        "partial_shape": (
             "Columns of the partial table, as comma-separated 'name TYPE' pairs. "
             "Example: 'gid INT64, links INT64, bytes INT64'"
         ),
-    )
-
-    final_sql: str = Field(
-        description=(
+        "final_sql": (
             "SELECT run once against the partial table to produce the answer. Must read only from partial. "
             "Combine the per-thread partial results here (SUM of counts and sums, MAX of maxima), and put global "
             "ORDER BY and LIMIT here. After a top-N prefilter this must repeat its ORDER BY with LIMIT (plus OFFSET) at "
             "most its n, without WHERE, GROUP BY, DISTINCT or aggregates. "
             "Example: SELECT gid, SUM(links) AS links, SUM(bytes) AS bytes FROM partial GROUP BY gid ORDER BY links DESC"
         ),
-    )
+    }
 
+
+_FULL_DESCRIPTIONS = query_descriptions(FULL)
+
+class GufiAggregateQuery(BaseModel):
+    """An index-wide GUFI aggregate pipeline (gufi_query -I, -T/-S/-E, -K, -J, -G)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    index: str = Field(description=_FULL_DESCRIPTIONS["index"])
+    per_directory_sql: list[str] = Field(min_length=1, max_length=3, description=_FULL_DESCRIPTIONS["per_directory_sql"])
+    per_directory_shape: str = Field(description=_FULL_DESCRIPTIONS["per_directory_shape"])
+    partial_sql: str = Field(description=_FULL_DESCRIPTIONS["partial_sql"])
+    partial_shape: str = Field(description=_FULL_DESCRIPTIONS["partial_shape"])
+    final_sql: str = Field(description=_FULL_DESCRIPTIONS["final_sql"])
     _phases: dict[str, str] = PrivateAttr(default_factory=dict)
 
     @field_validator("index")
@@ -935,7 +991,7 @@ class GufiAggregateQuery(BaseModel):
     def shape_valid(cls, shape: str, info) -> str:
         with _as_value_error():
             columns = parse_shape(shape, info.field_name)
-            hidden = sorted(HIDDEN_COLUMNS & set(columns))
+            hidden = sorted(HIDDEN_COLUMNS & set(columns)) if CONFIG.path == "server" else []
             if hidden:
                 raise GufiError(f"{info.field_name}: {', '.join(hidden)} is internal rollup bookkeeping, not a path. "
                                 f"Carry a path column as TEXT instead ({PATH_TABLES_TEXT})")
@@ -952,7 +1008,7 @@ class GufiAggregateQuery(BaseModel):
                 tree = parse_select(sql, context)
                 _reject_unsafe_characters(sql, context)
                 _reject_ordering(tree, context)
-                _reject_path_internals(tree, context)
+                _reject_path_internals(tree, context, per_directory=True)
                 _reject_blocked_functions(tree, context)
                 cleaned.append(sql)
         return cleaned
@@ -990,7 +1046,7 @@ class GufiAggregateQuery(BaseModel):
                         f"{context}: more than one per_directory_sql statement reads a {phase}-phase table; "
                         "combine them into one statement"
                     )
-                _check_columns(tree, schema_columns(table), table, context, TABLE_PATH_HINT)
+                _check_columns(tree, schema_columns(table), table, context, table_path_hint())
                 _check_projection_width(tree, len(per_directory_cols), "per_directory_shape", context)
                 if phase == "T" and not has_treesummary(self.index):
                     raise GufiError(f"{context}: index {self.index!r} has no treesummary table; use summary or entries tables")
@@ -999,13 +1055,13 @@ class GufiAggregateQuery(BaseModel):
             gather = parse_select(self.partial_sql, "partial_sql")
             if select_tables(gather, "partial_sql") != [PER_DIRECTORY_TABLE]:
                 raise GufiError("partial_sql must read only from the per_directory table")
-            _check_columns(gather, set(per_directory_cols), "per_directory (per_directory_shape)", "partial_sql", CARRY_PATH_HINT)
+            _check_columns(gather, set(per_directory_cols), "per_directory (per_directory_shape)", "partial_sql", carry_path_hint())
             _check_projection_width(gather, len(partial_cols), "partial_shape", "partial_sql")
 
             final = parse_select(self.final_sql, "final_sql")
             if select_tables(final, "final_sql") != [PARTIAL_TABLE]:
                 raise GufiError("final_sql must read only from the partial table")
-            _check_columns(final, set(partial_cols), "partial (partial_shape)", "final_sql", CARRY_PATH_HINT)
+            _check_columns(final, set(partial_cols), "partial (partial_shape)", "final_sql", carry_path_hint())
             _check_top_n(per_directory, list(per_directory_cols), gather, list(partial_cols), final)
 
         self._phases = phases
@@ -1021,11 +1077,14 @@ class GufiAggregateQuery(BaseModel):
         """
         root = str(resolve_index(self.index))
         source_prefix = _source_prefix(self.index) if GUFI_SOURCE_ROOT is not None else None
-        phases = {
-            phase: expand_path_columns(sql, f"per_directory {phase}",
-                                       lambda table, column: per_directory_path_sql(table, column, self.index, root))
-            for phase, sql in self._phases.items()
-        }
+        if CONFIG.path == "rpath":
+            phases = dict(self._phases)
+        else:
+            phases = {
+                phase: expand_path_columns(sql, f"per_directory {phase}",
+                                           lambda table, column: per_directory_path_sql(table, column, self.index, root))
+                for phase, sql in self._phases.items()
+            }
         return pipeline_statement(gufi_vt_options(root, source_prefix=source_prefix), phases,
                                   self.per_directory_shape, self.partial_sql, self.partial_shape)
 
@@ -1215,3 +1274,16 @@ def run_gufi_vt(create: str, select: str, what: str = "query") -> GufiQueryResul
 
 def run_aggregate(query: GufiAggregateQuery) -> GufiQueryResult:
     return run_gufi_vt(query.build_query_string(), query.final_query_string(), "aggregate pipeline")
+
+
+@lru_cache(maxsize=None)
+def query_model(cfg) -> type[GufiAggregateQuery]:
+    """GufiAggregateQuery with field descriptions for cfg; validation and execution are inherited unchanged."""
+    descriptions = query_descriptions(cfg)
+    if descriptions == _FULL_DESCRIPTIONS:
+        return GufiAggregateQuery
+    fields: dict[str, Any] = {}
+    for name, info in GufiAggregateQuery.model_fields.items():
+        extra = {"min_length": 1, "max_length": 3} if name == "per_directory_sql" else {}
+        fields[name] = (info.annotation, Field(description=descriptions[name], **extra))
+    return create_model("GufiAggregateQuery", __base__=GufiAggregateQuery, __doc__=GufiAggregateQuery.__doc__, **fields)

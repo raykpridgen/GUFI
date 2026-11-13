@@ -6,6 +6,7 @@ import asyncio
 import copy
 import json
 import os
+import random
 import time
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -62,6 +63,8 @@ def openai_tools(mcp_tools: list[Any], resources: list[str], templates: list[str
         }
         for tool in mcp_tools
     ]
+    if not resources and not templates:
+        return tools  # no resources: do not offer a read_resource function that can only fail
     listing = ", ".join(resources + templates)
     tools.append({
         "type": "function",
@@ -82,13 +85,14 @@ def openai_tools(mcp_tools: list[Any], resources: list[str], templates: list[str
     return tools
 
 
-def system_prompt(context: TrialContext, constraints: EvalConstraints, instructions: str = "") -> str:
+def system_prompt(context: TrialContext, constraints: EvalConstraints, instructions: str = "",
+                  resources: bool = False) -> str:
     """Host-style system prompt: role, the server's MCP instructions, then task constraints."""
-    lines = [
-        "You are a file system metadata assistant. You answer questions using a GUFI MCP server, "
-        "which indexes file system metadata into SQLite databases. Its tools are available as functions; "
-        f"its resources are read with the {READ_RESOURCE_TOOL} function.",
-    ]
+    intro = ("You are a file system metadata assistant. You answer questions using a GUFI MCP server, "
+             "which indexes file system metadata into SQLite databases. Its tools are available as functions.")
+    if resources:
+        intro += f" Its resources are read with the {READ_RESOURCE_TOOL} function."
+    lines = [intro]
     if instructions.strip():
         lines += ["", "Instructions from the GUFI MCP server:", instructions.strip(), ""]
     lines += [
@@ -111,7 +115,8 @@ def system_prompt(context: TrialContext, constraints: EvalConstraints, instructi
 
 
 def _aggregate_call(arguments: dict[str, Any], outcome: CallOutcome, t_ms: float) -> AggregateCall:
-    call = AggregateCall(t_ms=t_ms, query=arguments.get("query"), ok=outcome.ok,
+    query = arguments.get("query", arguments.get("command"))  # structured query, or plain gufi_query command
+    call = AggregateCall(t_ms=t_ms, query=query, ok=outcome.ok,
                          duration_ms=round(outcome.duration_ms, 3), error=outcome.error)
     data = outcome.structured or {}
     if outcome.ok:
@@ -120,6 +125,43 @@ def _aggregate_call(arguments: dict[str, Any], outcome: CallOutcome, t_ms: float
         call.row_count = int(data.get("row_count", len(call.rows)))
         call.truncated = bool(data.get("truncated", False))
     return call
+
+
+async def replay_arguments(context: TrialContext) -> dict[str, Any]:
+    """Ground truth as arguments for the server's aggregate tool, in whichever submission format it takes."""
+    from gufi_plain import to_plain_command, to_rpath_query
+
+    query = context.ground_truth
+    if context.ablation.get("path") == "rpath":
+        query = to_rpath_query(query)
+    tool = next((t for t in await context.server.list_tools() if t.name == AGGREGATE_TOOL), None)
+    properties = (tool.input_schema or {}).get("properties", {}) if tool is not None else {}
+    if "command" in properties:
+        return {"command": to_plain_command(query)}
+    return {"query": query}
+
+
+# HTTP statuses that say nothing about the agent: payment/credits, timeout, conflict, rate limit, server side.
+# 401/403: bad key or a spend cap (OpenRouter returns 403 "Key limit exceeded"); 402: out of credits;
+# 404: model not found. None of these is the agent's doing.
+INFRASTRUCTURE_STATUSES = {401, 402, 403, 404, 408, 409, 429}
+
+
+def is_infrastructure_error(e: BaseException) -> bool:
+    """True for model-API failures that are the harness's problem, not the agent's (they get retried).
+
+    A 400 such as an over-long context is the agent's own doing (it pulled too much into the conversation)
+    and stays a graded failure.
+    """
+    import openai
+
+    if isinstance(e, (openai.APIConnectionError, openai.APITimeoutError, openai.RateLimitError,
+                      openai.InternalServerError)):
+        return True
+    if isinstance(e, openai.APIStatusError):
+        return e.status_code in INFRASTRUCTURE_STATUSES or e.status_code >= 500
+    # OpenRouter sometimes returns 200 with an error body and no choices; the driver raises RuntimeError.
+    return isinstance(e, RuntimeError) and "returned no choices" in str(e)
 
 
 class ReplayDriver:
@@ -134,8 +176,14 @@ class ReplayDriver:
         telemetry = Telemetry()
         started = _now_iso()
         calls: list[AggregateCall] = []
+        # Robustness testing: GUFI_EVAL_REPLAY_FAULTS=0.3 fails 30% of trials like a model-API outage would.
+        fault_rate = float(os.getenv("GUFI_EVAL_REPLAY_FAULTS", "0") or 0)
+        if fault_rate and random.random() < fault_rate:
+            return AgentResult(final_text="", aggregate_calls=[], events=[], started_at=started, finished_at=_now_iso(),
+                               duration_ms=0, stop_reason="error", error="InjectedFault: simulated 503 from the model API",
+                               infrastructure_error=True)
         if context.ground_truth is not None and AGGREGATE_TOOL in constraints.allowed_tools:
-            arguments = {"query": context.ground_truth}
+            arguments = await replay_arguments(context)
             t_ms = telemetry.elapsed_ms()
             outcome = await context.server.call_tool(AGGREGATE_TOOL, arguments, telemetry)
             calls.append(_aggregate_call(arguments, outcome, t_ms))
@@ -185,7 +233,8 @@ class OpenRouterDriver:
         allowed = {t.name for t in mcp_tools}
 
         messages: list[dict[str, Any]] = [
-            {"role": "system", "content": system_prompt(context, constraints, server.instructions)},
+            {"role": "system", "content": system_prompt(context, constraints, server.instructions,
+                                                        resources=bool(resources or templates))},
             {"role": "user", "content": prompt},
         ]
         calls: list[AggregateCall] = []
@@ -241,12 +290,14 @@ class OpenRouterDriver:
         except Exception as e:  # API failures end the trial; they are reported, not raised
             state["stop"] = "error"
             state["error"] = f"{type(e).__name__}: {e}"
+            state["infrastructure"] = is_infrastructure_error(e)
 
         stop: StopReason = state["stop"]
         return AgentResult(
             final_text=state["final"], aggregate_calls=calls, events=telemetry.events, started_at=started,
             finished_at=_now_iso(), duration_ms=round(telemetry.elapsed_ms(), 3), stop_reason=stop,
             error=state["error"], usage=usage, transcript=messages,
+            infrastructure_error=bool(state.get("infrastructure")),
         )
 
     async def _dispatch(self, name: str, raw_arguments: Optional[str], context: TrialContext, allowed: set[str],

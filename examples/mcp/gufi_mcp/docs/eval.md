@@ -137,6 +137,36 @@ Trace events are `{t_ms, kind, name, args_summary, ok, duration_ms, error, note}
 
 One JSON object per trial with the **same keys** in every mode. Unused metrics are `null`, `[]`, or `""`, never omitted:
 
-`scenario_id, trial, mode, pass, passed_on_attempt, one_shot_pass, resources_consumed, timing_delta_ms, similarity_path, executions, execution_time_ms, redundancies, final_response_path, aggregate_revision_count, failure_tags, agent, model, stop_reason, duration_ms, usage, trace_path, error`
+`scenario_id, trial, mode, pass, passed_on_attempt, one_shot_pass, resources_consumed, timing_delta_ms, similarity_path, executions, execution_time_ms, redundancies, final_response_path, aggregate_revision_count, failure_tags, matched_ground_truth, agent, model, stop_reason, duration_ms, usage, trace_path, error`
 
 `pass` is `null` in general mode. `usage` holds prompt, completion, and total tokens, the request count, and the OpenRouter cost in USD.
+
+## Server ablation
+
+`gufi_ablation.py` switches parts of the server on and off through `GUFI_ABLATION_*` env vars (submission, schema, primer, functions, path); [ablation_design.md](../ablation_design.md) explains the design. Run from `eval/`:
+
+```
+uv run python gufi_eval.py run --ablation primer=0 --ablation-id no_primer   # one config
+uv run python run_ablation.py --phase pilot --agent replay --trials 1         # wiring smoke test, free
+uv run python run_ablation.py --phase pilot                                   # 8 configs
+uv run python run_ablation.py --phase factorial                               # all 48; reuses finished runs
+uv run python analyze_ablation.py --output plots/ablation                     # report.md + charts
+```
+
+Ground truth always runs on a full-config reference server; the agent's server gets the ablation env and the agent sees every tool it registers.
+
+### Interruptions and restarts
+
+A sweep can be stopped at any point (Ctrl-C, `kill`, a crash, a reboot). Rerun the same command to continue:
+
+- **Trial checkpoints.** Each graded trial is flushed to `summary.jsonl` as it finishes. A config that was cut off resumes in its own run directory and runs only its missing trials. A half-written last line is dropped and rerun. A single run resumes with `gufi_eval.py run ... --resume-dir eval_runs/<run>`, using the same settings.
+- **Infrastructure failures are not graded.** These failures are logged under `<run>/infrastructure/` and retried:
+  - model-API outages, timeouts, rate limits (429), out of credits or a key spend cap (402, 403), bad keys (401), unknown models (404), and 5xx errors;
+  - a dead or hung MCP server.
+
+  Errors the agent causes, such as an over-long context (400), are graded as failures.
+- **A broken server stops the run.** It is retried with fresh servers instead of failing every remaining trial.
+- **Retries.** `run_ablation.py` retries a config up to `--retries` times (default 3), pausing `--retry-pause` seconds (default 30), then 4× and 10× that.
+- **Stopping rule.** If an attempt grades no new trials, the cause is not the config (credits, network, GUFI setup), so the sweep stops with exit code 2 and a message.
+- **Lock and progress.** A lock file prevents two sweeps writing to the same `eval_runs/`. `eval_runs/sweep_<phase>.progress.json` shows each config's status.
+- **Fault injection for testing.** `GUFI_EVAL_REPLAY_FAULTS=0.3` makes the free replay agent fail 30% of trials as if the API were down.

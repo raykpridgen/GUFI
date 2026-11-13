@@ -83,12 +83,12 @@
 
 - id: total_file_size
   prompt: "How many bytes do all the files in {index} take up?"
-  tags: [size, total, mirrored]
+  tags: [size, total, retired_single]
   enabled: true
   index: eval_master
   parameters: {}
   ground_truth: null
-  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical. Nearest: count_and_size (adds the count)."
+  notes: "Was mirrored from scenarios.single.yaml; that scenario was dropped from the ablation set as redundant. Nearest: count_and_size (adds the count)."
 
 - id: total_dir_size
   prompt: "How much space do the directories themselves take up in {index}, not counting the files inside them?"
@@ -101,12 +101,12 @@
 
 - id: ext_histogram
   prompt: "How many files of each extension are there in {index}?"
-  tags: [name, histogram, mirrored]
+  tags: [name, histogram, retired_single]
   enabled: true
   index: eval_master
   parameters: {}
   ground_truth: null
-  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical. Nearest: ext_winner (only the top one), storage_by_file_type (bytes, not counts)."
+  notes: "Was mirrored from scenarios.single.yaml; that scenario was dropped from the ablation set as redundant. Nearest: ext_winner (only the top one), storage_by_file_type (bytes, not counts)."
 
 - id: size_histogram
   prompt: "Give me a breakdown of the files in {index} by size."
@@ -155,21 +155,21 @@
 
 - id: count_over_1gib
   prompt: "How many files in {index} are bigger than 1 GiB?"
-  tags: [size, threshold, mirrored]
+  tags: [size, threshold, retired_single]
   enabled: true
   index: eval_master
   parameters: {threshold: 1073741824}
   ground_truth: null
-  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical. Nearest: big_file_owners (who and where)."
+  notes: "Was mirrored from scenarios.single.yaml; that scenario was dropped from the ablation set as redundant. Nearest: big_file_owners (who and where)."
 
 - id: oldest_k
   prompt: "Which {parameters.k} files in {index} have gone the longest without being modified? Show their full paths and when they were last modified."
-  tags: [time, top-k, mirrored]
+  tags: [time, top-k, retired_single]
   enabled: true
   index: eval_master
   parameters: {k: 5}
   ground_truth: null
-  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical. Nearest: least_recently_accessed (atime)."
+  notes: "Was mirrored from scenarios.single.yaml; that scenario was dropped from the ablation set as redundant. Nearest: least_recently_accessed (atime)."
 
 - id: not_modified_n_days
   prompt: "How many files in {index} haven't been modified in the last {parameters.days} days?"
@@ -370,3 +370,66 @@
   parameters: {}
   ground_truth: null
   notes: "Path-scoped per-uid bytes (groups/grp03/shared). Replaces a group-write permission question; no file on eval_master is group-writable."
+
+- id: files_and_bytes_per_user
+  prompt: "How many files does each user own in {index}, and how much space do they take up?"
+  tags: [size, total, uid, group-by, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical."
+
+- id: avg_size_per_user
+  prompt: "What is the average file size for each user in {index}, in bytes rounded to the nearest whole byte?"
+  tags: [size, average, uid, group-by, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical."
+
+- id: users_per_group
+  prompt: "How many different users own files in each group in {index}?"
+  tags: [uid, gid, distinct, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical."
+
+- id: subtree_usage
+  prompt: "How many files are under groups/grp01/usr003/checkpoint in {index} (including its subdirectories), and how much space do they use?"
+  tags: [size, total, path, subtree, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical."
+
+- id: dirs_many_files
+  prompt: "Which directories in {index} have more than 100 files directly in them? Show each directory's full path and how many files it has."
+  tags: [directories, count, path, threshold, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical."
+
+- id: executable_count
+  prompt: "How many files in {index} are executable by someone (any execute permission bit set)?"
+  tags: [mode, permissions, count, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical."
+
+- id: symlink_targets
+  prompt: "List every symbolic link in {index} with its full path and the path it points to."
+  tags: [links, path, list, mirrored]
+  enabled: true
+  index: eval_master
+  parameters: {}
+  ground_truth: null
+  notes: "Mirrored from scenarios.single.yaml; keep the prompt identical."

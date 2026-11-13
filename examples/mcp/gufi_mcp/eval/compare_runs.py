@@ -17,6 +17,10 @@ from pathlib import Path
 
 import numpy as np
 
+import sys  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # plot_run.py lives one level up
+
 from plot_run import COLORS, FAILURE_COLORS, GUFI_FUNCTIONS, HERE, Trial, load_trials, plt, save
 
 RESOURCE_KINDS = [
@@ -26,6 +30,9 @@ RESOURCE_KINDS = [
     ("gufi://functions", re.compile(r"^gufi://functions$")),
     ("gufi://functions/<name>", re.compile(r"^gufi://functions/.")),
 ]
+
+
+DISCOVERY_TOOLS = ("gufi_indexes", "gufi_schemas", "gufi_functions", "gufi_function")
 
 
 def resource_kind(uri: str) -> str:
@@ -99,15 +106,20 @@ def plot_failure_reasons(data: list[list[Trial]], labels: list[str], out: Path) 
 
 
 def plot_usage(data: list[list[Trial]], labels: list[str], out: Path) -> None:
-    kinds = [name for name, _ in RESOURCE_KINDS] + ["aggregate_sql_query"]
+    # Older runs read gufi:// resources; current servers expose the same discovery as tools.
+    kinds = [name for name, _ in RESOURCE_KINDS] + list(DISCOVERY_TOOLS) + ["aggregate_sql_query"]
     means = []
     for ts in data:
         totals = Counter()
         for t in ts:
             for uri, n in t.resource_reads.items():
                 totals[resource_kind(uri)] += n
-            totals["aggregate_sql_query"] += t.tool_calls.get("aggregate_sql_query", 0)
+            for name in (*DISCOVERY_TOOLS, "aggregate_sql_query"):
+                totals[name] += t.tool_calls.get(name, 0)
         means.append([totals[k] / len(ts) for k in kinds])
+    keep = [i for i, k in enumerate(kinds) if any(m[i] for m in means)]  # drop kinds no run used
+    kinds = [kinds[i] for i in keep]
+    means = [[m[i] for i in keep] for m in means]
     x = np.arange(len(kinds))
     width = 0.8 / len(labels)
     fig, ax = plt.subplots(figsize=(13, 5))

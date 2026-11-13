@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 import secrets
+import threading
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,7 +19,7 @@ SUMMARY_KEYS = (
     "scenario_id", "trial", "mode", "pass", "passed_on_attempt", "one_shot_pass",
     "resources_consumed", "timing_delta_ms", "similarity_path",
     "executions", "execution_time_ms", "redundancies", "final_response_path",
-    "aggregate_revision_count", "failure_tags",
+    "aggregate_revision_count", "failure_tags", "matched_ground_truth",
     "agent", "model", "stop_reason", "duration_ms", "usage", "trace_path", "error",
 )
 MAX_ROWS_LOGGED = 1000
@@ -39,34 +41,71 @@ def _call_summary(call: AggregateCall) -> dict[str, Any]:
 
 
 class RunWriter:
-    def __init__(self, output: Path, run_id: Optional[str] = None):
+    """Artifacts of one run. Each trial's summary line is flushed to disk as soon as it is written, so a
+    run that is interrupted can be reopened with resume=True and continued from the trials it finished."""
+
+    def __init__(self, output: Path, run_id: Optional[str] = None, resume: bool = False):
         self.run_id = run_id or new_run_id()
         self.root = output / self.run_id
-        self.root.mkdir(parents=True, exist_ok=False)
+        if resume:
+            if not self.root.is_dir():
+                raise FileNotFoundError(f"cannot resume {self.root}: no such run directory")
+        else:
+            self.root.mkdir(parents=True, exist_ok=False)
         self.summary_path = self.root / "summary.jsonl"
         self.summary_path.touch()
+        self._lock = threading.Lock()
+
+    @classmethod
+    def reopen(cls, run_dir: Path) -> "RunWriter":
+        return cls(run_dir.parent, run_dir.name, resume=True)
 
     def rel(self, path: Path) -> str:
         return str(path.relative_to(self.root))
 
     def write_json(self, rel: str, data: Any) -> Path:
-        path = self.root / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(_jsonable(data), indent=2) + "\n")
-        return path
+        """Write atomically: a crash leaves the old file or the new one, never half of one."""
+        return self.write_text(rel, json.dumps(_jsonable(data), indent=2) + "\n")
 
     def write_text(self, rel: str, text: str) -> Path:
         path = self.root / rel
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text)
+        tmp = path.with_name(f".{path.name}.tmp")
+        tmp.write_text(text)
+        os.replace(tmp, path)
         return path
 
     def append_summary(self, line: dict[str, Any]) -> None:
         missing = set(SUMMARY_KEYS) ^ set(line)
         if missing:
             raise ValueError(f"summary line keys differ from SUMMARY_KEYS: {sorted(missing)}")
-        with self.summary_path.open("a") as f:
-            f.write(json.dumps(_jsonable({k: line[k] for k in SUMMARY_KEYS})) + "\n")
+        text = json.dumps(_jsonable({k: line[k] for k in SUMMARY_KEYS})) + "\n"
+        with self._lock, self.summary_path.open("a") as f:
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+
+    def load_summary(self) -> list[dict[str, Any]]:
+        """Summary lines already on disk. A torn last line (the process died mid-write) is cut off, so
+        that trial runs again."""
+        raw = self.summary_path.read_bytes()
+        lines: list[dict[str, Any]] = []
+        good = 0
+        for chunk in raw.splitlines(keepends=True):
+            try:
+                if not chunk.endswith(b"\n"):
+                    raise ValueError("unterminated line")
+                line = json.loads(chunk)
+                if not isinstance(line, dict) or set(line) != set(SUMMARY_KEYS):
+                    raise ValueError("not a summary line")
+            except ValueError:
+                break  # everything after a bad line is suspect; rerun it
+            lines.append(line)
+            good += len(chunk)
+        if good != len(raw):
+            with self.summary_path.open("r+b") as f:
+                f.truncate(good)
+        return lines
 
     def trace(self, mode: str, scenario_id: str, trial: int, result: AgentResult) -> Path:
         return self.write_json(f"{mode}/{scenario_id}/trial_{trial}.trace.json", {
@@ -86,7 +125,7 @@ def _base_line(scenario_id: str, trial: int, mode: str, result: AgentResult, age
         "scenario_id": scenario_id, "trial": trial, "mode": mode, "pass": None,
         "passed_on_attempt": None, "one_shot_pass": None, "resources_consumed": None, "timing_delta_ms": None, "similarity_path": "",
         "executions": None, "execution_time_ms": None, "redundancies": [], "final_response_path": "",
-        "aggregate_revision_count": None, "failure_tags": [],
+        "aggregate_revision_count": None, "failure_tags": [], "matched_ground_truth": None,
         "agent": agent.get("agent"), "model": agent.get("model"), "stop_reason": result.stop_reason,
         "duration_ms": result.duration_ms, "usage": result.usage, "trace_path": trace_path, "error": result.error,
     }
@@ -103,6 +142,7 @@ def record_single(writer: RunWriter, scenario_id: str, trial: int, result: Agent
         "trial": trial,
         "pass": score.passed,
         "passed_on_attempt": score.passed_on_attempt,
+        "matched_ground_truth": score.matched_ground_truth,
         "aggregate_revision_count": score.aggregate_revision_count,
         "ground_truth": ground_truth,
         "agent": (scored or last).query if (scored or last) else None,
@@ -145,6 +185,7 @@ def record_single(writer: RunWriter, scenario_id: str, trial: int, result: Agent
         "similarity_path": writer.rel(similarity),
         "aggregate_revision_count": score.aggregate_revision_count,
         "failure_tags": score.failure_tags,
+        "matched_ground_truth": score.matched_ground_truth,
     })
     writer.append_summary(line)
     return line

@@ -11,7 +11,9 @@ import logging
 import os
 import sys
 
-from gufi_mcp_server import mcp
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # the server lives one level up
+
+from gufi_mcp_server import mcp  # noqa: E402
 
 
 def apply_allowlist(spec: str) -> list[str]:

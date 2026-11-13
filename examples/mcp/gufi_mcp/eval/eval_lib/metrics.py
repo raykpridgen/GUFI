@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 
 from eval_lib.agent import AGGREGATE_TOOL, AgentResult, AggregateCall
 from eval_lib.comparator import Comparison, compare_rows, is_ordered
@@ -24,6 +24,7 @@ class Attempt:
     comparison: Optional[Comparison]
     passed: bool
     reason: str
+    matched_ground_truth: Optional[int] = None  # 0 = ground_truth, n = alternates[n - 1]
 
 
 @dataclass
@@ -39,44 +40,59 @@ class SingleScore:
     comparison: Optional[Comparison]
     timing_delta_ms: Optional[float]
     reason: str
+    matched_ground_truth: Optional[int] = None
 
 
 def resources_before_first_aggregate(result: AgentResult) -> int:
-    """Resource reads before the first aggregate call, repeats included."""
+    """Discovery calls (resource reads and non-aggregate tool calls) before the first aggregate call, repeats included."""
     count = 0
     for event in result.events:
         if event.kind == "tool" and event.name == AGGREGATE_TOOL:
             break
-        if event.kind == "resource":
-            count += 1
+        count += 1
     return count
 
 
-def grade_call(n: int, call: AggregateCall, index: str, gt_rows: list[list[Any]], ordered: bool) -> Attempt:
-    """Compare one aggregate call with the ground truth rows."""
+def grade_call(n: int, call: AggregateCall, index: str, gt_rows: list[list[Any]], ordered: bool,
+               alternates: Sequence[tuple[list[list[Any]], bool]] = (),
+               path_root: Optional[str] = None) -> Attempt:
+    """Compare one aggregate call with the ground truth rows, then with each accepted alternate."""
     if not call.ok:
         return Attempt(n, call, None, False, f"call failed: {call.error or 'error'}")
     if call.truncated:
         comparison = Comparison(False, ordered, None, "agent result was truncated")
+        matched = None
     else:
-        comparison = compare_rows(gt_rows, call.rows, ordered)
+        comparison = compare_rows(gt_rows, call.rows, ordered, path_root)
+        matched = 0 if comparison.passed else None
+        for i, (alt_rows, alt_ordered) in enumerate(alternates, 1):
+            if matched is not None:
+                break
+            alt = compare_rows(alt_rows, call.rows, alt_ordered, path_root)
+            if alt.passed:
+                comparison, matched = alt, i
     if call.index != index:
         return Attempt(n, call, comparison, False, f"wrong index {call.index!r}; {comparison.reason}")
-    return Attempt(n, call, comparison, comparison.passed, comparison.reason)
+    reason = comparison.reason if not matched else f"{comparison.reason} (alternate ground truth {matched})"
+    return Attempt(n, call, comparison, comparison.passed, reason, matched if comparison.passed else None)
 
 
 def score_single(result: AgentResult, index: str, gt_rows: list[list[Any]], gt_final_sql: str,
-                 gt_duration_ms: float, max_attempts: Optional[int] = None) -> SingleScore:
+                 gt_duration_ms: float, max_attempts: Optional[int] = None,
+                 alternates: Sequence[tuple[list[list[Any]], str]] = (),
+                 path_root: Optional[str] = None) -> SingleScore:
     """Grade the last successful call among the first max_attempts aggregate calls.
 
     Every aggregate call counts as an attempt, failed ones included. A failed call does not replace an
     earlier answer, but a later successful call does, even when an earlier one matched (tagged
-    replaced_match).
+    replaced_match). alternates are (rows, final_sql) of other accepted answers, for prompts with more than
+    one fair reading; path_root is stripped from path values on both sides before comparing.
     """
     calls = result.aggregate_calls
     graded = calls[:max_attempts] if max_attempts else calls
     ordered = is_ordered(gt_final_sql)
-    attempts = [grade_call(n, call, index, gt_rows, ordered) for n, call in enumerate(graded, 1)]
+    alts = [(rows, is_ordered(sql)) for rows, sql in alternates]
+    attempts = [grade_call(n, call, index, gt_rows, ordered, alts, path_root) for n, call in enumerate(graded, 1)]
 
     tags: list[str] = []
     if len(calls) > 1:
@@ -111,6 +127,7 @@ def score_single(result: AgentResult, index: str, gt_rows: list[list[Any]], gt_f
         comparison=shown.comparison if shown else None,
         timing_delta_ms=round(shown.call.duration_ms - gt_duration_ms, 3) if shown else None,
         reason=reason,
+        matched_ground_truth=shown.matched_ground_truth if passed else None,
     )
 
 
