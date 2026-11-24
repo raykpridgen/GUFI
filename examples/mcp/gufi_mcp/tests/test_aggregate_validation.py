@@ -259,6 +259,7 @@ def _top_n(per_directory: str = "SELECT path, size FROM vrpentries WHERE type = 
     {"per_directory_sql": ["SELECT path, size FROM vrpentries ORDER BY size LIMIT 10",
                            "SELECT path, totsize FROM vrsummary"],
      "final_sql": "SELECT path, size FROM partial ORDER BY size LIMIT 10"},
+])
 @pytest.mark.parametrize("partial_sql", [
     "SELECT SUM(size) FROM per_directory ORDER BY 1",
     "SELECT SUM(size) FROM per_directory LIMIT 1",
