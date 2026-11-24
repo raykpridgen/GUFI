@@ -1,1 +1,0 @@
-The total space that the directories themselves take up in the `eval_master` index is 1,056,768 bytes, and there are 258 directories.

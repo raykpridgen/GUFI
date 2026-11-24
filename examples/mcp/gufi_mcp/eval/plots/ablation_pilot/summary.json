@@ -1,0 +1,587 @@
+{
+  "configs": [
+    {
+      "label": "full",
+      "config_id": "py-hints-p1-f1-server",
+      "factors": {
+        "submission": "pydantic",
+        "schema": "hints",
+        "primer": true,
+        "functions": true,
+        "path": "server"
+      },
+      "trials": 150,
+      "pass_rate": 0.6266666666666667,
+      "ci_lo": 0.5470043657114055,
+      "ci_hi": 0.7000029457050124,
+      "one_shot": 0.5466666666666666,
+      "mean_tool_calls": 4.213333333333333,
+      "mean_discovery_calls": 3.033333333333333,
+      "mean_aggregate_calls": 1.16,
+      "mean_errors": 0.14,
+      "mean_cost": 0.002412294,
+      "mean_tokens": 21653.18,
+      "mean_seconds": 8.780256886666667,
+      "alternate_matches": 36,
+      "run": "ablation_full_20261111T065638Z-7eacd1"
+    },
+    {
+      "label": "minimal",
+      "config_id": "plain-none-p0-f0-rpath",
+      "factors": {
+        "submission": "plain",
+        "schema": "none",
+        "primer": false,
+        "functions": false,
+        "path": "rpath"
+      },
+      "trials": 150,
+      "pass_rate": 0.006666666666666667,
+      "ci_lo": 0.0011777710231334546,
+      "ci_hi": 0.036793752933975674,
+      "one_shot": 0.0,
+      "mean_tool_calls": 2.993333333333333,
+      "mean_discovery_calls": 0.0,
+      "mean_aggregate_calls": 2.993333333333333,
+      "mean_errors": 2.966666666666667,
+      "mean_cost": 0.000634843,
+      "mean_tokens": 3214.22,
+      "mean_seconds": 7.8565990066666656,
+      "alternate_matches": 0,
+      "run": "ablation_minimal_20261111T070229Z-7c8fb7"
+    },
+    {
+      "label": "naive_schema",
+      "config_id": "py-naive-p1-f1-server",
+      "factors": {
+        "submission": "pydantic",
+        "schema": "naive",
+        "primer": true,
+        "functions": true,
+        "path": "server"
+      },
+      "trials": 150,
+      "pass_rate": 0.5466666666666666,
+      "ci_lo": 0.46682631163294025,
+      "ci_hi": 0.6241763820467925,
+      "one_shot": 0.5133333333333333,
+      "mean_tool_calls": 4.3533333333333335,
+      "mean_discovery_calls": 3.1333333333333333,
+      "mean_aggregate_calls": 1.22,
+      "mean_errors": 0.14,
+      "mean_cost": 0.0017382700000000003,
+      "mean_tokens": 16143.2,
+      "mean_seconds": 7.4095331,
+      "alternate_matches": 33,
+      "run": "ablation_naive_schema_20261111T072245Z-c412ce"
+    },
+    {
+      "label": "no_functions",
+      "config_id": "py-hints-p1-f0-server",
+      "factors": {
+        "submission": "pydantic",
+        "schema": "hints",
+        "primer": true,
+        "functions": false,
+        "path": "server"
+      },
+      "trials": 150,
+      "pass_rate": 0.5533333333333333,
+      "ci_lo": 0.4734297284995479,
+      "ci_hi": 0.6305733499915755,
+      "one_shot": 0.5066666666666667,
+      "mean_tool_calls": 3.72,
+      "mean_discovery_calls": 2.58,
+      "mean_aggregate_calls": 1.14,
+      "mean_errors": 0.10666666666666667,
+      "mean_cost": 0.001743334,
+      "mean_tokens": 16809.453333333335,
+      "mean_seconds": 7.901756886666665,
+      "alternate_matches": 32,
+      "run": "ablation_no_functions_20261111T071246Z-0baf39"
+    },
+    {
+      "label": "no_primer",
+      "config_id": "py-hints-p0-f1-server",
+      "factors": {
+        "submission": "pydantic",
+        "schema": "hints",
+        "primer": false,
+        "functions": true,
+        "path": "server"
+      },
+      "trials": 150,
+      "pass_rate": 0.44,
+      "ci_lo": 0.3630436095097045,
+      "ci_hi": 0.5199529271877817,
+      "one_shot": 0.28,
+      "mean_tool_calls": 2.6266666666666665,
+      "mean_discovery_calls": 0.92,
+      "mean_aggregate_calls": 1.7066666666666668,
+      "mean_errors": 0.5266666666666666,
+      "mean_cost": 0.0011928060000000002,
+      "mean_tokens": 8695.2,
+      "mean_seconds": 8.132615486666667,
+      "alternate_matches": 34,
+      "run": "ablation_no_primer_20261111T070733Z-c00570"
+    },
+    {
+      "label": "no_schema",
+      "config_id": "py-none-p1-f1-server",
+      "factors": {
+        "submission": "pydantic",
+        "schema": "none",
+        "primer": true,
+        "functions": true,
+        "path": "server"
+      },
+      "trials": 150,
+      "pass_rate": 0.36,
+      "ci_lo": 0.28756459447316396,
+      "ci_hi": 0.4394273244876372,
+      "one_shot": 0.2733333333333333,
+      "mean_tool_calls": 3.2266666666666666,
+      "mean_discovery_calls": 1.7533333333333334,
+      "mean_aggregate_calls": 1.4533333333333334,
+      "mean_errors": 0.48,
+      "mean_cost": 0.001224261,
+      "mean_tokens": 11848.56,
+      "mean_seconds": 7.55120466,
+      "alternate_matches": 29,
+      "run": "ablation_no_schema_20261111T071753Z-54dae6"
+    },
+    {
+      "label": "plain",
+      "config_id": "plain-hints-p1-f1-server",
+      "factors": {
+        "submission": "plain",
+        "schema": "hints",
+        "primer": true,
+        "functions": true,
+        "path": "server"
+      },
+      "trials": 150,
+      "pass_rate": 0.56,
+      "ci_lo": 0.48004707281221837,
+      "ci_hi": 0.6369563904902955,
+      "one_shot": 0.44,
+      "mean_tool_calls": 4.466666666666667,
+      "mean_discovery_calls": 3.14,
+      "mean_aggregate_calls": 1.3266666666666667,
+      "mean_errors": 0.25333333333333335,
+      "mean_cost": 0.0017389360000000002,
+      "mean_tokens": 15842.866666666667,
+      "mean_seconds": 8.534639193333334,
+      "alternate_matches": 42,
+      "run": "ablation_plain_20261111T073256Z-0d3da4"
+    },
+    {
+      "label": "rpath",
+      "config_id": "py-hints-p1-f1-rpath",
+      "factors": {
+        "submission": "pydantic",
+        "schema": "hints",
+        "primer": true,
+        "functions": true,
+        "path": "rpath"
+      },
+      "trials": 150,
+      "pass_rate": 0.6133333333333333,
+      "ci_lo": 0.5334964294452139,
+      "ci_hi": 0.6875101123484232,
+      "one_shot": 0.56,
+      "mean_tool_calls": 4.78,
+      "mean_discovery_calls": 3.58,
+      "mean_aggregate_calls": 1.2,
+      "mean_errors": 0.20666666666666667,
+      "mean_cost": 0.002665395,
+      "mean_tokens": 24998.446666666667,
+      "mean_seconds": 8.206490039999998,
+      "alternate_matches": 35,
+      "run": "ablation_rpath_20261111T072736Z-986245"
+    }
+  ],
+  "effects": [
+    {
+      "part": "primer",
+      "label": "Primer (server instructions)",
+      "pairs": 1,
+      "all": {
+        "effect": 0.1866666666666667,
+        "lo": 0.053333333333333344,
+        "hi": 0.32,
+        "pairs": 1,
+        "scenarios": 15
+      },
+      "targeted": {
+        "effect": 0.10000000000000003,
+        "lo": -0.08749999999999997,
+        "hi": 0.26249999999999996,
+        "pairs": 1,
+        "scenarios": 8
+      },
+      "other": {
+        "effect": 0.28571428571428564,
+        "lo": 0.11428571428571421,
+        "hi": 0.4714285714285714,
+        "pairs": 1,
+        "scenarios": 7
+      },
+      "token_delta": 12957.98,
+      "verdict": "keep: helps",
+      "per_scenario": {
+        "age_histogram": 0.3,
+        "avg_size_per_user": -0.4,
+        "count_and_size": 0.30000000000000004,
+        "dirs_many_files": 0.0,
+        "executable_count": 0.4,
+        "ext_winner": 0.4,
+        "files_and_bytes_per_user": 0.0,
+        "not_modified_n_days": 0.4,
+        "size_histogram": 0.0,
+        "subtree_usage": 0.7,
+        "symlink_targets": 0.09999999999999998,
+        "top10_size_global": 0.0,
+        "top10_size_per_uid": 0.1,
+        "total_dir_size": 0.5,
+        "users_per_group": 0.0
+      }
+    },
+    {
+      "part": "functions",
+      "label": "Functions tools + column tags",
+      "pairs": 1,
+      "all": {
+        "effect": 0.07333333333333336,
+        "lo": -0.020000000000000018,
+        "hi": 0.20666666666666667,
+        "pairs": 1,
+        "scenarios": 15
+      },
+      "targeted": {
+        "effect": 0.36666666666666664,
+        "lo": 0.0,
+        "hi": 0.8,
+        "pairs": 1,
+        "scenarios": 3
+      },
+      "other": {
+        "effect": 0.0,
+        "lo": -0.04999999999999993,
+        "hi": 0.050000000000000044,
+        "pairs": 1,
+        "scenarios": 12
+      },
+      "token_delta": 4843.726666666666,
+      "verdict": "no detectable gain; costs more: simplify candidate",
+      "per_scenario": {
+        "age_histogram": 0.3,
+        "avg_size_per_user": -0.1,
+        "count_and_size": 0.09999999999999998,
+        "dirs_many_files": 0.0,
+        "executable_count": -0.09999999999999998,
+        "ext_winner": 0.8,
+        "files_and_bytes_per_user": -0.09999999999999998,
+        "not_modified_n_days": 0.09999999999999998,
+        "size_histogram": 0.0,
+        "subtree_usage": 0.19999999999999996,
+        "symlink_targets": 0.0,
+        "top10_size_global": 0.0,
+        "top10_size_per_uid": 0.0,
+        "total_dir_size": 0.0,
+        "users_per_group": -0.1
+      }
+    },
+    {
+      "part": "schema_tool",
+      "label": "Schema tool (names + types vs none)",
+      "pairs": 1,
+      "all": {
+        "effect": 0.18666666666666665,
+        "lo": -0.033333333333333354,
+        "hi": 0.4066666666666667,
+        "pairs": 1,
+        "scenarios": 15
+      },
+      "targeted": {
+        "effect": 0.525,
+        "lo": 0.09999999999999998,
+        "hi": 0.95,
+        "pairs": 1,
+        "scenarios": 4
+      },
+      "other": {
+        "effect": 0.0636363636363636,
+        "lo": -0.1545454545454546,
+        "hi": 0.2727272727272727,
+        "pairs": 1,
+        "scenarios": 11
+      },
+      "token_delta": 4294.640000000001,
+      "verdict": "no detectable gain; costs more: simplify candidate",
+      "per_scenario": {
+        "age_histogram": -0.8,
+        "avg_size_per_user": 0.1,
+        "count_and_size": 0.8,
+        "dirs_many_files": 0.9,
+        "executable_count": 0.0,
+        "ext_winner": 0.19999999999999996,
+        "files_and_bytes_per_user": 0.09999999999999998,
+        "not_modified_n_days": 0.09999999999999998,
+        "size_histogram": 0.0,
+        "subtree_usage": 0.29999999999999993,
+        "symlink_targets": 1.0,
+        "top10_size_global": 0.0,
+        "top10_size_per_uid": 0.0,
+        "total_dir_size": 0.19999999999999996,
+        "users_per_group": -0.1
+      }
+    },
+    {
+      "part": "schema_hints",
+      "label": "Schema hints (hints vs names + types)",
+      "pairs": 1,
+      "all": {
+        "effect": 0.08000000000000007,
+        "lo": -0.026666666666666616,
+        "hi": 0.22666666666666663,
+        "pairs": 1,
+        "scenarios": 15
+      },
+      "targeted": {
+        "effect": 0.17500000000000004,
+        "lo": -0.15000000000000002,
+        "hi": 0.675,
+        "pairs": 1,
+        "scenarios": 4
+      },
+      "other": {
+        "effect": 0.04545454545454547,
+        "lo": -0.018181818181818188,
+        "hi": 0.11818181818181817,
+        "pairs": 1,
+        "scenarios": 11
+      },
+      "token_delta": 5509.98,
+      "verdict": "no detectable gain; costs more: simplify candidate",
+      "per_scenario": {
+        "age_histogram": 0.3,
+        "avg_size_per_user": -0.1,
+        "count_and_size": 0.09999999999999998,
+        "dirs_many_files": 0.0,
+        "executable_count": 0.9,
+        "ext_winner": 0.20000000000000007,
+        "files_and_bytes_per_user": -0.09999999999999998,
+        "not_modified_n_days": 0.0,
+        "size_histogram": 0.0,
+        "subtree_usage": 0.0,
+        "symlink_targets": 0.0,
+        "top10_size_global": 0.0,
+        "top10_size_per_uid": 0.1,
+        "total_dir_size": -0.19999999999999996,
+        "users_per_group": 0.0
+      }
+    },
+    {
+      "part": "schema_full",
+      "label": "Schema tool with hints (vs none)",
+      "pairs": 1,
+      "all": {
+        "effect": 0.2666666666666667,
+        "lo": 0.04666666666666669,
+        "hi": 0.5,
+        "pairs": 1,
+        "scenarios": 15
+      },
+      "targeted": {
+        "effect": 0.7000000000000001,
+        "lo": 0.22499999999999998,
+        "hi": 0.975,
+        "pairs": 1,
+        "scenarios": 4
+      },
+      "other": {
+        "effect": 0.10909090909090907,
+        "lo": -0.07272727272727275,
+        "hi": 0.3181818181818182,
+        "pairs": 1,
+        "scenarios": 11
+      },
+      "token_delta": 9804.62,
+      "verdict": "keep: helps",
+      "per_scenario": {
+        "age_histogram": -0.5,
+        "avg_size_per_user": 0.0,
+        "count_and_size": 0.9,
+        "dirs_many_files": 0.9,
+        "executable_count": 0.9,
+        "ext_winner": 0.4,
+        "files_and_bytes_per_user": 0.0,
+        "not_modified_n_days": 0.09999999999999998,
+        "size_histogram": 0.0,
+        "subtree_usage": 0.29999999999999993,
+        "symlink_targets": 1.0,
+        "top10_size_global": 0.0,
+        "top10_size_per_uid": 0.1,
+        "total_dir_size": 0.0,
+        "users_per_group": -0.1
+      }
+    },
+    {
+      "part": "path_columns",
+      "label": "Server path columns (vs agent rpath)",
+      "pairs": 1,
+      "all": {
+        "effect": 0.01333333333333342,
+        "lo": -0.11333333333333329,
+        "hi": 0.1466666666666666,
+        "pairs": 1,
+        "scenarios": 15
+      },
+      "targeted": {
+        "effect": 0.12,
+        "lo": -0.06,
+        "hi": 0.41999999999999993,
+        "pairs": 1,
+        "scenarios": 5
+      },
+      "other": {
+        "effect": -0.039999999999999925,
+        "lo": -0.18000000000000005,
+        "hi": 0.06999999999999995,
+        "pairs": 1,
+        "scenarios": 10
+      },
+      "token_delta": -3345.2666666666664,
+      "verdict": "no detectable effect",
+      "per_scenario": {
+        "age_histogram": -0.6000000000000001,
+        "avg_size_per_user": 0.0,
+        "count_and_size": 0.0,
+        "dirs_many_files": 0.0,
+        "executable_count": 0.20000000000000007,
+        "ext_winner": 0.10000000000000009,
+        "files_and_bytes_per_user": 0.10000000000000009,
+        "not_modified_n_days": 0.0,
+        "size_histogram": -0.2,
+        "subtree_usage": 0.7,
+        "symlink_targets": 0.0,
+        "top10_size_global": 0.0,
+        "top10_size_per_uid": -0.1,
+        "total_dir_size": 0.0,
+        "users_per_group": 0.0
+      }
+    },
+    {
+      "part": "pydantic",
+      "label": "Structured submission (vs gufi_query command)",
+      "pairs": 1,
+      "all": {
+        "effect": 0.06666666666666665,
+        "lo": -0.07333333333333336,
+        "hi": 0.226833333333334,
+        "pairs": 1,
+        "scenarios": 15
+      },
+      "targeted": {
+        "effect": -0.1,
+        "lo": -0.1,
+        "hi": -0.1,
+        "pairs": 1,
+        "scenarios": 1
+      },
+      "other": {
+        "effect": 0.07857142857142851,
+        "lo": -0.0714285714285714,
+        "hi": 0.24285714285714288,
+        "pairs": 1,
+        "scenarios": 14
+      },
+      "token_delta": 5810.3133333333335,
+      "verdict": "no detectable gain; costs more: simplify candidate",
+      "per_scenario": {
+        "age_histogram": -0.39999999999999997,
+        "avg_size_per_user": -0.1,
+        "count_and_size": 0.19999999999999996,
+        "dirs_many_files": 0.0,
+        "executable_count": 0.7,
+        "ext_winner": 0.6000000000000001,
+        "files_and_bytes_per_user": -0.09999999999999998,
+        "not_modified_n_days": 0.4,
+        "size_histogram": -0.2,
+        "subtree_usage": 0.0,
+        "symlink_targets": 0.0,
+        "top10_size_global": 0.0,
+        "top10_size_per_uid": -0.30000000000000004,
+        "total_dir_size": 0.20000000000000007,
+        "users_per_group": 0.0
+      }
+    }
+  ],
+  "interactions": [],
+  "error_counts": {
+    "full": {
+      "unknown column": 7,
+      "column count mismatch": 2,
+      "other": 5,
+      "SQLite runtime error": 5,
+      "path column on wrong table": 2
+    },
+    "minimal": {
+      "plain command form": 322,
+      "other": 94,
+      "stage read wrong table": 1,
+      "no path columns (rpath mode)": 9,
+      "unknown column": 17,
+      "SQL parse error": 2
+    },
+    "naive_schema": {
+      "unknown column": 5,
+      "other": 6,
+      "column count mismatch": 2,
+      "SQLite runtime error": 1,
+      "path column on wrong table": 2,
+      "SQL parse error": 6
+    },
+    "no_functions": {
+      "unknown column": 10,
+      "SQLite runtime error": 1,
+      "other": 1,
+      "path column on wrong table": 2,
+      "column count mismatch": 2
+    },
+    "no_primer": {
+      "column count mismatch": 2,
+      "other": 40,
+      "unknown column": 34,
+      "path column on wrong table": 2,
+      "SQL parse error": 2
+    },
+    "no_schema": {
+      "unknown column": 35,
+      "column count mismatch": 2,
+      "other": 9,
+      "SQLite runtime error": 15,
+      "path column on wrong table": 9,
+      "SQL parse error": 2
+    },
+    "plain": {
+      "unknown column": 19,
+      "plain command form": 2,
+      "other": 7,
+      "SQLite runtime error": 1,
+      "stage read wrong table": 2,
+      "SQL parse error": 4,
+      "path column on wrong table": 2,
+      "path column not carried": 1
+    },
+    "rpath": {
+      "unknown column": 15,
+      "other": 5,
+      "SQLite runtime error": 6,
+      "no path columns (rpath mode)": 3,
+      "SQL parse error": 2
+    }
+  },
+  "mismatches": []
+}

@@ -1,1 +1,0 @@
-The directories in the `eval_master` index do not take up any space themselves, as the reported space usage is 0 bytes.
